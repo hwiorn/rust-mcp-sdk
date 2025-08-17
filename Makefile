@@ -24,6 +24,7 @@ setup:
 	rustup component add rustfmt clippy llvm-tools-preview
 	cargo install cargo-audit cargo-outdated cargo-machete cargo-deny
 	cargo install cargo-llvm-cov cargo-nextest cargo-mutants
+	cargo install pmat  # PAIML MCP Agent Toolkit for extreme quality standards
 	@echo "$(GREEN)✓ Development environment ready$(NC)"
 
 # Build targets
@@ -181,6 +182,7 @@ quality-gate:
 	@$(MAKE) unused-deps
 	@$(MAKE) check-todos
 	@$(MAKE) check-unwraps
+	@$(MAKE) pmat-quality
 	@echo "$(GREEN)═══════════════════════════════════════════════════════$(NC)"
 	@echo "$(GREEN)        ✓ ALL QUALITY CHECKS PASSED                    $(NC)"
 	@echo "$(GREEN)═══════════════════════════════════════════════════════$(NC)"
@@ -218,6 +220,44 @@ check-unwraps:
 	@echo "$(BLUE)Checking for unwrap() calls outside tests...$(NC)"
 	@echo "$(YELLOW)Note: All unwrap() calls found are in test modules$(NC)"
 	@echo "$(GREEN)✓ No unwrap() calls in production code$(NC)"
+
+# PMAT quality checks - extreme quality standards
+.PHONY: pmat-quality
+pmat-quality:
+	@echo "$(BLUE)Running PMAT quality analysis...$(NC)"
+	@if command -v pmat &> /dev/null; then \
+		echo "$(BLUE)Checking complexity metrics...$(NC)"; \
+		pmat analyze complexity --max-cyclomatic 20 --max-cognitive 15 --fail-on-violation || exit 1; \
+		echo "$(BLUE)Checking for SATD (Self-Admitted Technical Debt)...$(NC)"; \
+		pmat analyze satd --strict --fail-on-violation || exit 1; \
+		echo "$(BLUE)Checking for dead code...$(NC)"; \
+		pmat analyze dead-code --max-percentage 5.0 --fail-on-violation || exit 1; \
+		echo "$(BLUE)Running comprehensive quality gate...$(NC)"; \
+		pmat quality-gate --fail-on-violation || exit 1; \
+		echo "$(GREEN)✓ PMAT quality checks passed$(NC)"; \
+	else \
+		echo "$(YELLOW)⚠ pmat not installed - run 'cargo install pmat' to enable extreme quality checks$(NC)"; \
+	fi
+
+# PMAT detailed analysis (optional, more comprehensive)
+.PHONY: pmat-deep-analysis
+pmat-deep-analysis:
+	@echo "$(BLUE)Running PMAT deep analysis...$(NC)"
+	@if command -v pmat &> /dev/null; then \
+		echo "$(BLUE)Generating comprehensive context...$(NC)"; \
+		pmat context --format json > pmat-context.json; \
+		echo "$(BLUE)Analyzing Big-O complexity...$(NC)"; \
+		pmat analyze big-o; \
+		echo "$(BLUE)Analyzing dependency graph...$(NC)"; \
+		pmat analyze dag --target-nodes 25; \
+		echo "$(BLUE)Checking for code duplication...$(NC)"; \
+		pmat analyze duplicates --min-lines 10; \
+		echo "$(BLUE)Running provability analysis...$(NC)"; \
+		pmat analyze proof-annotations; \
+		echo "$(GREEN)✓ PMAT deep analysis complete$(NC)"; \
+	else \
+		echo "$(YELLOW)⚠ pmat not installed - run 'cargo install pmat' for deep analysis$(NC)"; \
+	fi
 
 # Mutation testing
 .PHONY: mutants
@@ -383,6 +423,8 @@ help:
 	@echo "  lint            - Run clippy lints"
 	@echo "  audit           - Check security vulnerabilities"
 	@echo "  check-todos     - Check for TODO/FIXME comments"
+	@echo "  pmat-quality    - PMAT extreme quality standards"
+	@echo "  pmat-deep-analysis - PMAT comprehensive analysis"
 	@echo ""
 	@echo "$(YELLOW)Testing:$(NC)"
 	@echo "  test            - Run unit tests"
