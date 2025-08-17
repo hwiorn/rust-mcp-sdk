@@ -13,6 +13,12 @@ use async_trait::async_trait;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
+
+#[cfg(target_arch = "wasm32")]
+use futures::lock::RwLock;
+#[cfg(target_arch = "wasm32")]
+use futures_channel::mpsc;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::{mpsc, RwLock};
 
 pub mod auth;

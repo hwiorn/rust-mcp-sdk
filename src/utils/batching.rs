@@ -5,7 +5,9 @@ use crate::types::Notification;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::{mpsc, Mutex};
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::time::{interval, sleep};
 use tracing::{debug, trace};
 

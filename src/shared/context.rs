@@ -7,9 +7,11 @@ use crate::types::RequestId;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::task_local;
 
 // Task-local storage for request context
+#[cfg(not(target_arch = "wasm32"))]
 task_local! {
     static REQUEST_CONTEXT: Arc<RequestContext>;
 }
@@ -194,7 +196,15 @@ impl RequestContext {
 
     /// Get current context from task-local storage.
     pub fn current() -> Option<Arc<Self>> {
-        REQUEST_CONTEXT.try_with(|ctx| ctx.clone()).ok()
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            REQUEST_CONTEXT.try_with(|ctx| ctx.clone()).ok()
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            // WASM doesn't support task-local storage
+            None
+        }
     }
 
     /// Run a future with this context.
@@ -202,7 +212,15 @@ impl RequestContext {
     where
         F: std::future::Future<Output = R>,
     {
-        REQUEST_CONTEXT.scope(Arc::new(self), f).await
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            REQUEST_CONTEXT.scope(Arc::new(self), f).await
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            // In WASM, just run the future without context
+            f.await
+        }
     }
 
     /// Convert to HTTP headers for propagation.

@@ -5,14 +5,12 @@
 
 #![cfg(target_arch = "wasm32")]
 
-use crate::error::{Error, Result};
+use crate::error::{Error, Result, TransportError};
 use crate::shared::transport::{Transport, TransportMessage};
 use async_trait::async_trait;
 use futures::channel::mpsc;
-use futures::{SinkExt, StreamExt};
+use futures::StreamExt;
 use serde_json::Value;
-use std::cell::RefCell;
-use std::rc::Rc;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::{ErrorEvent, MessageEvent, WebSocket};
@@ -29,6 +27,7 @@ use web_sys::{ErrorEvent, MessageEvent, WebSocket};
 /// # Ok(())
 /// # }
 /// ```
+#[derive(Debug)]
 pub struct WasmWebSocketTransport {
     ws: WebSocket,
     rx: mpsc::UnboundedReceiver<TransportMessage>,
@@ -56,8 +55,12 @@ impl WasmWebSocketTransport {
     /// # }
     /// ```
     pub async fn connect(url: &str) -> Result<Self> {
-        let ws = WebSocket::new(url)
-            .map_err(|e| Error::TransportError(format!("Failed to create WebSocket: {:?}", e)))?;
+        let ws = WebSocket::new(url).map_err(|e| {
+            Error::Transport(TransportError::InvalidMessage(format!(
+                "Failed to create WebSocket: {:?}",
+                e
+            )))
+        })?;
 
         // Set binary type to arraybuffer for efficiency
         ws.set_binary_type(web_sys::BinaryType::Arraybuffer);
@@ -89,7 +92,7 @@ impl WasmWebSocketTransport {
 
         // Setup close handler
         let on_close = {
-            let tx = tx_clone;
+            let _tx = tx_clone;
             Closure::wrap(Box::new(move || {
                 web_sys::console::log_1(&"WebSocket closed".into());
                 // Could send a close notification through the channel
@@ -124,33 +127,36 @@ impl WasmWebSocketTransport {
 impl Transport for WasmWebSocketTransport {
     async fn send(&mut self, message: TransportMessage) -> Result<()> {
         if !self.is_connected() {
-            return Err(Error::TransportError(
-                "WebSocket is not connected".to_string(),
-            ));
+            return Err(Error::Transport(TransportError::ConnectionClosed));
         }
 
         let json = serialize_transport_message(message)?;
         let text = serde_json::to_string(&json)?;
 
-        self.ws
-            .send_with_str(&text)
-            .map_err(|e| Error::TransportError(format!("Failed to send message: {:?}", e)))?;
+        self.ws.send_with_str(&text).map_err(|e| {
+            Error::Transport(TransportError::Send(format!(
+                "Failed to send message: {:?}",
+                e
+            )))
+        })?;
 
         Ok(())
     }
 
-    async fn receive(&mut self) -> Result<Option<TransportMessage>> {
+    async fn receive(&mut self) -> Result<TransportMessage> {
         self.rx
             .next()
             .await
-            .map(Some)
-            .ok_or_else(|| Error::TransportError("Channel closed".to_string()))
+            .ok_or_else(|| Error::Transport(TransportError::ConnectionClosed))
     }
 
     async fn close(&mut self) -> Result<()> {
-        self.ws
-            .close()
-            .map_err(|e| Error::TransportError(format!("Failed to close WebSocket: {:?}", e)))?;
+        self.ws.close().map_err(|e| {
+            Error::Transport(TransportError::Io(format!(
+                "Failed to close WebSocket: {:?}",
+                e
+            )))
+        })?;
         Ok(())
     }
 }
@@ -162,9 +168,9 @@ async fn wait_for_open(ws: &WebSocket) -> Result<()> {
 
     while ws.ready_state() == WebSocket::CONNECTING {
         if attempts >= MAX_ATTEMPTS {
-            return Err(Error::TransportError(
+            return Err(Error::Transport(TransportError::Request(
                 "WebSocket connection timeout".to_string(),
-            ));
+            )));
         }
 
         // Sleep for 100ms
@@ -173,9 +179,9 @@ async fn wait_for_open(ws: &WebSocket) -> Result<()> {
     }
 
     if ws.ready_state() != WebSocket::OPEN {
-        return Err(Error::TransportError(
+        return Err(Error::Transport(TransportError::Request(
             "WebSocket failed to connect".to_string(),
-        ));
+        )));
     }
 
     Ok(())
@@ -199,7 +205,7 @@ fn parse_transport_message(value: Value) -> Result<TransportMessage> {
         let notification = serde_json::from_value(value)?;
         Ok(TransportMessage::Notification(notification))
     } else {
-        Err(Error::ParseError("Unknown message type".to_string()))
+        Err(Error::parse("Unknown message type"))
     }
 }
 

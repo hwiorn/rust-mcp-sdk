@@ -4,6 +4,7 @@ use crate::error::Result;
 use crate::types::{protocol::ResourceUpdatedParams, ServerNotification};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::RwLock;
 
 /// Manages resource subscriptions for the server.

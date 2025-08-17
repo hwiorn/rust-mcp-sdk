@@ -76,6 +76,7 @@
 
 pub mod client;
 pub mod error;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod server;
 pub mod shared;
 pub mod types;
@@ -87,21 +88,29 @@ pub mod simd;
 // Re-export commonly used types
 pub use client::{Client, ClientBuilder};
 pub use error::{Error, ErrorCode, Result};
+#[cfg(not(target_arch = "wasm32"))]
 pub use server::{
     cancellation::RequestHandlerExtra, PromptHandler, ResourceHandler, SamplingHandler, Server,
     ServerBuilder, ToolHandler,
 };
+#[cfg(not(target_arch = "wasm32"))]
+pub use shared::StdioTransport;
 pub use shared::{
     batch::{BatchRequest, BatchResponse},
     uri_template::UriTemplate,
-    AuthMiddleware, LoggingMiddleware, Middleware, MiddlewareChain, RetryMiddleware,
-    StdioTransport, Transport,
+    AuthMiddleware, LoggingMiddleware, Middleware, MiddlewareChain, RetryMiddleware, Transport,
 };
 
-#[cfg(feature = "websocket")]
+#[cfg(all(feature = "websocket", not(target_arch = "wasm32")))]
 pub use shared::{WebSocketConfig, WebSocketTransport};
 
-#[cfg(feature = "http")]
+#[cfg(all(feature = "websocket-wasm", target_arch = "wasm32"))]
+pub use shared::{WasmWebSocketConfig, WasmWebSocketTransport};
+
+#[cfg(target_arch = "wasm32")]
+pub use shared::{WasmHttpClient, WasmHttpConfig, WasmHttpTransport};
+
+#[cfg(all(feature = "http", not(target_arch = "wasm32")))]
 pub use shared::{HttpConfig, HttpTransport};
 pub use types::{
     AuthInfo, AuthScheme, CallToolRequest, CallToolResult, ClientCapabilities, ClientNotification,
@@ -113,6 +122,7 @@ pub use types::{
     SamplingCapabilities, SamplingMessage, ServerCapabilities, ServerNotification, ServerRequest,
     TokenUsage, ToolCapabilities, ToolInfo,
 };
+#[cfg(not(target_arch = "wasm32"))]
 pub use utils::{BatchingConfig, DebouncingConfig, MessageBatcher, MessageDebouncer};
 
 // Re-export async_trait for convenience

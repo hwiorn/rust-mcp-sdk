@@ -133,6 +133,18 @@ cargo run --example 20_oidc_discovery
 
 # Procedural macros for tools
 cargo run --example 21_macro_tools --features macros
+
+# Streamable HTTP server (stateful with sessions)
+cargo run --example 22_streamable_http_server_stateful --features streamable-http
+
+# Streamable HTTP server (stateless for serverless)
+cargo run --example 23_streamable_http_server_stateless --features streamable-http
+
+# Streamable HTTP client
+cargo run --example 24_streamable_http_client --features streamable-http
+
+# WASM client (browser-based) - see examples/wasm-client/README.md
+cd examples/wasm-client && bash build.sh
 ```
 
 See the [examples directory](examples/) for detailed documentation.
@@ -145,12 +157,22 @@ See the [examples directory](examples/) for detailed documentation.
 - Automatic JSON schema generation from Rust types
 - 70% reduction in boilerplate code
 
-### 🌍 WASM Support
+### 🌍 Enhanced WASM Support
 - Full WebAssembly support for browser environments
-- WebSocket transport for WASM clients
+- Dual transport support: WebSocket and HTTP
+- HTTP transport for stateless/serverless MCP servers (AWS Lambda, Vercel, etc.)
 - Cross-platform runtime abstraction
 - Interactive browser example with modern UI
+- CORS-enabled streamable HTTP servers
 - TypeScript definitions for seamless integration
+
+### 🔄 Streamable HTTP Transport
+- Stateful mode with session management for traditional deployments
+- Stateless mode optimized for serverless (AWS Lambda, Vercel Functions)
+- Server-Sent Events (SSE) support for real-time streaming
+- Automatic protocol version negotiation
+- Built-in CORS support for browser clients
+- Examples for both client and server implementations
 
 ### 🚀 Enhanced Developer Experience
 - Type-safe parameter handling with compile-time validation
@@ -296,16 +318,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 let transport = StdioTransport::new();
 ```
 
-### HTTP/SSE
+### Streamable HTTP (Stateful)
 ```rust
-use pmcp::{HttpTransport, HttpConfig};
+use pmcp::{StreamableHttpTransport, StreamableHttpTransportConfig};
 
-let config = HttpConfig {
-    base_url: "http://localhost:8080".parse()?,
-    sse_endpoint: Some("/events".to_string()),
+let config = StreamableHttpTransportConfig {
+    url: "http://localhost:3000".parse()?,
+    enable_sse: true,  // Use SSE for real-time updates
+    session_id: Some("my-session".to_string()),
     ..Default::default()
 };
-let transport = HttpTransport::new(config);
+let transport = StreamableHttpTransport::new(config);
+```
+
+### Streamable HTTP (Stateless/Serverless)
+```rust
+use pmcp::{StreamableHttpTransport, StreamableHttpTransportConfig};
+
+let config = StreamableHttpTransportConfig {
+    url: "http://localhost:8081".parse()?,
+    enable_sse: false,  // Simple request/response
+    session_id: None,   // No session management
+    ..Default::default()
+};
+let transport = StreamableHttpTransport::new(config);
 ```
 
 ### WebSocket  
@@ -318,6 +354,21 @@ let config = WebSocketConfig {
     ..Default::default()
 };
 let transport = WebSocketTransport::new(config);
+```
+
+### WASM (Browser)
+```rust
+// For WebSocket in browser
+use pmcp::{WasmWebSocketTransport};
+let transport = WasmWebSocketTransport::connect("ws://localhost:8080").await?;
+
+// For HTTP in browser
+use pmcp::{WasmHttpTransport, WasmHttpConfig};
+let config = WasmHttpConfig {
+    url: "https://api.example.com/mcp".to_string(),
+    extra_headers: vec![],
+};
+let transport = WasmHttpTransport::new(config);
 ```
 
 ## Development
