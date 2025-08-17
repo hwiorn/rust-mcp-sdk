@@ -37,13 +37,15 @@ dashmap = "6.1"
 bytes = { version = "1.10", optional = true }
 futures = "0.3"
 futures-util = { version = "0.3", optional = true }
+futures-channel = { version = "0.3", optional = true }
+futures-locks = { version = "0.7", optional = true }
 pin-project = "1.1"
 http-body-util = "0.1"
 
 # OAuth dependencies
 sha2 = "0.10"
 base64 = "0.22"
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"], optional = false }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 tokio-tungstenite = { version = "0.27", features = ["native-tls"], optional = true }
 hyper = { version = "1.6", features = ["full"], optional = true }
 hyper-util = { version = "0.1", features = ["full"], optional = true }
@@ -53,17 +55,17 @@ glob-match = { version = "0.2", optional = true }
 
 # Platform-specific dependencies
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-tokio = { version = "1.46", features = ["full"] }
+tokio = { version = "1.46", features = ["full"], optional = true }
 tokio-stream = { version = "0.1.15", optional = true }
-tokio-util = { version = "0.7", features = ["rt"] }
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tokio-util = { version = "0.7", features = ["rt"], optional = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
-web-sys = { version = "0.3", features = ["console", "Window", "Document", "WebSocket", "MessageEvent", "CloseEvent", "ErrorEvent", "BinaryType"] }
+web-sys = { version = "0.3", features = ["console", "Window", "Document", "WebSocket", "MessageEvent", "CloseEvent", "ErrorEvent", "BinaryType", "Headers", "Request", "RequestInit", "Response"] }
 js-sys = "0.3"
-getrandom = { version = "0.3", features = ["std"] }
+getrandom = { version = "0.2", features = ["js"] }
 
 # Transport dependencies
 tokio-tungstenite = { version = "0.27", optional = true }
@@ -102,14 +104,15 @@ dashmap = "6.1"  # Already in main deps but needed for examples
 [features]
 default = ["validation"]
 full = ["websocket", "http", "streamable-http", "validation", "resource-watcher", "rayon"]
-websocket = ["dep:tokio-tungstenite"]
-http = ["dep:hyper", "dep:hyper-util"]
-streamable-http = ["dep:hyper", "dep:hyper-util", "dep:futures-util", "dep:bytes", "dep:axum", "dep:tokio-stream"]
+websocket = ["dep:tokio-tungstenite", "dep:tokio", "dep:tokio-util", "dep:tracing-subscriber"]
+http = ["dep:hyper", "dep:hyper-util", "dep:tokio", "dep:tokio-util", "dep:tracing-subscriber"]
+streamable-http = ["dep:hyper", "dep:hyper-util", "dep:futures-util", "dep:bytes", "dep:axum", "dep:tokio", "dep:tokio-util", "dep:tokio-stream", "dep:tracing-subscriber"]
 validation = ["dep:jsonschema", "dep:garde"]
 resource-watcher = ["dep:notify", "dep:glob-match"]
 # macros = ["dep:pmcp-macros", "dep:schemars"]
-wasm = ["getrandom/std", "websocket-wasm"]
+wasm = ["websocket-wasm", "uuid/js", "dep:futures-channel", "dep:futures-locks"]
 websocket-wasm = []
+wasm-tokio = ["dep:tokio", "dep:tokio-util", "dep:tracing-subscriber"]
 
 # Example features
 authentication_example = []
@@ -149,13 +152,11 @@ name = "simd_performance"
 harness = false
 
 [profile.release]
-lto = true
 codegen-units = 1
 opt-level = 3
 strip = true
 
 [profile.bench]
-lto = true
 codegen-units = 1
 opt-level = 3
 debug = true
@@ -266,7 +267,7 @@ path = "examples/24_streamable_http_client.rs"
 required-features = ["streamable-http"]
 
 [workspace]
-members = ["pmcp-macros"]
+members = ["pmcp-macros", "examples/wasm-client"]
 exclude = ["fuzz"]
 
 [package.metadata.docs.rs]

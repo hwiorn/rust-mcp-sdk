@@ -9,7 +9,10 @@ use futures::future::join_all;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::Semaphore;
+#[cfg(not(target_arch = "wasm32"))]
+use tokio::time::sleep;
 
 /// Configuration for parallel batch processing
 ///

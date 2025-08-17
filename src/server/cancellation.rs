@@ -4,7 +4,9 @@ use crate::error::Result;
 use crate::types::protocol::{CancelledNotification, Notification};
 use std::collections::HashMap;
 use std::sync::Arc;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::RwLock;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio_util::sync::CancellationToken;
 
 /// Manages cancellation tokens for requests.

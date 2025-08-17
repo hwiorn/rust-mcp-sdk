@@ -4,12 +4,16 @@
 //! fallback handlers, and circuit breakers for resilient error handling.
 
 use crate::error::{Error, ErrorCode, Result};
+use crate::shared::runtime;
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::RwLock;
+#[cfg(target_arch = "wasm32")]
+use futures_locks::RwLock;
 use tracing::{debug, error, info, warn};
 
 /// Error recovery strategy.
@@ -396,7 +400,7 @@ impl CircuitBreaker {
                 if *failure_count >= self.config.failure_threshold {
                     *self.state.write().await = CircuitState::Open;
                     *self.last_failure_time.write().await = Some(std::time::Instant::now());
-                    warn!("Circuit breaker opened after {} failures", failure_count);
+                    warn!("Circuit breaker opened after {} failures", *failure_count);
                 }
             },
             CircuitState::HalfOpen => {
@@ -541,7 +545,7 @@ impl RecoveryExecutor {
                 );
             }
 
-            tokio::time::sleep(delay).await;
+            runtime::sleep(delay).await;
 
             match operation().await {
                 Ok(result) => return Ok(result),
@@ -581,7 +585,7 @@ impl RecoveryExecutor {
                 );
             }
 
-            tokio::time::sleep(current_delay).await;
+            runtime::sleep(current_delay).await;
 
             match operation().await {
                 Ok(result) => return Ok(result),
@@ -708,7 +712,7 @@ where
 
     for attempt in 0..attempts {
         if attempt > 0 {
-            tokio::time::sleep(delay).await;
+            runtime::sleep(delay).await;
         }
 
         match operation().await {
@@ -722,7 +726,7 @@ where
     Err(last_error.unwrap_or_else(|| Error::internal("No attempts made")))
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicU32, Ordering};
@@ -778,7 +782,7 @@ mod tests {
         assert!(!cb.allow_request().await);
 
         // Wait for timeout
-        tokio::time::sleep(Duration::from_millis(150)).await;
+        runtime::sleep(Duration::from_millis(150)).await;
 
         // Should be half-open
         assert!(cb.allow_request().await);

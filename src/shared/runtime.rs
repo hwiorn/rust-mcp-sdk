@@ -12,6 +12,8 @@ use std::time::Duration;
 use tokio::time::sleep as tokio_sleep;
 
 #[cfg(target_arch = "wasm32")]
+use wasm_bindgen::JsCast;
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen_futures::JsFuture;
 #[cfg(target_arch = "wasm32")]
 use web_sys::window;
@@ -119,21 +121,25 @@ pub enum JoinHandle<T> {
     Wasm(Option<T>),
 }
 
-impl<T> Future for JoinHandle<T> {
+impl<T: Unpin> Future for JoinHandle<T> {
     type Output = Result<T, JoinError>;
 
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        match &mut *self {
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let this = self.get_mut();
+        match this {
             #[cfg(not(target_arch = "wasm32"))]
             Self::Native(handle) => Pin::new(handle)
                 .poll(cx)
                 .map_err(|e| JoinError(e.to_string())),
             #[cfg(target_arch = "wasm32")]
-            Self::Wasm(result) => Poll::Ready(
-                result
-                    .take()
-                    .ok_or_else(|| JoinError("Already consumed".to_string())),
-            ),
+            Self::Wasm(result) => {
+                let _ = cx; // Unused in WASM
+                Poll::Ready(
+                    result
+                        .take()
+                        .ok_or_else(|| JoinError("Already consumed".to_string())),
+                )
+            }
         }
     }
 }

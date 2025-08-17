@@ -7,8 +7,19 @@ use crate::error::{Error, ErrorCode, Result};
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::{Mutex, RwLock};
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::time::sleep;
+#[cfg(target_arch = "wasm32")]
+use futures::lock::{Mutex, RwLock};
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_futures::wasm_bindgen::JsValue;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_futures::JsFuture;
+#[cfg(target_arch = "wasm32")]
+use web_sys::window;
+
 use tracing::{debug, info, warn};
 
 /// Reconnection configuration.

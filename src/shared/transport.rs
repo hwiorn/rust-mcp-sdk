@@ -194,6 +194,10 @@ impl Default for MessagePriority {
 ///     }
 /// }
 /// ```
+// On native targets, transports must be Send + Sync so they can be used from
+// multi-threaded runtimes. In WASM (single-threaded), we relax this to avoid
+// forcing Send/Sync on Web APIs (e.g., web_sys::WebSocket).
+#[cfg(not(target_arch = "wasm32"))]
 #[async_trait]
 pub trait Transport: Send + Sync + Debug {
     /// Send a message over the transport.
@@ -217,6 +221,29 @@ pub trait Transport: Send + Sync + Debug {
     /// Check if the transport is still connected.
     ///
     /// Default implementation always returns true.
+    fn is_connected(&self) -> bool {
+        true
+    }
+
+    /// Get the transport type name for debugging.
+    fn transport_type(&self) -> &'static str {
+        "unknown"
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+#[async_trait(?Send)]
+pub trait Transport: Debug {
+    /// Send a message over the transport.
+    async fn send(&mut self, message: TransportMessage) -> Result<()>;
+
+    /// Receive a message from the transport.
+    async fn receive(&mut self) -> Result<TransportMessage>;
+
+    /// Close the transport.
+    async fn close(&mut self) -> Result<()>;
+
+    /// Check if the transport is still connected.
     fn is_connected(&self) -> bool {
         true
     }

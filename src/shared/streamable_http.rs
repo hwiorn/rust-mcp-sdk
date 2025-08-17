@@ -10,6 +10,7 @@ use parking_lot::RwLock;
 use reqwest::{Client, RequestBuilder, Response};
 use std::fmt::Debug;
 use std::sync::Arc;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::mpsc;
 use url::Url;
 

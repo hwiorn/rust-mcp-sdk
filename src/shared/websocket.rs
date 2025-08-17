@@ -7,8 +7,11 @@ use futures::{SinkExt, StreamExt};
 use parking_lot::RwLock;
 use std::sync::Arc;
 use std::time::Duration;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::mpsc;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::Mutex as AsyncMutex;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::time::{interval, sleep};
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 use tracing::{debug, error, info, warn};

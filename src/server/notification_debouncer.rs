@@ -9,7 +9,9 @@ use crate::types::protocol::ServerNotification;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::{mpsc, RwLock};
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::time::{interval, sleep, Instant};
 use tracing::{debug, trace, warn};
 

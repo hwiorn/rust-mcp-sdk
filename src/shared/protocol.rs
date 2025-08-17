@@ -3,11 +3,15 @@
 //! This module provides the core protocol state machine and request handling.
 
 use crate::error::Result;
+use crate::shared::runtime::{self, Mutex};
 use crate::types::{JSONRPCResponse, RequestId};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::oneshot;
+#[cfg(target_arch = "wasm32")]
+use futures_channel::oneshot;
 
 /// Progress callback type.
 pub type ProgressCallback = Box<dyn Fn(u64, Option<u64>) + Send + Sync>;
@@ -93,7 +97,7 @@ struct RequestContext {
     /// Transport ID that initiated the request.
     transport_id: TransportId,
     /// Response sender.
-    sender: Arc<tokio::sync::Mutex<Option<oneshot::Sender<JSONRPCResponse>>>>,
+    sender: Arc<Mutex<Option<oneshot::Sender<JSONRPCResponse>>>>,
 }
 
 /// Protocol state machine for handling JSON-RPC communication.
@@ -174,7 +178,7 @@ impl Protocol {
         let (tx, rx) = oneshot::channel();
         let context = RequestContext {
             transport_id: self.transport_id.clone(),
-            sender: Arc::new(tokio::sync::Mutex::new(Some(tx))),
+            sender: Arc::new(Mutex::new(Some(tx))),
         };
         self.pending_requests.insert(id, context);
         rx
@@ -188,8 +192,11 @@ impl Protocol {
             if context.transport_id == self.transport_id {
                 // Use async runtime to send response
                 let sender = context.sender;
-                tokio::spawn(async move {
+                runtime::spawn(async move {
+                    #[cfg(not(target_arch = "wasm32"))]
                     let tx_option = sender.lock().await.take();
+                    #[cfg(target_arch = "wasm32")]
+                    let tx_option = sender.lock().unwrap().take();
                     if let Some(tx) = tx_option {
                         let _ = tx.send(response);
                     }
@@ -255,8 +262,11 @@ impl Protocol {
             if &context.transport_id == transport_id {
                 if let Some(context) = self.pending_requests.remove(id) {
                     let sender = context.sender;
-                    tokio::spawn(async move {
+                    runtime::spawn(async move {
+                        #[cfg(not(target_arch = "wasm32"))]
                         let tx_option = sender.lock().await.take();
+                        #[cfg(target_arch = "wasm32")]
+                        let tx_option = sender.lock().unwrap().take();
                         if let Some(tx) = tx_option {
                             let _ = tx.send(response);
                         }
@@ -274,7 +284,7 @@ impl Protocol {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

@@ -21,6 +21,7 @@ use std::collections::HashMap;
 use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::sync::Arc;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use uuid::Uuid;
@@ -241,7 +242,9 @@ fn create_error_response(status: StatusCode, code: i32, message: &str) -> Respon
         "id": null
     });
 
-    (status, Json(error_body)).into_response()
+    let mut resp = (status, Json(error_body)).into_response();
+    add_cors_headers(resp.headers_mut());
+    resp
 }
 
 impl StreamableHttpServer {
@@ -272,6 +275,7 @@ impl StreamableHttpServer {
             .route("/", post(handle_post_request))
             .route("/", get(handle_get_sse))
             .route("/", delete(handle_delete_session))
+            .route("/", axum::routing::options(handle_options))
             .with_state(self.state);
 
         let listener = tokio::net::TcpListener::bind(self.addr).await?;
@@ -467,7 +471,9 @@ fn build_response(
 ) -> Response {
     if state.config.enable_json_response {
         // JSON response mode
-        (StatusCode::OK, Json(response)).into_response()
+        let mut resp = (StatusCode::OK, Json(response)).into_response();
+        add_cors_headers(resp.headers_mut());
+        resp
     } else {
         // SSE streaming mode
         if let Some(sid) = session_id {
@@ -669,9 +675,15 @@ async fn handle_post_request(
         },
         TransportMessage::Notification { .. } => {
             // Notifications get 202 Accepted
-            StatusCode::ACCEPTED.into_response()
+            let mut resp = StatusCode::ACCEPTED.into_response();
+            add_cors_headers(resp.headers_mut());
+            resp
         },
-        TransportMessage::Response(_) => StatusCode::ACCEPTED.into_response(),
+        TransportMessage::Response(_) => {
+            let mut resp = StatusCode::ACCEPTED.into_response();
+            add_cors_headers(resp.headers_mut());
+            resp
+        },
     }
 }
 
@@ -776,6 +788,9 @@ async fn handle_get_sse(State(state): State<ServerState>, headers: HeaderMap) ->
 
     let mut response = sse.into_response();
 
+    // Add CORS headers
+    add_cors_headers(response.headers_mut());
+
     // Add session ID header
     response
         .headers_mut()
@@ -825,9 +840,28 @@ async fn handle_delete_session(
             callback(&sid);
         }
 
-        (StatusCode::OK, Json(json!({"status": "ok"}))).into_response()
+        let mut resp = (StatusCode::OK, Json(json!({"status": "ok"}))).into_response();
+        add_cors_headers(resp.headers_mut());
+        resp
     } else {
         // No session to delete
         create_error_response(StatusCode::NOT_FOUND, -32600, "No session ID provided")
     }
+}
+
+/// Add CORS headers to a HeaderMap
+fn add_cors_headers(headers: &mut HeaderMap) {
+    headers.insert("Access-Control-Allow-Origin", HeaderValue::from_static("*"));
+    headers.insert("Access-Control-Allow-Methods", HeaderValue::from_static("GET, POST, DELETE, OPTIONS"));
+    headers.insert("Access-Control-Allow-Headers", HeaderValue::from_static("Content-Type, Accept, mcp-session-id, mcp-protocol-version, last-event-id"));
+    headers.insert("Access-Control-Expose-Headers", HeaderValue::from_static("mcp-session-id, mcp-protocol-version"));
+}
+
+/// Handle OPTIONS request for CORS preflight
+async fn handle_options() -> impl IntoResponse {
+    let mut headers = HeaderMap::new();
+    add_cors_headers(&mut headers);
+    headers.insert("Access-Control-Max-Age", HeaderValue::from_static("86400"));
+    
+    (StatusCode::OK, headers, "")
 }
