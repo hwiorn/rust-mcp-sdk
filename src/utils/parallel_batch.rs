@@ -11,8 +11,6 @@ use std::pin::Pin;
 use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::Semaphore;
-#[cfg(not(target_arch = "wasm32"))]
-use tokio::time::sleep;
 
 /// Configuration for parallel batch processing
 ///
@@ -490,6 +488,7 @@ pub type BatchProcessingFuture = Pin<Box<dyn Future<Output = Result<Vec<JSONRPCR
 /// # Ok(())
 /// # }
 /// ```
+#[cfg(not(target_arch = "wasm32"))]
 pub fn rate_limited_processor(
     max_requests_per_second: usize,
     config: ParallelBatchConfig,
