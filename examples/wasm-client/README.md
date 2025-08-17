@@ -51,23 +51,31 @@ This example demonstrates a browser-based MCP client built with WebAssembly that
 
 3. Start one of the example MCP servers:
 
-   **For Stateless HTTP Server (recommended for first test):**
+   **Option A: Stateless HTTP Server (recommended for serverless/Lambda-style deployments):**
    ```bash
    cargo run --example 23_streamable_http_server_stateless --features streamable-http
    ```
-   The server will run on `http://localhost:8081`
+   - Runs on `http://localhost:8081`
+   - No session management (perfect for serverless)
+   - Simple request/response pattern
+   - CORS enabled for browser access
 
-   **For Stateful HTTP Server:**
+   **Option B: Stateful HTTP Server (traditional server with sessions):**
    ```bash
    cargo run --example 22_streamable_http_server_stateful --features streamable-http
    ```
-   The server will run on `http://localhost:3000`
+   - Runs on `http://localhost:3000`
+   - Session management with unique IDs
+   - Supports SSE for real-time updates
+   - CORS enabled for browser access
 
-   **For WebSocket Server:**
+   **Option C: WebSocket Server:**
    ```bash
    cargo run --example 13_websocket_transport --features websocket
    ```
-   The server will run on `ws://localhost:8080`
+   - Runs on `ws://localhost:8080`
+   - Persistent connection
+   - Bidirectional communication
 
 4. In the browser interface:
    - The appropriate server URL should already be selected
@@ -80,6 +88,14 @@ This example demonstrates a browser-based MCP client built with WebAssembly that
 The client automatically selects the transport based on the URL scheme:
 - `http://` or `https://` → HTTP transport (for stateless/stateful servers)
 - `ws://` or `wss://` → WebSocket transport
+
+### Which Transport Should I Use?
+
+| Transport | Best For | Pros | Cons |
+|-----------|----------|------|------|
+| **Stateless HTTP** | Serverless (Lambda, Vercel) | No session overhead, scales horizontally, simple deployment | No real-time updates, higher latency |
+| **Stateful HTTP** | Traditional servers | Session management, SSE support, moderate complexity | Requires sticky sessions for scaling |
+| **WebSocket** | Real-time applications | Lowest latency, bidirectional, persistent connection | More complex deployment, harder to scale |
 
 ## Example Tool Calls
 
@@ -124,13 +140,55 @@ For the browser to connect to your MCP server, the server must send appropriate 
 
 The example servers (22, 23) already include proper CORS configuration.
 
+## Using the WASM Client Programmatically
+
+You can also use the WASM client in your own JavaScript/TypeScript applications:
+
+```javascript
+import init, { WasmClient } from './pkg/mcp_wasm_client.js';
+
+async function connectToMCP() {
+    // Initialize the WASM module
+    await init();
+    
+    // Create a new client
+    const client = new WasmClient();
+    
+    // Connect to a server (auto-detects transport type)
+    await client.connect("http://localhost:8081");  // HTTP
+    // or
+    // await client.connect("ws://localhost:8080");  // WebSocket
+    
+    // List available tools
+    const tools = await client.list_tools();
+    console.log("Available tools:", tools);
+    
+    // Call a tool
+    const result = await client.call_tool("echo", {
+        message: "Hello from JavaScript!"
+    });
+    console.log("Tool result:", result);
+}
+```
+
 ## Architecture
 
 The WASM client consists of:
 - **Rust WASM Module** (`src/lib.rs`): Core MCP client logic compiled to WebAssembly
-- **HTTP Transport**: Browser Fetch API-based transport for HTTP servers
-- **WebSocket Transport**: Browser WebSocket API-based transport
+- **HTTP Transport** (`src/shared/wasm_http.rs`): Browser Fetch API-based transport for HTTP servers
+- **WebSocket Transport** (`src/shared/wasm_websocket.rs`): Browser WebSocket API-based transport
 - **HTML Interface** (`index.html`): Interactive UI for testing the client
+- **Auto-detection**: Automatically selects transport based on URL scheme
+
+### Integration with Examples 22, 23, 24
+
+This WASM client works seamlessly with the streamable HTTP server examples:
+
+- **Example 22 (Stateful)**: Full session management with SSE support
+- **Example 23 (Stateless)**: Optimized for serverless deployments without sessions
+- **Example 24 (Client)**: Demonstrates native Rust client with same transport
+
+All three examples share the same transport protocol, allowing this WASM client to connect to any of them.
 
 ## Troubleshooting
 
