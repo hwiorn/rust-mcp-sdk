@@ -6,14 +6,14 @@
 use crate::error::{Error, ErrorCode, Result};
 use crate::shared::runtime;
 use async_trait::async_trait;
+#[cfg(target_arch = "wasm32")]
+use futures_locks::RwLock;
 use std::collections::HashMap;
 use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
 #[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::RwLock;
-#[cfg(target_arch = "wasm32")]
-use futures_locks::RwLock;
 use tracing::{debug, error, info, warn};
 
 /// Error recovery strategy.

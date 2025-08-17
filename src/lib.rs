@@ -93,14 +93,13 @@ pub use server::{
     cancellation::RequestHandlerExtra, PromptHandler, ResourceHandler, SamplingHandler, Server,
     ServerBuilder, ToolHandler,
 };
+#[cfg(not(target_arch = "wasm32"))]
+pub use shared::StdioTransport;
 pub use shared::{
     batch::{BatchRequest, BatchResponse},
     uri_template::UriTemplate,
-    AuthMiddleware, LoggingMiddleware, Middleware, MiddlewareChain, RetryMiddleware,
-    Transport,
+    AuthMiddleware, LoggingMiddleware, Middleware, MiddlewareChain, RetryMiddleware, Transport,
 };
-#[cfg(not(target_arch = "wasm32"))]
-pub use shared::StdioTransport;
 
 #[cfg(all(feature = "websocket", not(target_arch = "wasm32")))]
 pub use shared::{WebSocketConfig, WebSocketTransport};

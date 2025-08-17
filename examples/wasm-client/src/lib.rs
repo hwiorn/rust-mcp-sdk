@@ -28,7 +28,11 @@ struct StructuredError {
 impl From<pmcp::Error> for StructuredError {
     fn from(err: pmcp::Error) -> Self {
         match err {
-            pmcp::Error::Protocol { code, message, data } => Self {
+            pmcp::Error::Protocol {
+                code,
+                message,
+                data,
+            } => Self {
                 message,
                 code: Some(code.as_i32()),
                 data,
@@ -78,7 +82,7 @@ impl WasmClient {
         }
     }
 
-    /// Connect to an MCP server. 
+    /// Connect to an MCP server.
     /// - URLs starting with ws:// or wss:// will use WebSocket
     /// - URLs starting with http:// or https:// will use HTTP
     #[wasm_bindgen]
@@ -105,7 +109,7 @@ impl WasmClient {
                 extra_headers: vec![],
             };
             let mut client = WasmHttpClient::new(config);
-            
+
             // Initialize the connection - wrap in TransportMessage
             let init_request = pmcp::shared::TransportMessage::Request {
                 id: 1i64.into(),
@@ -120,20 +124,37 @@ impl WasmClient {
                     }),
                 )),
             };
-            
-            let response: pmcp::shared::TransportMessage = client.request(init_request).await.map_err(to_js_error)?;
-            
+
+            let response: pmcp::shared::TransportMessage =
+                client.request(init_request).await.map_err(to_js_error)?;
+
             // Verify we got a successful initialization response
             if let pmcp::shared::TransportMessage::Response(resp) = response {
                 if let pmcp::types::jsonrpc::ResponsePayload::Result(_) = resp.payload {
-                    console::log_1(&format!("HTTP connection successful. Session: {:?}", client.session_id()).into());
+                    console::log_1(
+                        &format!(
+                            "HTTP connection successful. Session: {:?}",
+                            client.session_id()
+                        )
+                        .into(),
+                    );
                 } else {
-                    return Err(new_js_error("Invalid initialization response".to_string(), None, JsValue::NULL).into());
+                    return Err(new_js_error(
+                        "Invalid initialization response".to_string(),
+                        None,
+                        JsValue::NULL,
+                    )
+                    .into());
                 }
             } else {
-                return Err(new_js_error("Expected response message".to_string(), None, JsValue::NULL).into());
+                return Err(new_js_error(
+                    "Expected response message".to_string(),
+                    None,
+                    JsValue::NULL,
+                )
+                .into());
             }
-            
+
             self.http_client = Some(client);
         } else {
             return Err(new_js_error(
@@ -152,19 +173,17 @@ impl WasmClient {
     pub async fn list_tools(&mut self) -> Result<JsValue, JsValue> {
         match self.connection_type {
             Some(ConnectionType::WebSocket) => {
-                let client = self
-                    .ws_client
-                    .as_mut()
-                    .ok_or_else(|| new_js_error("Not connected".to_string(), None, JsValue::NULL))?;
+                let client = self.ws_client.as_mut().ok_or_else(|| {
+                    new_js_error("Not connected".to_string(), None, JsValue::NULL)
+                })?;
                 let result = client.list_tools(None).await.map_err(to_js_error)?;
                 serde_wasm_bindgen::to_value(&result.tools).map_err(|e| e.into())
-            }
+            },
             Some(ConnectionType::Http) => {
-                let client = self
-                    .http_client
-                    .as_mut()
-                    .ok_or_else(|| new_js_error("Not connected".to_string(), None, JsValue::NULL))?;
-                
+                let client = self.http_client.as_mut().ok_or_else(|| {
+                    new_js_error("Not connected".to_string(), None, JsValue::NULL)
+                })?;
+
                 // Create list tools request as TransportMessage
                 let request = pmcp::shared::TransportMessage::Request {
                     id: 2i64.into(),
@@ -174,20 +193,29 @@ impl WasmClient {
                         }),
                     )),
                 };
-                
-                let response: pmcp::shared::TransportMessage = client.request(request).await.map_err(to_js_error)?;
-                
+
+                let response: pmcp::shared::TransportMessage =
+                    client.request(request).await.map_err(to_js_error)?;
+
                 // Extract tools from response
                 if let pmcp::shared::TransportMessage::Response(resp) = response {
                     if let pmcp::types::jsonrpc::ResponsePayload::Result(value) = resp.payload {
-                        if let Ok(result) = serde_json::from_value::<pmcp::types::ListToolsResult>(value) {
-                            return serde_wasm_bindgen::to_value(&result.tools).map_err(|e| e.into());
+                        if let Ok(result) =
+                            serde_json::from_value::<pmcp::types::ListToolsResult>(value)
+                        {
+                            return serde_wasm_bindgen::to_value(&result.tools)
+                                .map_err(|e| e.into());
                         }
                     }
                 }
-                
-                Err(new_js_error("Invalid response from server".to_string(), None, JsValue::NULL).into())
-            }
+
+                Err(new_js_error(
+                    "Invalid response from server".to_string(),
+                    None,
+                    JsValue::NULL,
+                )
+                .into())
+            },
             None => Err(new_js_error("Not connected".to_string(), None, JsValue::NULL).into()),
         }
     }
@@ -199,19 +227,20 @@ impl WasmClient {
 
         match self.connection_type {
             Some(ConnectionType::WebSocket) => {
-                let client = self
-                    .ws_client
-                    .as_mut()
-                    .ok_or_else(|| new_js_error("Not connected".to_string(), None, JsValue::NULL))?;
-                let result = client.call_tool(name, arguments).await.map_err(to_js_error)?;
+                let client = self.ws_client.as_mut().ok_or_else(|| {
+                    new_js_error("Not connected".to_string(), None, JsValue::NULL)
+                })?;
+                let result = client
+                    .call_tool(name, arguments)
+                    .await
+                    .map_err(to_js_error)?;
                 serde_wasm_bindgen::to_value(&result).map_err(|e| e.into())
-            }
+            },
             Some(ConnectionType::Http) => {
-                let client = self
-                    .http_client
-                    .as_mut()
-                    .ok_or_else(|| new_js_error("Not connected".to_string(), None, JsValue::NULL))?;
-                
+                let client = self.http_client.as_mut().ok_or_else(|| {
+                    new_js_error("Not connected".to_string(), None, JsValue::NULL)
+                })?;
+
                 // Create call tool request as TransportMessage
                 let request = pmcp::shared::TransportMessage::Request {
                     id: 3i64.into(), // TODO: Implement proper request ID tracking
@@ -222,20 +251,28 @@ impl WasmClient {
                         }),
                     )),
                 };
-                
-                let response: pmcp::shared::TransportMessage = client.request(request).await.map_err(to_js_error)?;
-                
+
+                let response: pmcp::shared::TransportMessage =
+                    client.request(request).await.map_err(to_js_error)?;
+
                 // Extract result from response
                 if let pmcp::shared::TransportMessage::Response(resp) = response {
                     if let pmcp::types::jsonrpc::ResponsePayload::Result(value) = resp.payload {
-                        if let Ok(result) = serde_json::from_value::<pmcp::types::CallToolResult>(value) {
+                        if let Ok(result) =
+                            serde_json::from_value::<pmcp::types::CallToolResult>(value)
+                        {
                             return serde_wasm_bindgen::to_value(&result).map_err(|e| e.into());
                         }
                     }
                 }
-                
-                Err(new_js_error("Invalid response from server".to_string(), None, JsValue::NULL).into())
-            }
+
+                Err(new_js_error(
+                    "Invalid response from server".to_string(),
+                    None,
+                    JsValue::NULL,
+                )
+                .into())
+            },
             None => Err(new_js_error("Not connected".to_string(), None, JsValue::NULL).into()),
         }
     }
@@ -252,10 +289,8 @@ impl WasmClient {
         match self.connection_type {
             Some(ConnectionType::WebSocket) => {
                 self.ws_client.as_ref().and_then(|_| None) // WebSocket client doesn't expose session directly
-            }
-            Some(ConnectionType::Http) => {
-                self.http_client.as_ref().and_then(|c| c.session_id())
-            }
+            },
+            Some(ConnectionType::Http) => self.http_client.as_ref().and_then(|c| c.session_id()),
             None => None,
         }
     }

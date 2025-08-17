@@ -5,13 +5,13 @@
 use crate::error::Result;
 use crate::shared::runtime::{self, Mutex};
 use crate::types::{JSONRPCResponse, RequestId};
+#[cfg(target_arch = "wasm32")]
+use futures_channel::oneshot;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 #[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::oneshot;
-#[cfg(target_arch = "wasm32")]
-use futures_channel::oneshot;
 
 /// Progress callback type.
 pub type ProgressCallback = Box<dyn Fn(u64, Option<u64>) + Send + Sync>;

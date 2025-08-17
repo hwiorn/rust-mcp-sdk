@@ -74,45 +74,50 @@ impl WasmHttpTransport {
         // Serialize the message
         let body = serde_json::to_string(message)
             .map_err(|e| Error::internal(format!("Failed to serialize message: {}", e)))?;
-        
+
         let response_text = self.do_http_request(&body).await?;
-        
+
         // Parse as TransportMessage
         serde_json::from_str(&response_text)
             .map_err(|e| Error::internal(format!("Failed to parse response: {}", e)))
     }
-    
+
     /// Perform an HTTP request and return the raw response text.
     async fn do_http_request(&mut self, body: &str) -> Result<String> {
         // Get window object
-        let window = web_sys::window()
-            .ok_or_else(|| Error::internal("No window object available"))?;
+        let window =
+            web_sys::window().ok_or_else(|| Error::internal("No window object available"))?;
 
         // Create headers
         let headers = Headers::new()
             .map_err(|e| Error::internal(format!("Failed to create headers: {:?}", e)))?;
-        
-        headers.set("Content-Type", "application/json")
+
+        headers
+            .set("Content-Type", "application/json")
             .map_err(|e| Error::internal(format!("Failed to set Content-Type: {:?}", e)))?;
-        
-        headers.set("Accept", "application/json")
+
+        headers
+            .set("Accept", "application/json")
             .map_err(|e| Error::internal(format!("Failed to set Accept: {:?}", e)))?;
 
         // Add session ID if present
         if let Some(ref session_id) = self.session_id {
-            headers.set("mcp-session-id", session_id)
+            headers
+                .set("mcp-session-id", session_id)
                 .map_err(|e| Error::internal(format!("Failed to set session ID: {:?}", e)))?;
         }
 
         // Add protocol version if present
         if let Some(ref version) = self.protocol_version {
-            headers.set("mcp-protocol-version", version)
+            headers
+                .set("mcp-protocol-version", version)
                 .map_err(|e| Error::internal(format!("Failed to set protocol version: {:?}", e)))?;
         }
 
         // Add extra headers
         for (key, value) in &self.config.extra_headers {
-            headers.set(key, value)
+            headers
+                .set(key, value)
                 .map_err(|e| Error::internal(format!("Failed to set header {}: {:?}", key, e)))?;
         }
 
@@ -141,22 +146,24 @@ impl WasmHttpTransport {
         if !response.ok() {
             let status = response.status();
             let text = JsFuture::from(
-                response.text()
-                    .map_err(|e| Error::internal(format!("Failed to get error text: {:?}", e)))?
+                response
+                    .text()
+                    .map_err(|e| Error::internal(format!("Failed to get error text: {:?}", e)))?,
             )
             .await
             .map_err(|e| Error::internal(format!("Failed to read error text: {:?}", e)))?;
-            
+
             return Err(Error::internal(format!(
                 "HTTP error {}: {}",
                 status,
-                text.as_string().unwrap_or_else(|| "Unknown error".to_string())
+                text.as_string()
+                    .unwrap_or_else(|| "Unknown error".to_string())
             )));
         }
 
         // Extract headers
         let response_headers = response.headers();
-        
+
         // Update session ID if present in response
         if let Ok(Some(session_id)) = response_headers.get("mcp-session-id") {
             self.session_id = Some(session_id);
@@ -169,8 +176,9 @@ impl WasmHttpTransport {
 
         // Parse response body
         let text = JsFuture::from(
-            response.text()
-                .map_err(|e| Error::internal(format!("Failed to get response text: {:?}", e)))?
+            response
+                .text()
+                .map_err(|e| Error::internal(format!("Failed to get response text: {:?}", e)))?,
         )
         .await
         .map_err(|e| Error::internal(format!("Failed to read response text: {:?}", e)))?;
@@ -186,17 +194,17 @@ impl Transport for WasmHttpTransport {
         // For HTTP transport, we need to send and receive in one operation
         // Store the message for the next receive call
         // This is a simplified approach - in practice you might want to queue messages
-        
+
         // Actually, for stateless HTTP, send and receive are coupled
         // We'll handle this in receive() by sending the queued message
-        
+
         // For now, we'll do a request-response immediately
         let _response = self.do_request(&message).await?;
-        
+
         // Store response for next receive() call
         // This is a limitation of the Transport trait design for HTTP
         // In a real implementation, you might want to use a different pattern
-        
+
         Ok(())
     }
 
@@ -204,7 +212,9 @@ impl Transport for WasmHttpTransport {
         // In HTTP transport, receive() doesn't make sense without a prior send()
         // This is a limitation of using the Transport trait for HTTP
         // For now, return an error
-        Err(Error::internal("HTTP transport requires send() before receive()"))
+        Err(Error::internal(
+            "HTTP transport requires send() before receive()",
+        ))
     }
 
     async fn close(&mut self) -> Result<()> {
@@ -228,17 +238,17 @@ impl WasmHttpClient {
     }
 
     /// Send a request and wait for response.
-    pub async fn request<R>(&mut self, request: impl serde::Serialize) -> Result<R> 
+    pub async fn request<R>(&mut self, request: impl serde::Serialize) -> Result<R>
     where
         R: serde::de::DeserializeOwned,
     {
         // Serialize the request
         let body = serde_json::to_string(&request)
             .map_err(|e| Error::internal(format!("Failed to serialize request: {}", e)))?;
-        
+
         // Perform the HTTP request
         let response_text = self.transport.do_http_request(&body).await?;
-        
+
         // Parse the response
         serde_json::from_str(&response_text)
             .map_err(|e| Error::internal(format!("Failed to parse response: {}", e)))

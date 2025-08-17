@@ -852,9 +852,20 @@ async fn handle_delete_session(
 /// Add CORS headers to a HeaderMap
 fn add_cors_headers(headers: &mut HeaderMap) {
     headers.insert("Access-Control-Allow-Origin", HeaderValue::from_static("*"));
-    headers.insert("Access-Control-Allow-Methods", HeaderValue::from_static("GET, POST, DELETE, OPTIONS"));
-    headers.insert("Access-Control-Allow-Headers", HeaderValue::from_static("Content-Type, Accept, mcp-session-id, mcp-protocol-version, last-event-id"));
-    headers.insert("Access-Control-Expose-Headers", HeaderValue::from_static("mcp-session-id, mcp-protocol-version"));
+    headers.insert(
+        "Access-Control-Allow-Methods",
+        HeaderValue::from_static("GET, POST, DELETE, OPTIONS"),
+    );
+    headers.insert(
+        "Access-Control-Allow-Headers",
+        HeaderValue::from_static(
+            "Content-Type, Accept, mcp-session-id, mcp-protocol-version, last-event-id",
+        ),
+    );
+    headers.insert(
+        "Access-Control-Expose-Headers",
+        HeaderValue::from_static("mcp-session-id, mcp-protocol-version"),
+    );
 }
 
 /// Handle OPTIONS request for CORS preflight
@@ -862,6 +873,6 @@ async fn handle_options() -> impl IntoResponse {
     let mut headers = HeaderMap::new();
     add_cors_headers(&mut headers);
     headers.insert("Access-Control-Max-Age", HeaderValue::from_static("86400"));
-    
+
     (StatusCode::OK, headers, "")
 }

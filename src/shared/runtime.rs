@@ -139,7 +139,7 @@ impl<T: Unpin> Future for JoinHandle<T> {
                         .take()
                         .ok_or_else(|| JoinError("Already consumed".to_string())),
                 )
-            }
+            },
         }
     }
 }

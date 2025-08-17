@@ -132,7 +132,7 @@ where
         }
         responses
     };
-    
+
     // For WASM, always process sequentially
     #[cfg(target_arch = "wasm32")]
     let responses = {

@@ -55,11 +55,12 @@ impl WasmWebSocketTransport {
     /// # }
     /// ```
     pub async fn connect(url: &str) -> Result<Self> {
-        let ws = WebSocket::new(url)
-            .map_err(|e| Error::Transport(TransportError::InvalidMessage(format!(
+        let ws = WebSocket::new(url).map_err(|e| {
+            Error::Transport(TransportError::InvalidMessage(format!(
                 "Failed to create WebSocket: {:?}",
                 e
-            ))))?;
+            )))
+        })?;
 
         // Set binary type to arraybuffer for efficiency
         ws.set_binary_type(web_sys::BinaryType::Arraybuffer);
@@ -132,12 +133,12 @@ impl Transport for WasmWebSocketTransport {
         let json = serialize_transport_message(message)?;
         let text = serde_json::to_string(&json)?;
 
-        self.ws
-            .send_with_str(&text)
-            .map_err(|e| Error::Transport(TransportError::Send(format!(
+        self.ws.send_with_str(&text).map_err(|e| {
+            Error::Transport(TransportError::Send(format!(
                 "Failed to send message: {:?}",
                 e
-            ))))?;
+            )))
+        })?;
 
         Ok(())
     }
@@ -150,12 +151,12 @@ impl Transport for WasmWebSocketTransport {
     }
 
     async fn close(&mut self) -> Result<()> {
-        self.ws
-            .close()
-            .map_err(|e| Error::Transport(TransportError::Io(format!(
+        self.ws.close().map_err(|e| {
+            Error::Transport(TransportError::Io(format!(
                 "Failed to close WebSocket: {:?}",
                 e
-            ))))?;
+            )))
+        })?;
         Ok(())
     }
 }
