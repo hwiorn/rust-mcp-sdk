@@ -1,0 +1,36 @@
+[package]
+name = "oauth-basic"
+version = "0.1.0"
+edition = "2021"
+description = "OAuth authentication example for MCP servers using the Rust SDK"
+license = "MIT"
+repository = "https://github.com/anthropics/claude-code"
+keywords = ["mcp", "oauth", "authentication", "authorization", "protocol"]
+categories = ["authentication", "network-programming"]
+
+[[bin]]
+name = "oauth-basic"
+path = "src/main.rs"
+
+[[bin]]
+name = "test-client"
+path = "test-client.rs"
+
+[[bin]]
+name = "stdio-minimal"
+path = "stdio-minimal.rs"
+
+[dependencies]
+pmcp = { path = "../../", features = ["streamable-http"] }
+tokio = { version = "1", features = ["full"] }
+serde_json = "1"
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+async-trait = "0.1"
+chrono = "0.4"
+url = "2.5"
+
+[features]
+default = ["streamable-http"]
+streamable-http = ["pmcp/streamable-http"]

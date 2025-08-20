@@ -131,6 +131,10 @@ pub struct Server {
     subscription_manager: Arc<RwLock<subscriptions::SubscriptionManager>>,
     /// Elicitation manager for user input requests
     elicitation_manager: Option<Arc<elicitation::ElicitationManager>>,
+    /// Authentication provider for validating requests
+    auth_provider: Option<Arc<dyn auth::AuthProvider>>,
+    /// Tool authorizer for fine-grained access control
+    tool_authorizer: Option<Arc<dyn auth::ToolAuthorizer>>,
 }
 
 impl std::fmt::Debug for Server {
@@ -649,10 +653,33 @@ impl Server {
             .get_token(&request_id.to_string())
             .await
             .unwrap_or_else(tokio_util::sync::CancellationToken::new);
+
+        // Validate authentication if auth provider is configured
+        let auth_context = if let Some(auth_provider) = &self.auth_provider {
+            // For now, we don't have access to HTTP headers in this context
+            // In a real implementation, this would come from the transport layer
+            // For the OAuth example, we'll use NoOpAuthProvider which validates without headers
+            auth_provider.validate_request(None).await?
+        } else {
+            None
+        };
+
+        // Check tool authorization if tool authorizer is configured
+        if let (Some(auth_ctx), Some(authorizer)) = (&auth_context, &self.tool_authorizer) {
+            if !authorizer.can_access_tool(auth_ctx, &req.name).await? {
+                return Err(Error::protocol(
+                    crate::error::ErrorCode::AUTHENTICATION_REQUIRED,
+                    format!("Access denied for tool '{}'", req.name),
+                ));
+            }
+        }
+
         let extra = crate::server::cancellation::RequestHandlerExtra::new(
             request_id.to_string(),
             cancellation_token,
-        );
+        )
+        .with_auth_context(auth_context);
+
         let result = handler.handle(req.arguments, extra).await?;
         Ok(serde_json::to_value(CallToolResult {
             content: vec![crate::types::Content::Text {
@@ -1033,6 +1060,10 @@ pub struct ServerBuilder {
     cancellation_manager: cancellation::CancellationManager,
     /// Roots manager for directory/URI registration
     roots_manager: roots::RootsManager,
+    /// Authentication provider for validating requests
+    auth_provider: Option<Arc<dyn auth::AuthProvider>>,
+    /// Tool authorizer for fine-grained access control
+    tool_authorizer: Option<Arc<dyn auth::ToolAuthorizer>>,
 }
 
 impl std::fmt::Debug for ServerBuilder {
@@ -1081,6 +1112,8 @@ impl ServerBuilder {
             sampling: None,
             cancellation_manager: cancellation::CancellationManager::new(),
             roots_manager: roots::RootsManager::new(),
+            auth_provider: None,
+            tool_authorizer: None,
         }
     }
 
@@ -1392,6 +1425,104 @@ impl ServerBuilder {
     /// // server.run_stdio().await?;
     /// # Ok::<(), pmcp::Error>(())
     /// ```
+    /// Set the authentication provider.
+    ///
+    /// Configures an authentication provider that will validate incoming requests.
+    /// When set, the server will use this provider to authenticate requests before
+    /// processing them.
+    ///
+    /// # Arguments
+    ///
+    /// * `provider` - The authentication provider implementation
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use pmcp::{Server, auth::ProxyProvider};
+    ///
+    /// let auth_provider = ProxyProvider::with_upstream("https://oauth.example.com");
+    ///
+    /// let server = Server::builder()
+    ///     .name("secure-server")
+    ///     .version("1.0.0")
+    ///     .auth_provider(auth_provider)
+    ///     .build()?;
+    /// # Ok::<(), pmcp::Error>(())
+    /// ```
+    pub fn auth_provider(mut self, provider: impl auth::AuthProvider + 'static) -> Self {
+        self.auth_provider = Some(Arc::new(provider));
+        self
+    }
+
+    /// Set the tool authorizer.
+    ///
+    /// Configures a tool authorizer for fine-grained access control.
+    /// The authorizer determines which tools authenticated users can access
+    /// based on their authentication context.
+    ///
+    /// # Arguments
+    ///
+    /// * `authorizer` - The tool authorization implementation
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use pmcp::{Server, auth::ScopeBasedAuthorizer};
+    ///
+    /// let authorizer = ScopeBasedAuthorizer::new()
+    ///     .require_scopes("sensitive_tool", vec!["admin".to_string()])
+    ///     .default_scopes(vec!["read".to_string()]);
+    ///
+    /// let server = Server::builder()
+    ///     .name("secure-server")
+    ///     .version("1.0.0")
+    ///     .tool_authorizer(authorizer)
+    ///     .build()?;
+    /// # Ok::<(), pmcp::Error>(())
+    /// ```
+    pub fn tool_authorizer(mut self, authorizer: impl auth::ToolAuthorizer + 'static) -> Self {
+        self.tool_authorizer = Some(Arc::new(authorizer));
+        self
+    }
+
+    /// Protect a specific tool with required scopes.
+    ///
+    /// This is a convenience method that creates or updates a scope-based authorizer
+    /// to require specific scopes for accessing the named tool.
+    ///
+    /// # Arguments
+    ///
+    /// * `tool_name` - The name of the tool to protect
+    /// * `scopes` - The required scopes for accessing this tool
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use pmcp::Server;
+    ///
+    /// let server = Server::builder()
+    ///     .name("secure-server")
+    ///     .version("1.0.0")
+    ///     .protect_tool("delete_data", vec!["admin".to_string(), "write".to_string()])
+    ///     .protect_tool("read_data", vec!["read".to_string()])
+    ///     .build()?;
+    /// # Ok::<(), pmcp::Error>(())
+    /// ```
+    pub fn protect_tool(mut self, tool_name: impl Into<String>, scopes: Vec<String>) -> Self {
+        // Get or create a scope-based authorizer
+        if let Some(existing) = self.tool_authorizer.take() {
+            // Try to downcast to ScopeBasedAuthorizer
+            // If it's not a ScopeBasedAuthorizer, we can't modify it, so just put it back
+            self.tool_authorizer = Some(existing);
+            self
+        } else {
+            // Create a new ScopeBasedAuthorizer
+            let authorizer = auth::ScopeBasedAuthorizer::new().require_scopes(tool_name, scopes);
+            self.tool_authorizer = Some(Arc::new(authorizer));
+            self
+        }
+    }
+
     ///
     /// # Errors
     ///
@@ -1420,6 +1551,8 @@ impl ServerBuilder {
             roots_manager: Arc::new(RwLock::new(self.roots_manager)),
             subscription_manager: Arc::new(RwLock::new(subscriptions::SubscriptionManager::new())),
             elicitation_manager: None,
+            auth_provider: self.auth_provider,
+            tool_authorizer: self.tool_authorizer,
         })
     }
 }

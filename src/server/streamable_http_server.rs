@@ -849,7 +849,7 @@ async fn handle_delete_session(
     }
 }
 
-/// Add CORS headers to a HeaderMap
+/// Add CORS headers to a `HeaderMap`
 fn add_cors_headers(headers: &mut HeaderMap) {
     headers.insert("Access-Control-Allow-Origin", HeaderValue::from_static("*"));
     headers.insert(
