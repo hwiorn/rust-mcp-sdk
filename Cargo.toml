@@ -277,6 +277,21 @@ name = "28_sse_optimized"
 path = "examples/28_sse_optimized.rs"
 required-features = ["sse"]
 
+[[example]]
+name = "29_connection_pool"
+path = "examples/29_connection_pool.rs"
+required-features = ["full"]
+
+[[example]]
+name = "30_enhanced_middleware"
+path = "examples/30_enhanced_middleware.rs"
+required-features = ["full"]
+
+[[example]]
+name = "31_advanced_error_recovery"
+path = "examples/31_advanced_error_recovery.rs"
+required-features = ["full"]
+
 
 
 [[bench]]

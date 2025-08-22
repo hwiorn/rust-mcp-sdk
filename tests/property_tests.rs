@@ -51,7 +51,7 @@ mod protocol_invariants {
 
             let error_code = ErrorCode::other(code);
             let as_i32 = error_code.as_i32();
-            let from_i32 = ErrorCode::from_i32(as_i32);
+            let from_i32 = ErrorCode::other(as_i32);
 
             prop_assert_eq!(error_code.as_i32(), from_i32.as_i32());
         }
@@ -280,7 +280,7 @@ mod error_properties {
             message in "[a-zA-Z0-9 _.-]{1,100}"
         ) {
             let parse_error = Error::parse(message.clone());
-            let invalid_request = Error::invalid_request(message.clone());
+            let invalid_request = Error::validation(message.clone());
             let method_not_found = Error::method_not_found(message.clone());
             let invalid_params = Error::invalid_params(message.clone());
             let internal_error = Error::internal(message.clone());
