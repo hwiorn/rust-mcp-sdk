@@ -3,14 +3,16 @@
 //! Performance regression testing following Toyota Way principles.
 //! ALWAYS Requirement: Performance benchmarks for new features
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use pmcp::error::*;
+use pmcp::shared::transport::{MessagePriority, TransportMessage};
 use pmcp::shared::uri_template::UriTemplate;
 use pmcp::types::*;
 use pmcp::utils::batching::*;
 use pmcp::*;
 use serde_json::{json, Value};
 use std::collections::HashMap;
+use std::hint::black_box;
 use std::time::Duration;
 
 /// Benchmark JSON-RPC serialization/deserialization
@@ -33,7 +35,7 @@ fn bench_jsonrpc_serialization(c: &mut Criterion) {
 
         let request = types::jsonrpc::JSONRPCRequest {
             jsonrpc: "2.0".to_string(),
-            id: Some(types::jsonrpc::RequestId::Number(1)),
+            id: types::jsonrpc::RequestId::Number(1),
             method: "test/benchmark".to_string(),
             params: Some(params),
         };
@@ -90,8 +92,10 @@ fn bench_error_handling(c: &mut Criterion) {
         let error = Error::parse("Test error");
         b.iter(|| {
             let code = error.error_code();
-            let as_i32 = code.as_i32();
-            black_box(ErrorCode::from_i32(as_i32));
+            if let Some(code) = code {
+                let as_i32 = code.as_i32();
+                black_box(as_i32);
+            }
         });
     });
 
@@ -99,10 +103,14 @@ fn bench_error_handling(c: &mut Criterion) {
         let data = json!({
             "details": "Additional information",
             "trace_id": "abc-123-def",
-            "timestamp": chrono::Utc::now().timestamp()
+            "timestamp": 1234567890
         });
         b.iter(|| {
-            black_box(Error::protocol_with_data("Custom error", data.clone()));
+            black_box(Error::Protocol {
+                code: ErrorCode::INTERNAL_ERROR,
+                message: "Custom error".to_string(),
+                data: Some(data.clone()),
+            });
         });
     });
 
@@ -127,19 +135,20 @@ fn bench_uri_templates(c: &mut Criterion) {
     for (template_str, name) in templates {
         let template = UriTemplate::new(template_str).unwrap();
 
-        group.bench_function(&format!("create_{}", name), |b| {
+        group.bench_function(format!("create_{}", name), |b| {
             b.iter(|| {
                 black_box(UriTemplate::new(template_str).unwrap());
             });
         });
 
-        let mut params = HashMap::new();
-        params.insert("version".to_string(), "v1".to_string());
-        params.insert("id".to_string(), "123".to_string());
-        params.insert("postId".to_string(), "456".to_string());
-        params.insert("commentId".to_string(), "789".to_string());
+        let params: Vec<(&str, &str)> = vec![
+            ("version", "v1"),
+            ("id", "123"),
+            ("postId", "456"),
+            ("commentId", "789"),
+        ];
 
-        group.bench_function(&format!("expand_{}", name), |b| {
+        group.bench_function(format!("expand_{}", name), |b| {
             b.iter(|| {
                 black_box(template.expand(&params).unwrap());
             });
@@ -147,13 +156,12 @@ fn bench_uri_templates(c: &mut Criterion) {
 
         // Create a matching URI for testing
         let expanded = template.expand(&params).unwrap();
-        if let Ok(uri) = url::Url::parse(&format!("https://example.com{}", expanded)) {
-            group.bench_function(&format!("match_{}", name), |b| {
-                b.iter(|| {
-                    black_box(template.match_uri(&uri));
-                });
+        let uri_str = format!("https://example.com{}", expanded);
+        group.bench_function(format!("match_{}", name), |b| {
+            b.iter(|| {
+                black_box(template.match_uri(&uri_str));
             });
-        }
+        });
     }
 
     group.finish();
@@ -203,21 +211,16 @@ fn bench_transport(c: &mut Criterion) {
     let message_sizes = vec![100, 1000, 10000, 100000];
 
     for size in message_sizes {
-        let data = vec![0u8; size];
-        let metadata = types::transport::MessageMetadata {
-            priority: types::transport::MessagePriority::Normal,
-            correlation_id: Some("benchmark-test".to_string()),
-            timestamp: std::time::SystemTime::now(),
-        };
-
         group.bench_with_input(
             BenchmarkId::new("message_creation", size),
-            &(data.clone(), metadata.clone()),
-            |b, (data, metadata)| {
+            &size,
+            |b, _size| {
                 b.iter(|| {
-                    black_box(types::transport::TransportMessage {
-                        data: data.clone(),
-                        metadata: metadata.clone(),
+                    // TransportMessage is an enum, create a mock request
+                    let request = types::Request::Client(Box::new(types::ClientRequest::Ping));
+                    black_box(TransportMessage::Request {
+                        id: types::RequestId::from(1i64),
+                        request,
                     });
                 });
             },
@@ -226,10 +229,9 @@ fn bench_transport(c: &mut Criterion) {
 
     // Benchmark priority ordering
     let priorities = vec![
-        types::transport::MessagePriority::Low,
-        types::transport::MessagePriority::Normal,
-        types::transport::MessagePriority::High,
-        types::transport::MessagePriority::Critical,
+        MessagePriority::Low,
+        MessagePriority::Normal,
+        MessagePriority::High,
     ];
 
     group.bench_function("priority_sorting", |b| {
@@ -252,7 +254,7 @@ fn bench_batching(c: &mut Criterion) {
             let config = BatchingConfig {
                 max_batch_size: 100,
                 max_wait_time: Duration::from_millis(10),
-                enable_compression: false,
+                batched_methods: vec![],
             };
             black_box(MessageBatcher::new(config));
         });
@@ -260,7 +262,11 @@ fn bench_batching(c: &mut Criterion) {
 
     group.bench_function("debouncer_creation", |b| {
         b.iter(|| {
-            black_box(MessageDebouncer::new(Duration::from_millis(10)));
+            let config = DebouncingConfig {
+                wait_time: Duration::from_millis(10),
+                debounced_methods: HashMap::new(),
+            };
+            black_box(MessageDebouncer::new(config));
         });
     });
 
@@ -285,9 +291,15 @@ fn bench_auth(c: &mut Criterion) {
 
     group.bench_function("auth_info_oauth2", |b| {
         b.iter(|| {
-            black_box(types::auth::AuthInfo::oauth2(
-                "https://example.com/oauth".to_string(),
-            ));
+            let oauth_info = types::auth::OAuthInfo {
+                auth_url: "https://example.com/auth".to_string(),
+                token_url: "https://example.com/token".to_string(),
+                client_id: "client-123".to_string(),
+                scopes: Some(vec!["read".to_string(), "write".to_string()]),
+                redirect_uri: Some("https://example.com/callback".to_string()),
+                pkce_method: None,
+            };
+            black_box(types::auth::AuthInfo::oauth2(oauth_info));
         });
     });
 
@@ -335,14 +347,14 @@ fn bench_json_operations(c: &mut Criterion) {
     ];
 
     for (data, name) in json_data {
-        group.bench_function(&format!("serialize_{}", name), |b| {
+        group.bench_function(format!("serialize_{}", name), |b| {
             b.iter(|| {
                 black_box(serde_json::to_string(&data).unwrap());
             });
         });
 
         let serialized = serde_json::to_string(&data).unwrap();
-        group.bench_function(&format!("deserialize_{}", name), |b| {
+        group.bench_function(format!("deserialize_{}", name), |b| {
             b.iter(|| {
                 black_box(serde_json::from_str::<Value>(&serialized).unwrap());
             });

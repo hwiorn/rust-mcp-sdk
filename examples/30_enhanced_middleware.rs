@@ -173,7 +173,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     info!("  • Compression (Normal priority): Gzip for messages >1KB");
 
     // Create contexts with different priorities
-    let contexts = vec![
+    let contexts = [
         MiddlewareContext {
             request_id: Some("req-001".to_string()),
             priority: Some(pmcp::shared::transport::MessagePriority::High),
