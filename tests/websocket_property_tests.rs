@@ -3,10 +3,9 @@
 //! PMCP-4001: Property tests for connection reliability and message ordering
 
 use pmcp::server::transport::websocket_enhanced::*;
-use pmcp::shared::{Transport, TransportMessage};
+use pmcp::shared::TransportMessage;
 use proptest::prelude::*;
 use std::time::Duration;
-use tokio::time::timeout;
 
 #[cfg(test)]
 mod websocket_reliability {
@@ -17,13 +16,15 @@ mod websocket_reliability {
         #[test]
         fn property_connection_count_consistency(
             max_connections in 1usize..100,
-            actual_connections in 0usize..100
+            _actual_connections in 0usize..100
         ) {
             let rt = tokio::runtime::Runtime::new().unwrap();
 
             rt.block_on(async {
-                let mut config = EnhancedWebSocketConfig::default();
-                config.max_connections = max_connections;
+                let config = EnhancedWebSocketConfig {
+                    max_connections,
+                    ..Default::default()
+                };
 
                 let server = EnhancedWebSocketServer::new(config);
 
@@ -32,7 +33,9 @@ mod websocket_reliability {
 
                 // Connected clients list should be empty
                 prop_assert!(server.get_connected_clients().await.is_empty());
-            })
+
+                Ok(())
+            })?;
         }
 
         /// Property: Broadcast configuration is respected
@@ -43,11 +46,20 @@ mod websocket_reliability {
             let rt = tokio::runtime::Runtime::new().unwrap();
 
             rt.block_on(async {
-                let mut config = EnhancedWebSocketConfig::default();
-                config.enable_broadcast = enable_broadcast;
+                let config = EnhancedWebSocketConfig {
+                    enable_broadcast,
+                    ..Default::default()
+                };
 
-                let server = EnhancedWebSocketServer::new(config.clone());
-                let result = server.broadcast(TransportMessage::Ping).await;
+                let server = EnhancedWebSocketServer::new(config);
+                let dummy_msg = TransportMessage::Notification(
+                    pmcp::types::Notification::Progress(pmcp::types::ProgressNotification {
+                        progress_token: pmcp::types::ProgressToken::String("test".to_string()),
+                        progress: 0.0,
+                        message: None,
+                    })
+                );
+                let result = server.broadcast(dummy_msg).await;
 
                 if enable_broadcast {
                     // Should succeed (though no clients connected)
@@ -56,7 +68,8 @@ mod websocket_reliability {
                     // Should fail when disabled
                     prop_assert!(result.is_err());
                 }
-            })
+                Ok(())
+            })?;
         }
 
         /// Property: Heartbeat interval configuration
@@ -107,7 +120,7 @@ mod websocket_reliability {
             max_frame_size in prop::option::of(1024usize..100_000_000),
             max_message_size in prop::option::of(1024usize..100_000_000)
         ) {
-            let config = EnhancedWebSocketConfig {
+            let _config = EnhancedWebSocketConfig {
                 max_frame_size,
                 max_message_size,
                 ..Default::default()
@@ -176,7 +189,7 @@ mod message_ordering {
         ) {
             // In a real implementation, messages from a single client
             // should maintain their order
-            let mut received = messages.clone();
+            let received = messages.clone();
 
             // Simulate ordered receiving
             let original = messages;

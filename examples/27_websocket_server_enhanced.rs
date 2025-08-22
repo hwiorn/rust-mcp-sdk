@@ -5,10 +5,8 @@
 //! Run with: cargo run --example 27_websocket_server_enhanced --features websocket
 
 use pmcp::server::transport::{EnhancedWebSocketConfig, EnhancedWebSocketServer};
-use pmcp::shared::TransportMessage;
 use std::time::Duration;
 use tracing::{info, Level};
-use tracing_subscriber;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

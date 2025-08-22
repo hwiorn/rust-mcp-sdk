@@ -463,18 +463,17 @@ mod tests {
 
     #[tokio::test]
     async fn test_broadcast_disabled() {
-        let mut config = EnhancedWebSocketConfig::default();
-        config.enable_broadcast = false;
+        let config = EnhancedWebSocketConfig {
+            enable_broadcast: false,
+            ..Default::default()
+        };
 
         let server = EnhancedWebSocketServer::new(config);
         let result = server
             .broadcast(TransportMessage::Notification(
                 crate::types::Notification::Cancelled(crate::types::CancelledNotification {
-                    method: "cancelled".to_string(),
-                    params: crate::types::CancelledNotificationParams {
-                        request_id: crate::types::RequestId::Number(1),
-                        reason: None,
-                    },
+                    request_id: crate::types::RequestId::Number(1),
+                    reason: None,
                 }),
             ))
             .await;
