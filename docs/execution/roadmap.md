@@ -16,11 +16,11 @@
 | PMCP-3001 | Create roadmap specification (docs/specifications/pmcp-roadmap-spec.md) | ✅ | Low | P0 |
 | PMCP-3002 | Update CLAUDE.md with ALWAYS workflow requirements | ✅ | Medium | P0 |
 | PMCP-3003 | Implement quality gates in Makefile (PAIML-style) | ✅ | Medium | P0 |
-| PMCP-3004 | Create execution roadmap tracking (docs/execution/roadmap.md) | 🚧 | Low | P0 |
-| PMCP-3005 | Update VERSION and prepare release infrastructure | 📋 | Low | P0 |
+| PMCP-3004 | Create execution roadmap tracking (docs/execution/roadmap.md) | ✅ | Low | P0 |
+| PMCP-3005 | Update VERSION and prepare release infrastructure | 🚧 | Low | P0 |
 | PMCP-3006 | Commit and push v1.3.0 release with quality gates | 📋 | Low | P0 |
-| PMCP-3007 | Add comprehensive property testing framework | 📋 | High | P1 |
-| PMCP-3008 | Implement fuzz testing infrastructure | 📋 | High | P1 |
+| PMCP-3007 | Add comprehensive property testing framework | ✅ | High | P1 |
+| PMCP-3008 | Implement fuzz testing infrastructure | ✅ | High | P1 |
 
 ## Previous Sprints
 

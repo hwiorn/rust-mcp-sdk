@@ -266,6 +266,11 @@ name = "24_streamable_http_client"
 path = "examples/24_streamable_http_client.rs"
 required-features = ["streamable-http"]
 
+
+
+[[bench]]
+name = "comprehensive_benchmarks"
+harness = false
 [workspace]
 members = ["pmcp-macros", "examples/wasm-client"]
 exclude = ["fuzz"]
