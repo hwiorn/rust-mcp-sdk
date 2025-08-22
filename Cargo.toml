@@ -103,7 +103,8 @@ dashmap = "6.1"  # Already in main deps but needed for examples
 
 [features]
 default = ["validation"]
-full = ["websocket", "http", "streamable-http", "validation", "resource-watcher", "rayon"]
+full = ["websocket", "http", "streamable-http", "sse", "validation", "resource-watcher", "rayon"]
+sse = ["dep:bytes", "dep:tokio", "dep:tokio-util", "dep:tracing-subscriber"]
 websocket = ["dep:tokio-tungstenite", "dep:tokio", "dep:tokio-util", "dep:tracing-subscriber"]
 http = ["dep:hyper", "dep:hyper-util", "dep:tokio", "dep:tokio-util", "dep:tracing-subscriber"]
 streamable-http = ["dep:hyper", "dep:hyper-util", "dep:futures-util", "dep:bytes", "dep:axum", "dep:tokio", "dep:tokio-util", "dep:tokio-stream", "dep:tracing-subscriber"]
@@ -270,6 +271,11 @@ required-features = ["streamable-http"]
 name = "27_websocket_server_enhanced"
 path = "examples/27_websocket_server_enhanced.rs"
 required-features = ["websocket"]
+
+[[example]]
+name = "28_sse_optimized"
+path = "examples/28_sse_optimized.rs"
+required-features = ["sse"]
 
 
 

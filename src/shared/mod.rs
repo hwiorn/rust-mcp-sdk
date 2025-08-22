@@ -11,6 +11,9 @@ pub mod protocol_helpers;
 pub mod reconnect;
 pub mod session;
 pub mod sse_parser;
+
+#[cfg(feature = "sse")]
+pub mod sse_optimized;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod stdio;
 pub mod transport;
@@ -76,3 +79,6 @@ pub use http::{HttpConfig, HttpTransport};
 
 #[cfg(all(feature = "streamable-http", not(target_arch = "wasm32")))]
 pub use streamable_http::{StreamableHttpTransport, StreamableHttpTransportConfig};
+
+#[cfg(feature = "sse")]
+pub use sse_optimized::{OptimizedSseConfig, OptimizedSseTransport};
