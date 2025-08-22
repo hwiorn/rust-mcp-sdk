@@ -1094,7 +1094,21 @@ impl AdvancedRecoveryExecutor {
             .await;
 
         let start_time = Instant::now();
-        let result = match operation().await {
+
+        // Use tokio timeout to enforce the deadline
+        let timeout_result = tokio::time::timeout(deadline.remaining, operation()).await;
+
+        let result = match timeout_result {
+            Ok(Ok(value)) => Ok(value),
+            Ok(Err(error)) => Err(error),
+            Err(_) => {
+                // Timeout occurred
+                deadline.update();
+                return Err(Error::Timeout(deadline.remaining.as_millis() as u64));
+            },
+        };
+
+        let result = match result {
             Ok(value) => {
                 let duration = start_time.elapsed();
                 self.coordinator

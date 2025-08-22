@@ -172,9 +172,15 @@ mod pool_stats {
             degraded in 0usize..30,
             unhealthy in 0usize..20,
             total_requests in 0u64..10000,
-            active_requests in 0usize..100
+            active_requests_percentage in 0u8..=100
         ) {
             let total_connections = healthy + degraded + unhealthy;
+
+            // Ensure active_requests doesn't exceed total_requests or connection limits
+            let max_active_by_requests = total_requests as usize;
+            let max_active_by_connections = if total_connections > 0 { total_connections * 100 } else { 0 };
+            let max_active = max_active_by_requests.min(max_active_by_connections);
+            let active_requests = (max_active * active_requests_percentage as usize) / 100;
 
             let stats = PoolStats {
                 total_connections,
