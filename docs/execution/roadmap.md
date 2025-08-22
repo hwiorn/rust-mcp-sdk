@@ -48,19 +48,23 @@
 - **Major Achievement**: Stable MCP SDK foundation
 - **Features**: Core protocol implementation, basic transport support, initial examples
 
-## Future Roadmap
+## Current Sprint: v1.4.0 - Advanced Transport & Performance 🚧 IN PROGRESS
 
-### v1.4.0 - Advanced Transport & Performance ⏳ PLANNED
-**Timeline**: Q4 2025 (3-4 days)
+### v1.4.0 Sprint Details
+**Timeline**: Started 2025-08-22
 **Focus**: Transport layer optimization, advanced performance features
+**Version Target**: v1.4.0
 
-**Features**:
-- WebSocket server implementation completion
-- Advanced HTTP/SSE transport optimizations
-- Connection pooling and load balancing
-- Transport middleware system enhancement
-- Advanced error recovery mechanisms
-- SIMD optimization for message parsing
+#### Sprint Tasks
+
+| ID | Description | Status | Complexity | Priority |
+|----|-------------|--------|------------|---------|
+| PMCP-4001 | Complete WebSocket server implementation | 🚧 | High | P0 |
+| PMCP-4002 | Implement HTTP/SSE transport optimizations | 📋 | Medium | P0 |
+| PMCP-4003 | Add connection pooling and load balancing | 📋 | High | P1 |
+| PMCP-4004 | Enhance transport middleware system | 📋 | Medium | P1 |
+| PMCP-4005 | Implement advanced error recovery | 📋 | Medium | P1 |
+| PMCP-4006 | Add SIMD optimization for parsing | 📋 | High | P2 |
 
 **ALWAYS Requirements**:
 - Fuzz testing for all transport implementations
