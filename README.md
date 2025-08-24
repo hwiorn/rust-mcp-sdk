@@ -200,6 +200,14 @@ cargo run --example 32_simd_parsing_performance --features full
 
 See the [examples directory](examples/) for detailed documentation.
 
+### 🤖 Background Agents
+
+PMCP serves as the foundation for building background agents that provide continuous AI assistance. See our [Background Agents Guide](docs/examples/background-agents.md) for examples including:
+
+- **[PMAT](../paiml-mcp-agent-toolkit)** - Continuous code quality monitoring with Toyota Way compliance
+- **[Ruchy](../ruchy)** - Language server agent for the Ruchy programming language
+- Build your own background agent using PMCP as the transport layer
+
 ## What's New in v1.4.0 - Enterprise Performance Edition
 
 ### 🌐 Production WebSocket Server (PMCP-4001)
