@@ -145,6 +145,9 @@ cargo run --example 24_streamable_http_client --features streamable-http
 
 # WASM client (browser-based) - see examples/wasm-client/README.md
 cd examples/wasm-client && bash build.sh
+
+# MCP server tester - comprehensive testing tool for MCP servers
+cargo run --example 26-server-tester -- test http://localhost:8080
 ```
 
 See the [examples directory](examples/) for detailed documentation.
@@ -152,12 +155,14 @@ See the [examples directory](examples/) for detailed documentation.
 ## What's New in v1.0 (In Development)
 
 ### 🎯 Procedural Macros
+
 - `#[tool]` attribute for automatic tool handler generation
 - `#[tool_router]` for collecting tools from impl blocks
 - Automatic JSON schema generation from Rust types
 - 70% reduction in boilerplate code
 
 ### 🌍 Enhanced WASM Support
+
 - Full WebAssembly support for browser environments
 - Dual transport support: WebSocket and HTTP
 - HTTP transport for stateless/serverless MCP servers (AWS Lambda, Vercel, etc.)
@@ -167,6 +172,7 @@ See the [examples directory](examples/) for detailed documentation.
 - TypeScript definitions for seamless integration
 
 ### 🔄 Streamable HTTP Transport
+
 - Stateful mode with session management for traditional deployments
 - Stateless mode optimized for serverless (AWS Lambda, Vercel Functions)
 - Server-Sent Events (SSE) support for real-time streaming
@@ -175,6 +181,7 @@ See the [examples directory](examples/) for detailed documentation.
 - Examples for both client and server implementations
 
 ### 🚀 Enhanced Developer Experience
+
 - Type-safe parameter handling with compile-time validation
 - Automatic error conversion and handling
 - Improved documentation with 200+ examples
@@ -183,17 +190,20 @@ See the [examples directory](examples/) for detailed documentation.
 ## What's New in v0.6.6
 
 ### 🔐 OIDC Discovery Support
+
 - Full OpenID Connect discovery implementation
 - Automatic retry on CORS/network errors
 - Token exchange with explicit JSON accept headers
 - Comprehensive auth client module
 
-### 🔒 Transport Response Isolation  
+### 🔒 Transport Response Isolation
+
 - Unique transport IDs prevent cross-transport response routing
 - Enhanced protocol safety for multiple concurrent connections
 - Request-response correlation per transport instance
 
 ### 📚 Enhanced Documentation
+
 - 135+ doctests with real-world examples
 - Complete property test coverage
 - New OIDC discovery example (example 20)
@@ -201,13 +211,17 @@ See the [examples directory](examples/) for detailed documentation.
 ## What's New in v0.2.0
 
 ### 🆕 WebSocket Transport with Auto-Reconnection
-Full WebSocket support with automatic reconnection, exponential backoff, and keepalive ping/pong.
+
+Full WebSocket support with automatic reconnection, exponential backoff, and keep-alive ping/pong.
 
 ### 🆕 HTTP/SSE Transport
+
 HTTP transport with Server-Sent Events for real-time notifications and long-polling support.
 
 ### 🆕 LLM Sampling Support
+
 Native support for model sampling operations with the `createMessage` API:
+
 ```rust
 let result = client.create_message(CreateMessageRequest {
     messages: vec![SamplingMessage {
@@ -219,7 +233,9 @@ let result = client.create_message(CreateMessageRequest {
 ```
 
 ### 🆕 Middleware System
+
 Powerful middleware chain for request/response processing:
+
 ```rust
 use pmcp::{MiddlewareChain, LoggingMiddleware, AuthMiddleware};
 
@@ -229,7 +245,9 @@ chain.add(Arc::new(AuthMiddleware::new("token".to_string())));
 ```
 
 ### 🆕 Message Batching & Debouncing
+
 Optimize notification delivery with batching and debouncing:
+
 ```rust
 use pmcp::{MessageBatcher, BatchingConfig};
 
@@ -314,11 +332,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ## Transport Options
 
 ### stdio (Default)
+
 ```rust
 let transport = StdioTransport::new();
 ```
 
 ### Streamable HTTP (Stateful)
+
 ```rust
 use pmcp::{StreamableHttpTransport, StreamableHttpTransportConfig};
 
@@ -332,6 +352,7 @@ let transport = StreamableHttpTransport::new(config);
 ```
 
 ### Streamable HTTP (Stateless/Serverless)
+
 ```rust
 use pmcp::{StreamableHttpTransport, StreamableHttpTransportConfig};
 
@@ -344,7 +365,8 @@ let config = StreamableHttpTransportConfig {
 let transport = StreamableHttpTransport::new(config);
 ```
 
-### WebSocket  
+### WebSocket
+
 ```rust
 use pmcp::{WebSocketTransport, WebSocketConfig};
 
@@ -357,6 +379,7 @@ let transport = WebSocketTransport::new(config);
 ```
 
 ### WASM (Browser)
+
 ```rust
 // For WebSocket in browser
 use pmcp::{WasmWebSocketTransport};

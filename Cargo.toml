@@ -267,7 +267,7 @@ path = "examples/24_streamable_http_client.rs"
 required-features = ["streamable-http"]
 
 [workspace]
-members = ["pmcp-macros", "examples/wasm-client", "examples/25-oauth-basic", "examples/test-basic"]
+members = ["pmcp-macros", "examples/wasm-client", "examples/25-oauth-basic", "examples/test-basic", "examples/26-server-tester"]
 exclude = ["fuzz"]
 
 [package.metadata.docs.rs]
