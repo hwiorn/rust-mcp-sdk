@@ -165,8 +165,13 @@ impl ScopeBasedAuthorizer {
     }
 
     /// Add required scopes for a tool.
-    pub fn require_scopes(mut self, tool_name: impl Into<String>, scopes: Vec<String>) -> Self {
-        self.tool_scopes.insert(tool_name.into(), scopes);
+    pub fn require_scopes<S, I>(mut self, tool_name: impl Into<String>, scopes: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        let scopes_vec = scopes.into_iter().map(|s| s.as_ref().to_string()).collect();
+        self.tool_scopes.insert(tool_name.into(), scopes_vec);
         self
     }
 
