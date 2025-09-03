@@ -4,9 +4,7 @@ use pmcp::{
         streamable_http::{StreamableHttpTransport, StreamableHttpTransportConfig},
         StdioTransport,
     },
-    types::{
-        ClientCapabilities, InitializeResult, ListToolsResult, ToolInfo,
-    },
+    types::{ClientCapabilities, InitializeResult, ListToolsResult, ToolInfo},
 };
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -57,7 +55,13 @@ pub struct ServerTester {
 }
 
 impl ServerTester {
-    pub fn new(url: &str, timeout: Duration, insecure: bool, api_key: Option<&str>, force_transport: Option<&str>) -> Result<Self> {
+    pub fn new(
+        url: &str,
+        timeout: Duration,
+        insecure: bool,
+        api_key: Option<&str>,
+        force_transport: Option<&str>,
+    ) -> Result<Self> {
         // Determine transport type based on force_transport or URL
         let (transport_type, http_config, json_rpc_client) = match force_transport {
             Some("stdio") => (TransportType::Stdio, None, None),
@@ -80,14 +84,15 @@ impl ServerTester {
             },
             Some("jsonrpc") => {
                 // Create JSON-RPC HTTP client
-                let mut client_builder = reqwest::ClientBuilder::new()
-                    .timeout(timeout);
-                
+                let mut client_builder = reqwest::ClientBuilder::new().timeout(timeout);
+
                 if insecure {
                     client_builder = client_builder.danger_accept_invalid_certs(true);
                 }
-                
-                let client = client_builder.build().context("Failed to create HTTP client")?;
+
+                let client = client_builder
+                    .build()
+                    .context("Failed to create HTTP client")?;
                 (TransportType::JsonRpcHttp, None, Some(client))
             },
             None => {
@@ -97,21 +102,23 @@ impl ServerTester {
                     // Auto-detect: API Gateway URLs use JSON-RPC, others use SDK transport
                     if url.contains("amazonaws.com") || url.contains("api.") {
                         // Create JSON-RPC HTTP client for API Gateway
-                        let mut client_builder = reqwest::ClientBuilder::new()
-                            .timeout(timeout);
-                        
+                        let mut client_builder = reqwest::ClientBuilder::new().timeout(timeout);
+
                         if insecure {
                             client_builder = client_builder.danger_accept_invalid_certs(true);
                         }
-                        
-                        let client = client_builder.build().context("Failed to create HTTP client")?;
+
+                        let client = client_builder
+                            .build()
+                            .context("Failed to create HTTP client")?;
                         (TransportType::JsonRpcHttp, None, Some(client))
                     } else {
                         // Use SDK streamable HTTP transport
                         let parsed_url = Url::parse(url).context("Invalid URL")?;
                         let mut extra_headers = vec![];
                         if let Some(key) = api_key {
-                            extra_headers.push(("Authorization".to_string(), format!("Bearer {}", key)));
+                            extra_headers
+                                .push(("Authorization".to_string(), format!("Bearer {}", key)));
                             extra_headers.push(("X-API-Key".to_string(), key.to_string()));
                         }
                         let config = StreamableHttpTransportConfig {
@@ -126,7 +133,9 @@ impl ServerTester {
                     }
                 }
             },
-            Some(transport) => return Err(anyhow::anyhow!("Unsupported transport type: {}", transport)),
+            Some(transport) => {
+                return Err(anyhow::anyhow!("Unsupported transport type: {}", transport))
+            },
         };
 
         Ok(Self {
@@ -145,28 +154,37 @@ impl ServerTester {
 
     async fn send_json_rpc_request(&self, request: JsonRpcRequest) -> Result<JsonRpcResponse> {
         if let Some(client) = &self.json_rpc_client {
-            let mut req = client.post(&self.url)
+            let mut req = client
+                .post(&self.url)
                 .header("Content-Type", "application/json")
                 .json(&request);
 
             // Add API key headers if provided
             if let Some(api_key) = &self.api_key {
-                req = req.header("Authorization", format!("Bearer {}", api_key))
-                     .header("X-API-Key", api_key);
+                req = req
+                    .header("Authorization", format!("Bearer {}", api_key))
+                    .header("X-API-Key", api_key);
             }
 
-            let response = req.send().await
+            let response = req
+                .send()
+                .await
                 .context("Failed to send JSON-RPC request")?;
 
             let status = response.status();
             if !status.is_success() {
-                let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+                let error_text = response
+                    .text()
+                    .await
+                    .unwrap_or_else(|_| "Unknown error".to_string());
                 return Err(anyhow::anyhow!("HTTP error {}: {}", status, error_text));
             }
 
-            let response_text = response.text().await
+            let response_text = response
+                .text()
+                .await
                 .context("Failed to read response body")?;
-            
+
             let json_response: JsonRpcResponse = serde_json::from_str(&response_text)
                 .context("Failed to parse JSON-RPC response")?;
 
@@ -405,23 +423,28 @@ impl ServerTester {
                 status: TestStatus::Skipped,
                 duration: start.elapsed(),
                 error: None,
-                details: Some("API key testing only applicable to JSON-RPC HTTP transport".to_string()),
+                details: Some(
+                    "API key testing only applicable to JSON-RPC HTTP transport".to_string(),
+                ),
             };
         }
 
         // Test with invalid API key
         let invalid_key_client = match reqwest::ClientBuilder::new()
             .timeout(Duration::from_secs(10))
-            .build() {
+            .build()
+        {
             Ok(client) => client,
-            Err(_) => return TestResult {
-                name,
-                category: TestCategory::Core,
-                status: TestStatus::Failed,
-                duration: start.elapsed(),
-                error: Some("Failed to create test client".to_string()),
-                details: None,
-            }
+            Err(_) => {
+                return TestResult {
+                    name,
+                    category: TestCategory::Core,
+                    status: TestStatus::Failed,
+                    duration: start.elapsed(),
+                    error: Some("Failed to create test client".to_string()),
+                    details: None,
+                }
+            },
         };
 
         let test_request = JsonRpcRequest {
@@ -451,7 +474,7 @@ impl ServerTester {
             .await;
 
         let mut details = Vec::new();
-        
+
         match invalid_response {
             Ok(response) => {
                 let status = response.status();
@@ -460,10 +483,11 @@ impl ServerTester {
                 } else {
                     details.push(format!("⚠ Invalid API key returned status {}", status));
                 }
-            }
+            },
             Err(_) => {
-                details.push("✓ Invalid API key correctly rejected (connection failed)".to_string());
-            }
+                details
+                    .push("✓ Invalid API key correctly rejected (connection failed)".to_string());
+            },
         }
 
         // Test with valid API key (our current key should work since we're already connected)
@@ -485,10 +509,10 @@ impl ServerTester {
                     } else {
                         details.push(format!("⚠ Valid API key returned status {}", status));
                     }
-                }
+                },
                 Err(_) => {
                     details.push("⚠ Valid API key test failed".to_string());
-                }
+                },
             }
         }
 
@@ -559,18 +583,28 @@ impl ServerTester {
                 match self.send_json_rpc_request(request).await {
                     Ok(response) => {
                         if let Some(error) = response.error {
-                            Err(pmcp::Error::Internal(format!("JSON-RPC error: {:?}", error)))
+                            Err(pmcp::Error::Internal(format!(
+                                "JSON-RPC error: {:?}",
+                                error
+                            )))
                         } else if let Some(result) = response.result {
                             // Parse the initialize result
                             match serde_json::from_value::<InitializeResult>(result) {
                                 Ok(init_result) => Ok(init_result),
-                                Err(e) => Err(pmcp::Error::Internal(format!("Failed to parse initialize result: {}", e)))
+                                Err(e) => Err(pmcp::Error::Internal(format!(
+                                    "Failed to parse initialize result: {}",
+                                    e
+                                ))),
                             }
                         } else {
-                            Err(pmcp::Error::Internal("No result in initialize response".to_string()))
+                            Err(pmcp::Error::Internal(
+                                "No result in initialize response".to_string(),
+                            ))
                         }
                     },
-                    Err(e) => Err(pmcp::Error::Transport(pmcp::error::TransportError::Request(e.to_string())))
+                    Err(e) => Err(pmcp::Error::Transport(
+                        pmcp::error::TransportError::Request(e.to_string()),
+                    )),
                 }
             },
         };
@@ -730,18 +764,28 @@ impl ServerTester {
                 match self.send_json_rpc_request(request).await {
                     Ok(response) => {
                         if let Some(error) = response.error {
-                            Err(pmcp::Error::Internal(format!("JSON-RPC error: {:?}", error)))
+                            Err(pmcp::Error::Internal(format!(
+                                "JSON-RPC error: {:?}",
+                                error
+                            )))
                         } else if let Some(result) = response.result {
                             // Parse the tools list result
                             match serde_json::from_value::<ListToolsResult>(result) {
                                 Ok(tools_result) => Ok(tools_result),
-                                Err(e) => Err(pmcp::Error::Internal(format!("Failed to parse tools list result: {}", e)))
+                                Err(e) => Err(pmcp::Error::Internal(format!(
+                                    "Failed to parse tools list result: {}",
+                                    e
+                                ))),
                             }
                         } else {
-                            Err(pmcp::Error::Internal("No result in tools/list response".to_string()))
+                            Err(pmcp::Error::Internal(
+                                "No result in tools/list response".to_string(),
+                            ))
                         }
                     },
-                    Err(e) => Err(pmcp::Error::Transport(pmcp::error::TransportError::Request(e.to_string())))
+                    Err(e) => Err(pmcp::Error::Transport(
+                        pmcp::error::TransportError::Request(e.to_string()),
+                    )),
                 }
             },
         };
@@ -821,20 +865,27 @@ impl ServerTester {
                 match self.send_json_rpc_request(request).await {
                     Ok(response) => {
                         if let Some(error) = response.error {
-                            Err(pmcp::Error::Internal(format!("JSON-RPC error: {:?}", error)))
+                            Err(pmcp::Error::Internal(format!(
+                                "JSON-RPC error: {:?}",
+                                error
+                            )))
                         } else if let Some(result) = response.result {
                             // For tool calls, we expect a CallToolResult structure
                             Ok(pmcp::types::CallToolResult {
-                                content: vec![pmcp::types::Content::Text { 
-                                    text: format!("{}", result) 
+                                content: vec![pmcp::types::Content::Text {
+                                    text: format!("{}", result),
                                 }],
                                 is_error: false,
                             })
                         } else {
-                            Err(pmcp::Error::Internal("No result in tool call response".to_string()))
+                            Err(pmcp::Error::Internal(
+                                "No result in tool call response".to_string(),
+                            ))
                         }
                     },
-                    Err(e) => Err(pmcp::Error::Transport(pmcp::error::TransportError::Request(e.to_string())))
+                    Err(e) => Err(pmcp::Error::Transport(
+                        pmcp::error::TransportError::Request(e.to_string()),
+                    )),
                 }
             },
         };
@@ -843,14 +894,17 @@ impl ServerTester {
             Ok(result) => {
                 let full_response = format!("{:?}", result.content);
                 debug!("Tool {} full response: {}", tool_name, full_response);
-                
+
                 // Truncate response to first 100 characters for display
                 let truncated_response = if full_response.len() > 100 {
-                    format!("{}... (use RUST_LOG=debug for full response)", &full_response[..100])
+                    format!(
+                        "{}... (use RUST_LOG=debug for full response)",
+                        &full_response[..100]
+                    )
                 } else {
                     full_response
                 };
-                
+
                 Ok(TestResult {
                     name,
                     category: TestCategory::Tools,
@@ -863,24 +917,36 @@ impl ServerTester {
             Err(e) => {
                 let error_str = e.to_string();
                 // Check if this is a parameter validation error (which is actually expected for test calls)
-                let is_param_error = error_str.contains("-32602") || error_str.contains("Missing required parameter") || error_str.contains("Invalid params");
-                
+                let is_param_error = error_str.contains("-32602")
+                    || error_str.contains("Missing required parameter")
+                    || error_str.contains("Invalid params");
+
                 // Check if this is an AWS service error with test data
-                let is_aws_service_error = error_str.contains("-32603") && (
-                    error_str.contains("service error") || 
-                    error_str.contains("Failed to describe execution") ||
-                    error_str.contains("does not exist") ||
-                    error_str.contains("ExecutionDoesNotExist")
-                );
-                
+                let is_aws_service_error = error_str.contains("-32603")
+                    && (error_str.contains("service error")
+                        || error_str.contains("Failed to describe execution")
+                        || error_str.contains("does not exist")
+                        || error_str.contains("ExecutionDoesNotExist"));
+
                 let (status, error, details) = if is_param_error {
-                    (TestStatus::Warning, None, Some("Parameter validation working correctly".to_string()))
+                    (
+                        TestStatus::Warning,
+                        None,
+                        Some("Parameter validation working correctly".to_string()),
+                    )
                 } else if is_aws_service_error {
-                    (TestStatus::Warning, None, Some("Tool execution works but test data doesn't exist in AWS account".to_string()))
+                    (
+                        TestStatus::Warning,
+                        None,
+                        Some(
+                            "Tool execution works but test data doesn't exist in AWS account"
+                                .to_string(),
+                        ),
+                    )
                 } else {
                     (TestStatus::Failed, Some(error_str.clone()), Some(error_str))
                 };
-                
+
                 Ok(TestResult {
                     name,
                     category: TestCategory::Tools,
@@ -946,18 +1012,23 @@ impl ServerTester {
                 match self.send_json_rpc_request(request).await {
                     Ok(response) => {
                         if let Some(error) = response.error {
-                            Err(pmcp::Error::Internal(format!("JSON-RPC error: {:?}", error)))
+                            Err(pmcp::Error::Internal(format!(
+                                "JSON-RPC error: {:?}",
+                                error
+                            )))
                         } else {
                             // Should have returned an error for non-existent tool
                             Ok(pmcp::types::CallToolResult {
-                                content: vec![pmcp::types::Content::Text { 
-                                    text: "Unexpected success".to_string() 
+                                content: vec![pmcp::types::Content::Text {
+                                    text: "Unexpected success".to_string(),
                                 }],
                                 is_error: false,
                             })
                         }
                     },
-                    Err(e) => Err(pmcp::Error::Transport(pmcp::error::TransportError::Request(e.to_string())))
+                    Err(e) => Err(pmcp::Error::Transport(
+                        pmcp::error::TransportError::Request(e.to_string()),
+                    )),
                 }
             },
         };
@@ -1044,14 +1115,17 @@ impl ServerTester {
                 match self.send_json_rpc_request(request).await {
                     Ok(response) => {
                         if let Some(error) = response.error {
-                            Err(pmcp::Error::Internal(format!("JSON-RPC error: {:?}", error)))
+                            Err(pmcp::Error::Internal(format!(
+                                "JSON-RPC error: {:?}",
+                                error
+                            )))
                         } else if let Some(result) = response.result {
                             match serde_json::from_value::<ListToolsResult>(result) {
                                 Ok(tools_result) => Ok(tools_result),
                                 Err(_) => Ok(ListToolsResult {
                                     tools: vec![],
                                     next_cursor: None,
-                                })
+                                }),
                             }
                         } else {
                             Ok(ListToolsResult {
@@ -1060,7 +1134,9 @@ impl ServerTester {
                             })
                         }
                     },
-                    Err(e) => Err(pmcp::Error::Transport(pmcp::error::TransportError::Request(e.to_string())))
+                    Err(e) => Err(pmcp::Error::Transport(
+                        pmcp::error::TransportError::Request(e.to_string()),
+                    )),
                 }
             },
         };
@@ -1291,7 +1367,7 @@ impl ServerTester {
                 } else {
                     json!({})
                 }
-            }
+            },
         }
     }
 
@@ -1299,7 +1375,7 @@ impl ServerTester {
         // Basic schema parsing to generate test arguments
         if let Some(properties) = schema.get("properties") {
             let mut args = json!({});
-            
+
             if let Some(props_obj) = properties.as_object() {
                 for (key, prop) in props_obj {
                     if let Some(prop_type) = prop.get("type").and_then(|t| t.as_str()) {
@@ -1309,7 +1385,7 @@ impl ServerTester {
                             "boolean" => json!(true),
                             "array" => json!([]),
                             "object" => json!({}),
-                            _ => json!("test")
+                            _ => json!("test"),
                         };
                         args[key] = test_value;
                     }

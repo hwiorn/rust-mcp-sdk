@@ -142,9 +142,7 @@ async fn main() -> Result<()> {
         ))
     };
 
-    tracing_subscriber::fmt()
-        .with_env_filter(env_filter)
-        .init();
+    tracing_subscriber::fmt().with_env_filter(env_filter).init();
 
     // Print header
     if matches!(cli.format, OutputFormat::Pretty) {
@@ -158,29 +156,93 @@ async fn main() -> Result<()> {
             with_tools,
             tool,
             args,
-        } => run_full_test(&url, with_tools, tool, args, cli.timeout, cli.insecure, cli.api_key.as_deref(), cli.transport.as_deref()).await,
+        } => {
+            run_full_test(
+                &url,
+                with_tools,
+                tool,
+                args,
+                cli.timeout,
+                cli.insecure,
+                cli.api_key.as_deref(),
+                cli.transport.as_deref(),
+            )
+            .await
+        },
 
-        Commands::Quick { url } => run_quick_test(&url, cli.timeout, cli.insecure, cli.api_key.as_deref(), cli.transport.as_deref()).await,
+        Commands::Quick { url } => {
+            run_quick_test(
+                &url,
+                cli.timeout,
+                cli.insecure,
+                cli.api_key.as_deref(),
+                cli.transport.as_deref(),
+            )
+            .await
+        },
 
         Commands::Compliance { url, strict } => {
-            run_compliance_test(&url, strict, cli.timeout, cli.insecure, cli.api_key.as_deref(), cli.transport.as_deref()).await
+            run_compliance_test(
+                &url,
+                strict,
+                cli.timeout,
+                cli.insecure,
+                cli.api_key.as_deref(),
+                cli.transport.as_deref(),
+            )
+            .await
         },
 
         Commands::Tools { url, test_all } => {
-            run_tools_test(&url, test_all, cli.timeout, cli.insecure, cli.api_key.as_deref(), cli.transport.as_deref()).await
+            run_tools_test(
+                &url,
+                test_all,
+                cli.timeout,
+                cli.insecure,
+                cli.api_key.as_deref(),
+                cli.transport.as_deref(),
+            )
+            .await
         },
 
         Commands::Diagnose { url, network } => {
-            run_diagnostics(&url, network, cli.timeout, cli.insecure, cli.api_key.as_deref()).await
+            run_diagnostics(
+                &url,
+                network,
+                cli.timeout,
+                cli.insecure,
+                cli.api_key.as_deref(),
+            )
+            .await
         },
 
         Commands::Compare {
             server1,
             server2,
             with_perf,
-        } => run_comparison(&server1, &server2, with_perf, cli.timeout, cli.insecure, cli.api_key.as_deref(), cli.transport.as_deref()).await,
+        } => {
+            run_comparison(
+                &server1,
+                &server2,
+                with_perf,
+                cli.timeout,
+                cli.insecure,
+                cli.api_key.as_deref(),
+                cli.transport.as_deref(),
+            )
+            .await
+        },
 
-        Commands::Health { url } => run_health_check(&url, cli.timeout, cli.insecure, cli.api_key.as_deref(), cli.transport.as_deref()).await,
+        Commands::Health { url } => {
+            run_health_check(
+                &url,
+                cli.timeout,
+                cli.insecure,
+                cli.api_key.as_deref(),
+                cli.transport.as_deref(),
+            )
+            .await
+        },
     };
 
     // Handle results and output
@@ -233,7 +295,13 @@ async fn run_full_test(
     api_key: Option<&str>,
     transport: Option<&str>,
 ) -> Result<TestReport> {
-    let mut tester = ServerTester::new(url, Duration::from_secs(timeout), insecure, api_key, transport)?;
+    let mut tester = ServerTester::new(
+        url,
+        Duration::from_secs(timeout),
+        insecure,
+        api_key,
+        transport,
+    )?;
 
     println!("{}", "Running full test suite...".green());
     println!();
@@ -257,8 +325,20 @@ async fn run_full_test(
     Ok(report)
 }
 
-async fn run_quick_test(url: &str, timeout: u64, insecure: bool, api_key: Option<&str>, transport: Option<&str>) -> Result<TestReport> {
-    let mut tester = ServerTester::new(url, Duration::from_secs(timeout), insecure, api_key, transport)?;
+async fn run_quick_test(
+    url: &str,
+    timeout: u64,
+    insecure: bool,
+    api_key: Option<&str>,
+    transport: Option<&str>,
+) -> Result<TestReport> {
+    let mut tester = ServerTester::new(
+        url,
+        Duration::from_secs(timeout),
+        insecure,
+        api_key,
+        transport,
+    )?;
 
     println!("{}", "Running quick connectivity test...".green());
     println!();
@@ -274,7 +354,13 @@ async fn run_compliance_test(
     api_key: Option<&str>,
     transport: Option<&str>,
 ) -> Result<TestReport> {
-    let mut tester = ServerTester::new(url, Duration::from_secs(timeout), insecure, api_key, transport)?;
+    let mut tester = ServerTester::new(
+        url,
+        Duration::from_secs(timeout),
+        insecure,
+        api_key,
+        transport,
+    )?;
 
     println!("{}", "Running protocol compliance tests...".green());
     if strict {
@@ -293,7 +379,13 @@ async fn run_tools_test(
     api_key: Option<&str>,
     transport: Option<&str>,
 ) -> Result<TestReport> {
-    let mut tester = ServerTester::new(url, Duration::from_secs(timeout), insecure, api_key, transport)?;
+    let mut tester = ServerTester::new(
+        url,
+        Duration::from_secs(timeout),
+        insecure,
+        api_key,
+        transport,
+    )?;
 
     println!("{}", "Discovering and testing tools...".green());
     println!();
@@ -311,8 +403,14 @@ async fn run_diagnostics(
     println!("{}", "Running connection diagnostics...".green());
     println!();
 
-    let report =
-        diagnostics::run_diagnostics(url, network, Duration::from_secs(timeout), insecure, api_key).await?;
+    let report = diagnostics::run_diagnostics(
+        url,
+        network,
+        Duration::from_secs(timeout),
+        insecure,
+        api_key,
+    )
+    .await?;
 
     Ok(report)
 }
@@ -331,16 +429,40 @@ async fn run_comparison(
     println!("  Server 2: {}", server2.cyan());
     println!();
 
-    let mut tester1 = ServerTester::new(server1, Duration::from_secs(timeout), insecure, api_key, transport)?;
-    let mut tester2 = ServerTester::new(server2, Duration::from_secs(timeout), insecure, api_key, transport)?;
+    let mut tester1 = ServerTester::new(
+        server1,
+        Duration::from_secs(timeout),
+        insecure,
+        api_key,
+        transport,
+    )?;
+    let mut tester2 = ServerTester::new(
+        server2,
+        Duration::from_secs(timeout),
+        insecure,
+        api_key,
+        transport,
+    )?;
 
     let report = tester1.compare_with(&mut tester2, with_perf).await?;
 
     Ok(report)
 }
 
-async fn run_health_check(url: &str, timeout: u64, insecure: bool, api_key: Option<&str>, transport: Option<&str>) -> Result<TestReport> {
-    let mut tester = ServerTester::new(url, Duration::from_secs(timeout), insecure, api_key, transport)?;
+async fn run_health_check(
+    url: &str,
+    timeout: u64,
+    insecure: bool,
+    api_key: Option<&str>,
+    transport: Option<&str>,
+) -> Result<TestReport> {
+    let mut tester = ServerTester::new(
+        url,
+        Duration::from_secs(timeout),
+        insecure,
+        api_key,
+        transport,
+    )?;
 
     println!("{}", "Checking server health...".green());
     println!();

@@ -1544,7 +1544,7 @@ impl ServerBuilder {
                 return Err(crate::Error::validation(
                     "Cannot use protect_tool() with a custom tool_authorizer. \
                      Either use protect_tool() to configure scope-based authorization, \
-                     or provide a custom ToolAuthorizer implementation, but not both."
+                     or provide a custom ToolAuthorizer implementation, but not both.",
                 ));
             }
             // Create a ScopeBasedAuthorizer with all the tool protections
