@@ -1064,6 +1064,8 @@ pub struct ServerBuilder {
     auth_provider: Option<Arc<dyn auth::AuthProvider>>,
     /// Tool authorizer for fine-grained access control
     tool_authorizer: Option<Arc<dyn auth::ToolAuthorizer>>,
+    /// Tool protection requirements to be applied at build time
+    tool_protections: HashMap<String, Vec<String>>,
 }
 
 impl std::fmt::Debug for ServerBuilder {
@@ -1114,6 +1116,7 @@ impl ServerBuilder {
             roots_manager: roots::RootsManager::new(),
             auth_provider: None,
             tool_authorizer: None,
+            tool_protections: HashMap::new(),
         }
     }
 
@@ -1481,6 +1484,11 @@ impl ServerBuilder {
     /// # Ok::<(), pmcp::Error>(())
     /// ```
     pub fn tool_authorizer(mut self, authorizer: impl auth::ToolAuthorizer + 'static) -> Self {
+        if !self.tool_protections.is_empty() {
+            // Log a warning or panic - for now we'll clear the protections with a warning
+            eprintln!("Warning: Setting a custom tool_authorizer clears any previous protect_tool() configurations");
+            self.tool_protections.clear();
+        }
         self.tool_authorizer = Some(Arc::new(authorizer));
         self
     }
@@ -1509,18 +1517,9 @@ impl ServerBuilder {
     /// # Ok::<(), pmcp::Error>(())
     /// ```
     pub fn protect_tool(mut self, tool_name: impl Into<String>, scopes: Vec<String>) -> Self {
-        // Get or create a scope-based authorizer
-        if let Some(existing) = self.tool_authorizer.take() {
-            // Try to downcast to ScopeBasedAuthorizer
-            // If it's not a ScopeBasedAuthorizer, we can't modify it, so just put it back
-            self.tool_authorizer = Some(existing);
-            self
-        } else {
-            // Create a new ScopeBasedAuthorizer
-            let authorizer = auth::ScopeBasedAuthorizer::new().require_scopes(tool_name, scopes);
-            self.tool_authorizer = Some(Arc::new(authorizer));
-            self
-        }
+        // Store the tool protection requirements to be applied at build time
+        self.tool_protections.insert(tool_name.into(), scopes);
+        self
     }
 
     ///
@@ -1537,6 +1536,27 @@ impl ServerBuilder {
             .version
             .ok_or_else(|| crate::Error::validation("Server version is required"))?;
 
+        // Apply tool protections
+        let tool_authorizer = if !self.tool_protections.is_empty() {
+            if self.tool_authorizer.is_some() {
+                // If there's an existing authorizer and tool protections are specified,
+                // this is a configuration error
+                return Err(crate::Error::validation(
+                    "Cannot use protect_tool() with a custom tool_authorizer. \
+                     Either use protect_tool() to configure scope-based authorization, \
+                     or provide a custom ToolAuthorizer implementation, but not both."
+                ));
+            }
+            // Create a ScopeBasedAuthorizer with all the tool protections
+            let mut authorizer = auth::ScopeBasedAuthorizer::new();
+            for (tool_name, scopes) in self.tool_protections {
+                authorizer = authorizer.require_scopes(tool_name, scopes);
+            }
+            Some(Arc::new(authorizer) as Arc<dyn auth::ToolAuthorizer>)
+        } else {
+            self.tool_authorizer
+        };
+
         Ok(Server {
             info: Implementation { name, version },
             capabilities: self.capabilities,
@@ -1552,7 +1572,7 @@ impl ServerBuilder {
             subscription_manager: Arc::new(RwLock::new(subscriptions::SubscriptionManager::new())),
             elicitation_manager: None,
             auth_provider: self.auth_provider,
-            tool_authorizer: self.tool_authorizer,
+            tool_authorizer,
         })
     }
 }
