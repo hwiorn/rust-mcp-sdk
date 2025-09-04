@@ -97,7 +97,8 @@ jobs:
               echo "Skipping example: $example_name (requires cancellation_example feature)"
               continue
             fi
-            if [[ "$example_name" == "13_websocket_transport" ]]; then
+            if [[ "$example_name" == "13_websocket_transport" ]] || \
+               [[ "$example_name" == "27_websocket_server_enhanced" ]]; then
               echo "Skipping example: $example_name (requires websocket feature)"
               continue
             fi
@@ -109,6 +110,16 @@ jobs:
                [[ "$example_name" == "23_streamable_http_server_stateless" ]] || \
                [[ "$example_name" == "24_streamable_http_client" ]]; then
               echo "Skipping example: $example_name (requires streamable-http feature)"
+              continue
+            fi
+            if [[ "$example_name" == "28_sse_optimized" ]]; then
+              echo "Skipping example: $example_name (requires sse feature)"
+              continue
+            fi
+            if [[ "$example_name" == "29_connection_pool" ]] || \
+               [[ "$example_name" == "30_enhanced_middleware" ]] || \
+               [[ "$example_name" == "31_advanced_error_recovery" ]]; then
+              echo "Skipping example: $example_name (requires full feature)"
               continue
             fi
             echo "Checking example: $example_name"
