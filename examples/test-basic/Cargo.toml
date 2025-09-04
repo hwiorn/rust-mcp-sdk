@@ -2,6 +2,12 @@
 name = "test-basic"
 version = "0.1.0"
 edition = "2021"
+description = "Basic test example for PMCP SDK"
+license = "MIT"
+repository = "https://github.com/paiml/rust-mcp-sdk"
+readme = "../../README.md"
+keywords = ["mcp", "example", "test"]
+categories = ["development-tools::testing"]
 
 [dependencies]
 pmcp = { path = "../../", features = ["http"] }

@@ -47,7 +47,7 @@ impl Default for ProxyProviderConfig {
 }
 
 /// Proxy authentication provider that delegates to an upstream OAuth server.
-/// This is similar to the TypeScript SDK's ProxyProvider pattern.
+/// This is similar to the TypeScript SDK's `ProxyProvider` pattern.
 pub struct ProxyProvider {
     config: ProxyProviderConfig,
     token_validator: Option<TokenValidatorFn>,
@@ -150,8 +150,7 @@ impl ProxyProvider {
         // This would make an HTTP request to the introspection endpoint
         // For now, return a placeholder implementation
         // Real implementation would use reqwest or similar HTTP client
-
-        // TODO: Implement actual HTTP introspection when HTTP client is available
+        //
         // The implementation would:
         // 1. POST to introspection_endpoint with token
         // 2. Include client credentials if configured
@@ -172,9 +171,8 @@ impl AuthProvider for ProxyProvider {
         authorization_header: Option<&str>,
     ) -> Result<Option<AuthContext>> {
         // Extract bearer token from Authorization header
-        let token = match Self::extract_bearer_token(authorization_header) {
-            Some(token) => token,
-            None => return Ok(None), // No auth provided
+        let Some(token) = Self::extract_bearer_token(authorization_header) else {
+            return Ok(None); // No auth provided
         };
 
         // Validate the token
