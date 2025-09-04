@@ -112,7 +112,8 @@ jobs:
               continue
             fi
             echo "Checking example: $example_name"
-            cargo check --example "$example_name"
+            # Most examples need at least http feature for tokio
+            cargo check --example "$example_name" --features http
           fi
         done
     
