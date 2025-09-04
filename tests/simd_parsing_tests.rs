@@ -126,8 +126,14 @@ fn test_cpu_feature_detection() {
     println!("  SSE4.2: {}", features.sse42);
     println!("  SSSE3: {}", features.ssse3);
 
-    // On any modern CPU, at least one feature should be available
+    // On x86_64, at least one feature should be available
+    // On ARM/aarch64, these x86 features won't be available
+    #[cfg(target_arch = "x86_64")]
     assert!(features.avx2 || features.sse42 || features.ssse3);
+
+    // On ARM, all x86 features should be false
+    #[cfg(target_arch = "aarch64")]
+    assert!(!features.avx2 && !features.sse42 && !features.ssse3);
 }
 
 #[test]

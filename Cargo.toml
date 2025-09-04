@@ -58,7 +58,7 @@ glob-match = { version = "0.2", optional = true }
 tokio = { version = "1.46", features = ["full"], optional = true }
 tokio-stream = { version = "0.1.15", optional = true }
 tokio-util = { version = "0.7", features = ["rt"], optional = true }
-tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
+tracing-subscriber = { version = "0.3.20", features = ["env-filter"], optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
@@ -106,7 +106,7 @@ default = ["validation"]
 full = ["websocket", "http", "streamable-http", "sse", "validation", "resource-watcher", "rayon"]
 sse = ["dep:bytes", "dep:tokio", "dep:tokio-util", "dep:tracing-subscriber"]
 websocket = ["dep:tokio-tungstenite", "dep:tokio", "dep:tokio-util", "dep:tracing-subscriber"]
-http = ["dep:hyper", "dep:hyper-util", "dep:tokio", "dep:tokio-util", "dep:tracing-subscriber"]
+http = ["dep:hyper", "dep:hyper-util", "dep:bytes", "dep:tokio", "dep:tokio-util", "dep:tracing-subscriber"]
 streamable-http = ["dep:hyper", "dep:hyper-util", "dep:futures-util", "dep:bytes", "dep:axum", "dep:tokio", "dep:tokio-util", "dep:tokio-stream", "dep:tracing-subscriber"]
 validation = ["dep:jsonschema", "dep:garde"]
 resource-watcher = ["dep:notify", "dep:glob-match"]
@@ -298,7 +298,7 @@ required-features = ["full"]
 name = "comprehensive_benchmarks"
 harness = false
 [workspace]
-members = ["pmcp-macros", "examples/wasm-client"]
+members = ["pmcp-macros", "examples/wasm-client", "examples/25-oauth-basic", "examples/test-basic", "examples/26-server-tester"]
 exclude = ["fuzz"]
 
 [package.metadata.docs.rs]

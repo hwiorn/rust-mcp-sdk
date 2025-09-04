@@ -2,6 +2,8 @@
 //! Provides vectorized implementations of JSON parsing and string operations
 
 #![allow(unsafe_code)]
+#![allow(dead_code)]
+#![allow(unused_imports)]
 
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;

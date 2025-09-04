@@ -90,8 +90,8 @@ pub use client::{Client, ClientBuilder};
 pub use error::{Error, ErrorCode, Result};
 #[cfg(not(target_arch = "wasm32"))]
 pub use server::{
-    cancellation::RequestHandlerExtra, PromptHandler, ResourceHandler, SamplingHandler, Server,
-    ServerBuilder, ToolHandler,
+    auth, cancellation::RequestHandlerExtra, PromptHandler, ResourceHandler, SamplingHandler,
+    Server, ServerBuilder, ToolHandler,
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use shared::StdioTransport;
