@@ -62,5 +62,7 @@ heading-split-level = 3
 copy-js = true
 
 # Rust configuration for PMCP examples
+# Disable doctests for now since PMCP crate isn't available in test environment
+# TODO: Enable when PMCP is published or configure test dependencies
 [rust]
 edition = "2021"

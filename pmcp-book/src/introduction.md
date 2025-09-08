@@ -51,14 +51,14 @@ PMCP (Pragmatic Model Context Protocol) is a high-performance Rust implementatio
 
 ## Architecture Overview
 
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   MCP Client    │◄──►│   Transport     │◄──►│   MCP Server    │
-│                 │    │   Layer         │    │                 │
-│  - Tool calls   │    │  - WebSocket    │    │  - Tool handlers│
-│  - Resource req │    │  - HTTP         │    │  - Resources    │
-│  - Prompt use   │    │  - Streamable   │    │  - Prompts      │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+```text
++-------------------+     +-------------------+     +-------------------+
+|   MCP Client      |<--->|   Transport       |<--->|   MCP Server      |
+|                   |     |   Layer           |     |                   |
+|  - Tool calls     |     |  - WebSocket      |     |  - Tool handlers  |
+|  - Resource req   |     |  - HTTP           |     |  - Resources      |
+|  - Prompt use     |     |  - Streamable     |     |  - Prompts        |
++-------------------+     +-------------------+     +-------------------+
 ```
 
 PMCP provides implementations for all components:
