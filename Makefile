@@ -214,16 +214,21 @@ validate-always:
 .PHONY: coverage
 coverage:
 	@echo "$(BLUE)Running coverage analysis...$(NC)"
-	$(CARGO) llvm-cov --all-features --workspace --lcov --output-path lcov.info
-	$(CARGO) llvm-cov report --html
-	@echo "$(GREEN)✓ Coverage report generated$(NC)"
+	$(CARGO) llvm-cov --all-features --package pmcp --lcov --output-path lcov.info
+	@echo "$(BLUE)Calculating coverage percentage...$(NC)"
+	@TOTAL_LINES=$$(grep "^LF:" lcov.info | awk -F: '{sum+=$$2} END {print sum}'); \
+	HIT_LINES=$$(grep "^LH:" lcov.info | awk -F: '{sum+=$$2} END {print sum}'); \
+	PERCENTAGE=$$(echo "scale=2; $$HIT_LINES / $$TOTAL_LINES * 100" | bc); \
+	echo "$(GREEN)✓ Coverage: $$PERCENTAGE% ($$HIT_LINES/$$TOTAL_LINES lines)$(NC)"
 
 .PHONY: coverage-ci
 coverage-ci:
 	@echo "$(BLUE)Running CI coverage...$(NC)"
-	$(CARGO) llvm-cov --all-features --workspace --lcov --output-path lcov.info
-	$(CARGO) llvm-cov report
-	@echo "$(GREEN)✓ CI coverage complete$(NC)"
+	$(CARGO) llvm-cov --all-features --package pmcp --lcov --output-path lcov.info
+	@TOTAL_LINES=$$(grep "^LF:" lcov.info | awk -F: '{sum+=$$2} END {print sum}'); \
+	HIT_LINES=$$(grep "^LH:" lcov.info | awk -F: '{sum+=$$2} END {print sum}'); \
+	PERCENTAGE=$$(echo "scale=2; $$HIT_LINES / $$TOTAL_LINES * 100" | bc); \
+	echo "Coverage: $$PERCENTAGE% ($$HIT_LINES/$$TOTAL_LINES lines)"
 
 # Benchmarks
 .PHONY: bench
