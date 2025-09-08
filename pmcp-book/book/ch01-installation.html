@@ -1,0 +1,457 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Chapter 1: Installation &amp; Setup - The PMCP Guide: Pragmatic Model Context Protocol</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="The comprehensive guide to PMCP - High-performance Rust SDK for Model Context Protocol">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/pmcp.css">
+        <link rel="stylesheet" href="theme/code-enhancements.css">
+        <link rel="stylesheet" href="theme/syntax-highlight.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "rust";
+            const default_dark_theme = "ayu";
+            window.path_to_searchindex_js = "searchindex.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The PMCP Guide: Pragmatic Model Context Protocol</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/pmcp" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/pmcp/edit/main/pmcp-book/src/ch01-installation.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="chapter-1-installation--setup"><a class="header" href="#chapter-1-installation--setup">Chapter 1: Installation &amp; Setup</a></h1>
+<p>Getting started with PMCP is straightforward. This chapter will guide you through installing PMCP, setting up your development environment, and verifying everything works correctly.</p>
+<h2 id="system-requirements"><a class="header" href="#system-requirements">System Requirements</a></h2>
+<p>PMCP supports all major platforms:</p>
+<ul>
+<li><strong>Linux</strong> (Ubuntu 20.04+, RHEL 8+, Arch Linux)</li>
+<li><strong>macOS</strong> (10.15+)</li>
+<li><strong>Windows</strong> (Windows 10+)</li>
+<li><strong>WebAssembly</strong> (for browser environments)</li>
+</ul>
+<p><strong>Minimum Requirements:</strong></p>
+<ul>
+<li>Rust 1.82+</li>
+<li>2GB RAM</li>
+<li>1GB disk space</li>
+</ul>
+<h2 id="installation-methods"><a class="header" href="#installation-methods">Installation Methods</a></h2>
+<h3 id="method-1-using-cargo-recommended"><a class="header" href="#method-1-using-cargo-recommended">Method 1: Using Cargo (Recommended)</a></h3>
+<p>Add PMCP to your <code>Cargo.toml</code>:</p>
+<pre><code class="language-toml">[dependencies]
+pmcp = "1.4.1"
+</code></pre>
+<p>Or use <code>cargo add</code>:</p>
+<pre><code class="language-bash">cargo add pmcp
+</code></pre>
+<h3 id="method-2-from-source"><a class="header" href="#method-2-from-source">Method 2: From Source</a></h3>
+<p>Clone and build from source for the latest features:</p>
+<pre><code class="language-bash">git clone https://github.com/paiml/pmcp.git
+cd pmcp
+cargo build --release
+</code></pre>
+<h3 id="method-3-pre-built-binaries"><a class="header" href="#method-3-pre-built-binaries">Method 3: Pre-built Binaries</a></h3>
+<p>Download pre-built binaries from the <a href="https://github.com/paiml/pmcp/releases">releases page</a>:</p>
+<pre><code class="language-bash"># Linux/macOS
+curl -L https://github.com/paiml/pmcp/releases/latest/download/pmcp-linux.tar.gz | tar xz
+
+# Windows PowerShell  
+Invoke-WebRequest -Uri "https://github.com/paiml/pmcp/releases/latest/download/pmcp-windows.zip" -OutFile "pmcp.zip"
+Expand-Archive pmcp.zip
+</code></pre>
+<h2 id="feature-flags"><a class="header" href="#feature-flags">Feature Flags</a></h2>
+<p>PMCP uses feature flags to minimize binary size. Choose the features you need:</p>
+<pre><code class="language-toml">[dependencies]
+pmcp = { version = "1.4.1", features = ["full"] }
+</code></pre>
+<h3 id="available-features"><a class="header" href="#available-features">Available Features</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Feature</th><th>Description</th><th>Dependencies</th></tr></thead><tbody>
+<tr><td><code>default</code></td><td>Core functionality + validation</td><td><code>jsonschema</code>, <code>garde</code></td></tr>
+<tr><td><code>full</code></td><td>All features enabled</td><td>All dependencies</td></tr>
+<tr><td><code>websocket</code></td><td>WebSocket transport</td><td><code>tokio-tungstenite</code></td></tr>
+<tr><td><code>http</code></td><td>HTTP transport</td><td><code>hyper</code>, <code>hyper-util</code></td></tr>
+<tr><td><code>streamable-http</code></td><td>Streamable HTTP server</td><td><code>axum</code>, <code>tokio-stream</code></td></tr>
+<tr><td><code>sse</code></td><td>Server-Sent Events</td><td><code>bytes</code>, <code>tokio-util</code></td></tr>
+<tr><td><code>validation</code></td><td>Input validation</td><td><code>jsonschema</code>, <code>garde</code></td></tr>
+<tr><td><code>resource-watcher</code></td><td>File system watching</td><td><code>notify</code>, <code>glob-match</code></td></tr>
+<tr><td><code>wasm</code></td><td>WebAssembly support</td><td><code>wasm-bindgen</code></td></tr>
+</tbody></table>
+</div>
+<h3 id="common-configurations"><a class="header" href="#common-configurations">Common Configurations</a></h3>
+<p><strong>Minimal client:</strong></p>
+<pre><code class="language-toml">pmcp = { version = "1.4.1", features = ["validation"] }
+</code></pre>
+<p><strong>WebSocket server:</strong></p>
+<pre><code class="language-toml">pmcp = { version = "1.4.1", features = ["websocket", "validation"] }
+</code></pre>
+<p><strong>Production server:</strong></p>
+<pre><code class="language-toml">pmcp = { version = "1.4.1", features = ["full"] }
+</code></pre>
+<h2 id="development-environment-setup"><a class="header" href="#development-environment-setup">Development Environment Setup</a></h2>
+<h3 id="install-required-tools"><a class="header" href="#install-required-tools">Install Required Tools</a></h3>
+<pre><code class="language-bash"># Install Rust toolchain
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Add required components
+rustup component add rustfmt clippy llvm-tools-preview
+
+# Install development tools
+cargo install cargo-nextest cargo-llvm-cov cargo-audit
+</code></pre>
+<h3 id="ide-configuration"><a class="header" href="#ide-configuration">IDE Configuration</a></h3>
+<p><strong>Visual Studio Code:</strong></p>
+<pre><code class="language-bash"># Install Rust extension
+code --install-extension rust-lang.rust-analyzer
+</code></pre>
+<p><strong>vim/neovim:</strong></p>
+<pre><code class="language-vim">" Add to your config
+Plug 'rust-lang/rust.vim'
+Plug 'neoclide/coc.nvim'
+</code></pre>
+<p><strong>JetBrains IntelliJ/CLion:</strong></p>
+<ul>
+<li>Install the Rust plugin from the marketplace</li>
+</ul>
+<h2 id="verification"><a class="header" href="#verification">Verification</a></h2>
+<h3 id="quick-test"><a class="header" href="#quick-test">Quick Test</a></h3>
+<p>Create a new project and verify PMCP works:</p>
+<pre><code class="language-bash">cargo new pmcp-test
+cd pmcp-test
+</code></pre>
+<p>Add to <code>Cargo.toml</code>:</p>
+<pre><code class="language-toml">[dependencies]
+pmcp = "1.4.1"
+tokio = { version = "1.0", features = ["full"] }
+</code></pre>
+<p>Replace <code>src/main.rs</code>:</p>
+<pre><pre class="playground"><code class="language-rust edition2021">use pmcp::{Client, ClientCapabilities};
+
+#[tokio::main]
+async fn main() -&gt; pmcp::Result&lt;()&gt; {
+    println!("PMCP version: {}", pmcp::VERSION);
+    
+    // Test client creation
+    let client = Client::builder()
+        .name("test-client")
+        .version("1.0.0")
+        .capabilities(ClientCapabilities::default())
+        .build()?;
+    
+    println!("✅ PMCP client created successfully!");
+    println!("Client name: {}", client.name());
+    
+    Ok(())
+}</code></pre></pre>
+<p>Run the test:</p>
+<pre><code class="language-bash">cargo run
+</code></pre>
+<p>Expected output:</p>
+<pre><code>PMCP version: 1.4.1
+✅ PMCP client created successfully!
+Client name: test-client
+</code></pre>
+<h3 id="run-examples"><a class="header" href="#run-examples">Run Examples</a></h3>
+<p>Test with the included examples:</p>
+<pre><code class="language-bash"># Clone the repository
+git clone https://github.com/paiml/pmcp.git
+cd pmcp
+
+# Run basic server example  
+cargo run --example 02_server_basic --features full
+
+# In another terminal, run client example
+cargo run --example 01_client_initialize --features full
+</code></pre>
+<h3 id="performance-benchmark"><a class="header" href="#performance-benchmark">Performance Benchmark</a></h3>
+<p>Verify performance with built-in benchmarks:</p>
+<pre><code class="language-bash">cargo bench --all-features
+</code></pre>
+<p>Expected results (approximate):</p>
+<pre><code>simple_protocol_parse    time: [12.5 ns 12.8 ns 13.2 ns]
+json_serialization      time: [1.85 μs 1.89 μs 1.94 μs]  
+websocket_roundtrip     time: [45.2 μs 46.1 μs 47.3 μs]
+</code></pre>
+<h2 id="common-issues"><a class="header" href="#common-issues">Common Issues</a></h2>
+<h3 id="compilation-errors"><a class="header" href="#compilation-errors">Compilation Errors</a></h3>
+<p><strong>Issue</strong>: Missing features</p>
+<pre><code>error[E0432]: unresolved import `pmcp::WebSocketTransport`
+</code></pre>
+<p><strong>Solution</strong>: Enable required features:</p>
+<pre><code class="language-toml">pmcp = { version = "1.4.1", features = ["websocket"] }
+</code></pre>
+<p><strong>Issue</strong>: MSRV (Minimum Supported Rust Version)</p>
+<pre><code>error: package `pmcp v1.4.1` cannot be built because it requires rustc 1.82 or newer
+</code></pre>
+<p><strong>Solution</strong>: Update Rust:</p>
+<pre><code class="language-bash">rustup update stable
+</code></pre>
+<h3 id="runtime-issues"><a class="header" href="#runtime-issues">Runtime Issues</a></h3>
+<p><strong>Issue</strong>: Port already in use</p>
+<pre><code>Error: Address already in use (os error 98)
+</code></pre>
+<p><strong>Solution</strong>: Use a different port:</p>
+<pre><pre class="playground"><code class="language-rust edition2021"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>server.bind("127.0.0.1:0").await?; // Let OS choose port
+<span class="boring">}</span></code></pre></pre>
+<p><strong>Issue</strong>: Permission denied</p>
+<pre><code>Error: Permission denied (os error 13)
+</code></pre>
+<p><strong>Solution</strong>: Use unprivileged port (&gt;1024):</p>
+<pre><pre class="playground"><code class="language-rust edition2021"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>server.bind("127.0.0.1:8080").await?;
+<span class="boring">}</span></code></pre></pre>
+<h3 id="performance-issues"><a class="header" href="#performance-issues">Performance Issues</a></h3>
+<p><strong>Issue</strong>: High memory usage</p>
+<pre><code>Memory usage: 2.3GB for simple server
+</code></pre>
+<p><strong>Solution</strong>: Disable debug symbols in release:</p>
+<pre><code class="language-toml">[profile.release]
+debug = false
+strip = true
+</code></pre>
+<h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
+<p>Now that PMCP is installed and working, you’re ready to:</p>
+<ol>
+<li><strong>Build your first server</strong> - Chapter 2 walks through creating a basic MCP server</li>
+<li><strong>Create a client</strong> - Chapter 3 shows how to connect and interact with servers</li>
+<li><strong>Explore examples</strong> - Check out the <code>examples/</code> directory for real-world patterns</li>
+</ol>
+<h2 id="getting-help"><a class="header" href="#getting-help">Getting Help</a></h2>
+<p>If you encounter issues:</p>
+<ul>
+<li><strong>Documentation</strong>: <a href="https://docs.rs/pmcp">https://docs.rs/pmcp</a></li>
+<li><strong>Examples</strong>: <a href="https://github.com/paiml/pmcp/tree/main/examples">https://github.com/paiml/pmcp/tree/main/examples</a></li>
+<li><strong>Issues</strong>: <a href="https://github.com/paiml/pmcp/issues">https://github.com/paiml/pmcp/issues</a></li>
+<li><strong>Discussions</strong>: <a href="https://github.com/paiml/pmcp/discussions">https://github.com/paiml/pmcp/discussions</a></li>
+</ul>
+<p>You’re all set! Let’s start building with PMCP.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="introduction.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="ch02-first-server.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="introduction.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="ch02-first-server.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+        <script>
+            window.playground_line_numbers = true;
+        </script>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="ace.js"></script>
+        <script src="mode-rust.js"></script>
+        <script src="editor.js"></script>
+        <script src="theme-dawn.js"></script>
+        <script src="theme-tomorrow_night.js"></script>
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="theme/pmcp-highlight.js"></script>
+        <script src="theme/examples.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

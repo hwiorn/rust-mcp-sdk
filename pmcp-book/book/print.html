@@ -1,0 +1,1543 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>The PMCP Guide: Pragmatic Model Context Protocol</title>
+        <meta name="robots" content="noindex">
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="The comprehensive guide to PMCP - High-performance Rust SDK for Model Context Protocol">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/pmcp.css">
+        <link rel="stylesheet" href="theme/code-enhancements.css">
+        <link rel="stylesheet" href="theme/syntax-highlight.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "rust";
+            const default_dark_theme = "ayu";
+            window.path_to_searchindex_js = "searchindex.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The PMCP Guide: Pragmatic Model Context Protocol</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/pmcp" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="the-pmcp-guide"><a class="header" href="#the-pmcp-guide">The PMCP Guide</a></h1>
+<p><strong>Pragmatic Model Context Protocol</strong></p>
+<p><em>High-Performance Rust SDK for Model Context Protocol</em></p>
+<hr />
+<p><strong>Version 1.4.1</strong><br />
+<strong>Authors</strong>: PAIML Team<br />
+<strong>License</strong>: MIT</p>
+<hr />
+<h2 id="about-pmcp"><a class="header" href="#about-pmcp">About PMCP</a></h2>
+<p>PMCP (Pragmatic Model Context Protocol) is a high-quality Rust implementation of the <a href="https://modelcontextprotocol.io">Model Context Protocol</a> (MCP) SDK, maintaining full compatibility with the TypeScript SDK while leveraging Rust’s performance and safety guarantees.</p>
+<p><strong>Code Name</strong>: <em>Angel Rust</em></p>
+<h2 id="what-youll-learn"><a class="header" href="#what-youll-learn">What You’ll Learn</a></h2>
+<p>This book will teach you how to:</p>
+<ul>
+<li>Build robust MCP servers and clients using PMCP</li>
+<li>Leverage Rust’s type system for protocol safety</li>
+<li>Achieve TypeScript SDK compatibility</li>
+<li>Implement advanced features like authentication and middleware</li>
+<li>Deploy production-ready MCP applications</li>
+<li>Optimize performance for high-throughput scenarios</li>
+</ul>
+<h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
+<ul>
+<li>Basic knowledge of Rust programming</li>
+<li>Familiarity with async/await concepts</li>
+<li>Understanding of network protocols (helpful but not required)</li>
+</ul>
+<h2 id="toyota-way-quality-standards"><a class="header" href="#toyota-way-quality-standards">Toyota Way Quality Standards</a></h2>
+<p>This book follows Toyota Way principles with zero tolerance for defects:</p>
+<ul>
+<li>✅ All examples are tested and working</li>
+<li>✅ 74%+ test coverage on all code</li>
+<li>✅ Zero clippy warnings</li>
+<li>✅ Comprehensive documentation with examples</li>
+<li>✅ TDD (Test-Driven Development) methodology</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="foreword"><a class="header" href="#foreword">Foreword</a></h1>
+<p>Welcome to The PMCP Guide, your comprehensive resource for mastering the Pragmatic Model Context Protocol in Rust.</p>
+<h2 id="why-pmcp"><a class="header" href="#why-pmcp">Why PMCP?</a></h2>
+<p>The Model Context Protocol (MCP) represents a fundamental shift in how AI applications communicate with external systems. While the TypeScript SDK provided an excellent foundation, the Rust ecosystem demanded a solution that leveraged Rust’s unique strengths: memory safety, zero-cost abstractions, and fearless concurrency.</p>
+<p>PMCP was born from this need, designed from day one to provide:</p>
+<ul>
+<li><strong>TypeScript Compatibility</strong>: 100% protocol compatibility with the official TypeScript SDK</li>
+<li><strong>Performance</strong>: 10x faster than TypeScript implementations</li>
+<li><strong>Safety</strong>: Leverage Rust’s type system for protocol correctness</li>
+<li><strong>Quality</strong>: Toyota Way standards with zero tolerance for defects</li>
+</ul>
+<h2 id="who-this-book-is-for"><a class="header" href="#who-this-book-is-for">Who This Book Is For</a></h2>
+<p>This book is designed for developers who want to:</p>
+<ul>
+<li>Build high-performance MCP servers and clients</li>
+<li>Migrate from TypeScript MCP implementations</li>
+<li>Learn best practices for protocol implementation</li>
+<li>Understand advanced MCP patterns and techniques</li>
+</ul>
+<p>Whether you’re building AI assistants, data processing pipelines, or integration services, PMCP provides the tools you need to create robust, production-ready applications.</p>
+<h2 id="how-this-book-is-organized"><a class="header" href="#how-this-book-is-organized">How This Book Is Organized</a></h2>
+<p>The book follows a practical, example-driven approach:</p>
+<p><strong>Part I</strong> introduces core concepts and gets you building immediately
+<strong>Part II</strong> covers essential MCP primitives: tools, resources, and prompts<br />
+<strong>Part III</strong> explores advanced features like authentication and custom transports
+<strong>Part IV</strong> focuses on production deployment and optimization
+<strong>Part V</strong> provides complete, real-world examples
+<strong>Part VI</strong> ensures TypeScript SDK compatibility
+<strong>Part VII</strong> covers advanced topics and contribution guidelines</p>
+<p>Every chapter includes working examples that you can run, modify, and learn from.</p>
+<h2 id="test-driven-documentation"><a class="header" href="#test-driven-documentation">Test-Driven Documentation</a></h2>
+<p>Following the Toyota Way principles, this book practices what it preaches. Every code example is tested before being documented, ensuring that you can trust the code you see will work exactly as described.</p>
+<h2 id="lets-begin"><a class="header" href="#lets-begin">Let’s Begin</a></h2>
+<p>The Model Context Protocol ecosystem is rapidly evolving, and PMCP positions you at the forefront of this revolution. Whether you’re building the next generation of AI tools or integrating existing systems, this guide will help you harness the full power of PMCP.</p>
+<p>Let’s build something amazing together.</p>
+<hr />
+<p><em>The PAIML Team</em></p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
+<p>The Model Context Protocol (MCP) is revolutionizing how AI applications interact with external systems, tools, and data sources. PMCP brings this power to the Rust ecosystem with uncompromising quality and performance.</p>
+<h2 id="what-is-mcp"><a class="header" href="#what-is-mcp">What is MCP?</a></h2>
+<p>The Model Context Protocol is a standardized way for AI applications to:</p>
+<ul>
+<li><strong>Discover and invoke tools</strong> - Execute functions and commands</li>
+<li><strong>Access resources</strong> - Read files, query databases, fetch web content</li>
+<li><strong>Use prompts and templates</strong> - Generate structured responses</li>
+<li><strong>Manage context</strong> - Maintain state across interactions</li>
+</ul>
+<p>Think of MCP as a universal adapter that allows AI models to interact with any system through a consistent, well-defined interface.</p>
+<h2 id="what-is-pmcp"><a class="header" href="#what-is-pmcp">What is PMCP?</a></h2>
+<p>PMCP (Pragmatic Model Context Protocol) is a high-performance Rust implementation that:</p>
+<ul>
+<li><strong>Maintains 100% TypeScript SDK compatibility</strong> - Drop-in replacement for existing applications</li>
+<li><strong>Leverages Rust’s type system</strong> - Catch protocol errors at compile time</li>
+<li><strong>Delivers superior performance</strong> - 10x faster than TypeScript implementations</li>
+<li><strong>Follows Toyota Way quality standards</strong> - Zero tolerance for defects</li>
+<li><strong>Provides comprehensive tooling</strong> - Everything you need for production deployment</li>
+</ul>
+<h2 id="key-features"><a class="header" href="#key-features">Key Features</a></h2>
+<h3 id="-performance"><a class="header" href="#-performance">🚀 <strong>Performance</strong></a></h3>
+<ul>
+<li><strong>Zero-cost abstractions</strong> - Pay only for what you use</li>
+<li><strong>Async-first design</strong> - Handle thousands of concurrent connections</li>
+<li><strong>Memory efficient</strong> - Minimal allocation overhead</li>
+<li><strong>SIMD optimizations</strong> - Vectorized protocol parsing</li>
+</ul>
+<h3 id="-type-safety"><a class="header" href="#-type-safety">🔒 <strong>Type Safety</strong></a></h3>
+<ul>
+<li><strong>Compile-time protocol validation</strong> - Catch errors before deployment</li>
+<li><strong>Rich type system</strong> - Express complex protocol constraints</li>
+<li><strong>Memory safety</strong> - No segfaults, no data races</li>
+<li><strong>Resource management</strong> - Automatic cleanup and lifecycle management</li>
+</ul>
+<h3 id="-compatibility"><a class="header" href="#-compatibility">🔄 <strong>Compatibility</strong></a></h3>
+<ul>
+<li><strong>TypeScript SDK parity</strong> - Identical protocol behavior</li>
+<li><strong>Cross-platform support</strong> - Linux, macOS, Windows, WebAssembly</li>
+<li><strong>Multiple transports</strong> - WebSocket, HTTP, Streamable HTTP, SSE</li>
+<li><strong>Version compatibility</strong> - Support for all MCP protocol versions</li>
+</ul>
+<h3 id="-production-ready"><a class="header" href="#-production-ready">🏭 <strong>Production Ready</strong></a></h3>
+<ul>
+<li><strong>Comprehensive testing</strong> - 74%+ coverage, property tests, integration tests</li>
+<li><strong>Battle-tested examples</strong> - Real-world usage patterns</li>
+<li><strong>Monitoring and observability</strong> - Built-in metrics and tracing</li>
+<li><strong>Security hardened</strong> - OAuth2, rate limiting, input validation</li>
+</ul>
+<h2 id="architecture-overview"><a class="header" href="#architecture-overview">Architecture Overview</a></h2>
+<pre><code>┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   MCP Client    │◄──►│   Transport     │◄──►│   MCP Server    │
+│                 │    │   Layer         │    │                 │
+│  - Tool calls   │    │  - WebSocket    │    │  - Tool handlers│
+│  - Resource req │    │  - HTTP         │    │  - Resources    │
+│  - Prompt use   │    │  - Streamable   │    │  - Prompts      │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+</code></pre>
+<p>PMCP provides implementations for all components:</p>
+<ul>
+<li><strong>Client Library</strong> - Connect to any MCP server</li>
+<li><strong>Server Framework</strong> - Build custom MCP servers</li>
+<li><strong>Transport Implementations</strong> - WebSocket, HTTP, and more</li>
+<li><strong>Protocol Utilities</strong> - Serialization, validation, error handling</li>
+</ul>
+<h2 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h2>
+<p>The fastest way to experience PMCP is through our examples:</p>
+<pre><code class="language-bash"># Install PMCP
+cargo add pmcp
+
+# Run a simple server
+cargo run --example 02_server_basic
+
+# Connect with a client  
+cargo run --example 01_client_initialize
+</code></pre>
+<h2 id="real-world-example"><a class="header" href="#real-world-example">Real-World Example</a></h2>
+<p>Here’s a complete MCP server in just a few lines:</p>
+<pre><pre class="playground"><code class="language-rust edition2021">use pmcp::{Server, ToolHandler, RequestHandlerExtra, Result};
+use serde_json::{json, Value};
+use async_trait::async_trait;
+
+struct Calculator;
+
+#[async_trait]
+impl ToolHandler for Calculator {
+    async fn handle(&amp;self, args: Value, _extra: RequestHandlerExtra) -&gt; Result&lt;Value&gt; {
+        let a = args["a"].as_f64().unwrap_or(0.0);
+        let b = args["b"].as_f64().unwrap_or(0.0);
+        
+        Ok(json!({
+            "content": [{
+                "type": "text", 
+                "text": format!("Result: {}", a + b)
+            }],
+            "isError": false
+        }))
+    }
+}
+
+#[tokio::main]
+async fn main() -&gt; Result&lt;()&gt; {
+    Server::builder()
+        .name("calculator-server")
+        .version("1.0.0")
+        .tool("add", Calculator)
+        .build()?
+        .run_stdio()
+        .await
+}</code></pre></pre>
+<p>This server:</p>
+<ul>
+<li>✅ Handles tool calls with full type safety</li>
+<li>✅ Provides structured responses</li>
+<li>✅ Includes comprehensive error handling</li>
+<li>✅ Works with any MCP client (including TypeScript)</li>
+</ul>
+<h2 id="whats-next"><a class="header" href="#whats-next">What’s Next?</a></h2>
+<p>In the following chapters, you’ll learn how to:</p>
+<ol>
+<li><strong>Install and configure</strong> PMCP for your environment</li>
+<li><strong>Build your first server</strong> with tools, resources, and prompts</li>
+<li><strong>Create robust clients</strong> that handle errors gracefully</li>
+<li><strong>Implement advanced features</strong> like authentication and middleware</li>
+<li><strong>Deploy to production</strong> with confidence and monitoring</li>
+<li><strong>Integrate with existing systems</strong> using battle-tested patterns</li>
+</ol>
+<p>Let’s dive in and start building with PMCP!</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="chapter-1-installation--setup"><a class="header" href="#chapter-1-installation--setup">Chapter 1: Installation &amp; Setup</a></h1>
+<p>Getting started with PMCP is straightforward. This chapter will guide you through installing PMCP, setting up your development environment, and verifying everything works correctly.</p>
+<h2 id="system-requirements"><a class="header" href="#system-requirements">System Requirements</a></h2>
+<p>PMCP supports all major platforms:</p>
+<ul>
+<li><strong>Linux</strong> (Ubuntu 20.04+, RHEL 8+, Arch Linux)</li>
+<li><strong>macOS</strong> (10.15+)</li>
+<li><strong>Windows</strong> (Windows 10+)</li>
+<li><strong>WebAssembly</strong> (for browser environments)</li>
+</ul>
+<p><strong>Minimum Requirements:</strong></p>
+<ul>
+<li>Rust 1.82+</li>
+<li>2GB RAM</li>
+<li>1GB disk space</li>
+</ul>
+<h2 id="installation-methods"><a class="header" href="#installation-methods">Installation Methods</a></h2>
+<h3 id="method-1-using-cargo-recommended"><a class="header" href="#method-1-using-cargo-recommended">Method 1: Using Cargo (Recommended)</a></h3>
+<p>Add PMCP to your <code>Cargo.toml</code>:</p>
+<pre><code class="language-toml">[dependencies]
+pmcp = "1.4.1"
+</code></pre>
+<p>Or use <code>cargo add</code>:</p>
+<pre><code class="language-bash">cargo add pmcp
+</code></pre>
+<h3 id="method-2-from-source"><a class="header" href="#method-2-from-source">Method 2: From Source</a></h3>
+<p>Clone and build from source for the latest features:</p>
+<pre><code class="language-bash">git clone https://github.com/paiml/pmcp.git
+cd pmcp
+cargo build --release
+</code></pre>
+<h3 id="method-3-pre-built-binaries"><a class="header" href="#method-3-pre-built-binaries">Method 3: Pre-built Binaries</a></h3>
+<p>Download pre-built binaries from the <a href="https://github.com/paiml/pmcp/releases">releases page</a>:</p>
+<pre><code class="language-bash"># Linux/macOS
+curl -L https://github.com/paiml/pmcp/releases/latest/download/pmcp-linux.tar.gz | tar xz
+
+# Windows PowerShell  
+Invoke-WebRequest -Uri "https://github.com/paiml/pmcp/releases/latest/download/pmcp-windows.zip" -OutFile "pmcp.zip"
+Expand-Archive pmcp.zip
+</code></pre>
+<h2 id="feature-flags"><a class="header" href="#feature-flags">Feature Flags</a></h2>
+<p>PMCP uses feature flags to minimize binary size. Choose the features you need:</p>
+<pre><code class="language-toml">[dependencies]
+pmcp = { version = "1.4.1", features = ["full"] }
+</code></pre>
+<h3 id="available-features"><a class="header" href="#available-features">Available Features</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Feature</th><th>Description</th><th>Dependencies</th></tr></thead><tbody>
+<tr><td><code>default</code></td><td>Core functionality + validation</td><td><code>jsonschema</code>, <code>garde</code></td></tr>
+<tr><td><code>full</code></td><td>All features enabled</td><td>All dependencies</td></tr>
+<tr><td><code>websocket</code></td><td>WebSocket transport</td><td><code>tokio-tungstenite</code></td></tr>
+<tr><td><code>http</code></td><td>HTTP transport</td><td><code>hyper</code>, <code>hyper-util</code></td></tr>
+<tr><td><code>streamable-http</code></td><td>Streamable HTTP server</td><td><code>axum</code>, <code>tokio-stream</code></td></tr>
+<tr><td><code>sse</code></td><td>Server-Sent Events</td><td><code>bytes</code>, <code>tokio-util</code></td></tr>
+<tr><td><code>validation</code></td><td>Input validation</td><td><code>jsonschema</code>, <code>garde</code></td></tr>
+<tr><td><code>resource-watcher</code></td><td>File system watching</td><td><code>notify</code>, <code>glob-match</code></td></tr>
+<tr><td><code>wasm</code></td><td>WebAssembly support</td><td><code>wasm-bindgen</code></td></tr>
+</tbody></table>
+</div>
+<h3 id="common-configurations"><a class="header" href="#common-configurations">Common Configurations</a></h3>
+<p><strong>Minimal client:</strong></p>
+<pre><code class="language-toml">pmcp = { version = "1.4.1", features = ["validation"] }
+</code></pre>
+<p><strong>WebSocket server:</strong></p>
+<pre><code class="language-toml">pmcp = { version = "1.4.1", features = ["websocket", "validation"] }
+</code></pre>
+<p><strong>Production server:</strong></p>
+<pre><code class="language-toml">pmcp = { version = "1.4.1", features = ["full"] }
+</code></pre>
+<h2 id="development-environment-setup"><a class="header" href="#development-environment-setup">Development Environment Setup</a></h2>
+<h3 id="install-required-tools"><a class="header" href="#install-required-tools">Install Required Tools</a></h3>
+<pre><code class="language-bash"># Install Rust toolchain
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Add required components
+rustup component add rustfmt clippy llvm-tools-preview
+
+# Install development tools
+cargo install cargo-nextest cargo-llvm-cov cargo-audit
+</code></pre>
+<h3 id="ide-configuration"><a class="header" href="#ide-configuration">IDE Configuration</a></h3>
+<p><strong>Visual Studio Code:</strong></p>
+<pre><code class="language-bash"># Install Rust extension
+code --install-extension rust-lang.rust-analyzer
+</code></pre>
+<p><strong>vim/neovim:</strong></p>
+<pre><code class="language-vim">" Add to your config
+Plug 'rust-lang/rust.vim'
+Plug 'neoclide/coc.nvim'
+</code></pre>
+<p><strong>JetBrains IntelliJ/CLion:</strong></p>
+<ul>
+<li>Install the Rust plugin from the marketplace</li>
+</ul>
+<h2 id="verification"><a class="header" href="#verification">Verification</a></h2>
+<h3 id="quick-test"><a class="header" href="#quick-test">Quick Test</a></h3>
+<p>Create a new project and verify PMCP works:</p>
+<pre><code class="language-bash">cargo new pmcp-test
+cd pmcp-test
+</code></pre>
+<p>Add to <code>Cargo.toml</code>:</p>
+<pre><code class="language-toml">[dependencies]
+pmcp = "1.4.1"
+tokio = { version = "1.0", features = ["full"] }
+</code></pre>
+<p>Replace <code>src/main.rs</code>:</p>
+<pre><pre class="playground"><code class="language-rust edition2021">use pmcp::{Client, ClientCapabilities};
+
+#[tokio::main]
+async fn main() -&gt; pmcp::Result&lt;()&gt; {
+    println!("PMCP version: {}", pmcp::VERSION);
+    
+    // Test client creation
+    let client = Client::builder()
+        .name("test-client")
+        .version("1.0.0")
+        .capabilities(ClientCapabilities::default())
+        .build()?;
+    
+    println!("✅ PMCP client created successfully!");
+    println!("Client name: {}", client.name());
+    
+    Ok(())
+}</code></pre></pre>
+<p>Run the test:</p>
+<pre><code class="language-bash">cargo run
+</code></pre>
+<p>Expected output:</p>
+<pre><code>PMCP version: 1.4.1
+✅ PMCP client created successfully!
+Client name: test-client
+</code></pre>
+<h3 id="run-examples"><a class="header" href="#run-examples">Run Examples</a></h3>
+<p>Test with the included examples:</p>
+<pre><code class="language-bash"># Clone the repository
+git clone https://github.com/paiml/pmcp.git
+cd pmcp
+
+# Run basic server example  
+cargo run --example 02_server_basic --features full
+
+# In another terminal, run client example
+cargo run --example 01_client_initialize --features full
+</code></pre>
+<h3 id="performance-benchmark"><a class="header" href="#performance-benchmark">Performance Benchmark</a></h3>
+<p>Verify performance with built-in benchmarks:</p>
+<pre><code class="language-bash">cargo bench --all-features
+</code></pre>
+<p>Expected results (approximate):</p>
+<pre><code>simple_protocol_parse    time: [12.5 ns 12.8 ns 13.2 ns]
+json_serialization      time: [1.85 μs 1.89 μs 1.94 μs]  
+websocket_roundtrip     time: [45.2 μs 46.1 μs 47.3 μs]
+</code></pre>
+<h2 id="common-issues"><a class="header" href="#common-issues">Common Issues</a></h2>
+<h3 id="compilation-errors"><a class="header" href="#compilation-errors">Compilation Errors</a></h3>
+<p><strong>Issue</strong>: Missing features</p>
+<pre><code>error[E0432]: unresolved import `pmcp::WebSocketTransport`
+</code></pre>
+<p><strong>Solution</strong>: Enable required features:</p>
+<pre><code class="language-toml">pmcp = { version = "1.4.1", features = ["websocket"] }
+</code></pre>
+<p><strong>Issue</strong>: MSRV (Minimum Supported Rust Version)</p>
+<pre><code>error: package `pmcp v1.4.1` cannot be built because it requires rustc 1.82 or newer
+</code></pre>
+<p><strong>Solution</strong>: Update Rust:</p>
+<pre><code class="language-bash">rustup update stable
+</code></pre>
+<h3 id="runtime-issues"><a class="header" href="#runtime-issues">Runtime Issues</a></h3>
+<p><strong>Issue</strong>: Port already in use</p>
+<pre><code>Error: Address already in use (os error 98)
+</code></pre>
+<p><strong>Solution</strong>: Use a different port:</p>
+<pre><pre class="playground"><code class="language-rust edition2021"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>server.bind("127.0.0.1:0").await?; // Let OS choose port
+<span class="boring">}</span></code></pre></pre>
+<p><strong>Issue</strong>: Permission denied</p>
+<pre><code>Error: Permission denied (os error 13)
+</code></pre>
+<p><strong>Solution</strong>: Use unprivileged port (&gt;1024):</p>
+<pre><pre class="playground"><code class="language-rust edition2021"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>server.bind("127.0.0.1:8080").await?;
+<span class="boring">}</span></code></pre></pre>
+<h3 id="performance-issues"><a class="header" href="#performance-issues">Performance Issues</a></h3>
+<p><strong>Issue</strong>: High memory usage</p>
+<pre><code>Memory usage: 2.3GB for simple server
+</code></pre>
+<p><strong>Solution</strong>: Disable debug symbols in release:</p>
+<pre><code class="language-toml">[profile.release]
+debug = false
+strip = true
+</code></pre>
+<h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
+<p>Now that PMCP is installed and working, you’re ready to:</p>
+<ol>
+<li><strong>Build your first server</strong> - Chapter 2 walks through creating a basic MCP server</li>
+<li><strong>Create a client</strong> - Chapter 3 shows how to connect and interact with servers</li>
+<li><strong>Explore examples</strong> - Check out the <code>examples/</code> directory for real-world patterns</li>
+</ol>
+<h2 id="getting-help"><a class="header" href="#getting-help">Getting Help</a></h2>
+<p>If you encounter issues:</p>
+<ul>
+<li><strong>Documentation</strong>: <a href="https://docs.rs/pmcp">https://docs.rs/pmcp</a></li>
+<li><strong>Examples</strong>: <a href="https://github.com/paiml/pmcp/tree/main/examples">https://github.com/paiml/pmcp/tree/main/examples</a></li>
+<li><strong>Issues</strong>: <a href="https://github.com/paiml/pmcp/issues">https://github.com/paiml/pmcp/issues</a></li>
+<li><strong>Discussions</strong>: <a href="https://github.com/paiml/pmcp/discussions">https://github.com/paiml/pmcp/discussions</a></li>
+</ul>
+<p>You’re all set! Let’s start building with PMCP.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="chapter-2-your-first-mcp-server"><a class="header" href="#chapter-2-your-first-mcp-server">Chapter 2: Your First MCP Server</a></h1>
+<p>In this chapter, you’ll build your first Model Context Protocol server using PMCP. We’ll start with a simple calculator server and gradually add more features.</p>
+<h2 id="basic-server-structure"><a class="header" href="#basic-server-structure">Basic Server Structure</a></h2>
+<p>Every MCP server needs:</p>
+<ol>
+<li><strong>Tool handlers</strong> - Functions that clients can call</li>
+<li><strong>Server configuration</strong> - Name, version, capabilities</li>
+<li><strong>Transport layer</strong> - How clients connect (stdio, WebSocket, HTTP)</li>
+</ol>
+<p>Let’s build a calculator server step by step.</p>
+<h2 id="step-1-project-setup"><a class="header" href="#step-1-project-setup">Step 1: Project Setup</a></h2>
+<p>Create a new Rust project:</p>
+<pre><code class="language-bash">cargo new mcp-calculator
+cd mcp-calculator
+</code></pre>
+<p>Add dependencies to <code>Cargo.toml</code>:</p>
+<pre><code class="language-toml">[dependencies]
+pmcp = { version = "1.4.1", features = ["full"] }
+tokio = { version = "1.0", features = ["full"] }
+serde_json = "1.0"
+async-trait = "0.1"
+</code></pre>
+<h2 id="step-2-basic-calculator-tool"><a class="header" href="#step-2-basic-calculator-tool">Step 2: Basic Calculator Tool</a></h2>
+<p>Replace <code>src/main.rs</code> with:</p>
+<pre><pre class="playground"><code class="language-rust edition2021">use pmcp::{Server, ToolHandler, RequestHandlerExtra, Result};
+use serde_json::{json, Value};
+use async_trait::async_trait;
+
+// Define our calculator tool handler
+struct Calculator;
+
+#[async_trait]
+impl ToolHandler for Calculator {
+    async fn handle(&amp;self, args: Value, _extra: RequestHandlerExtra) -&gt; Result&lt;Value&gt; {
+        // Extract arguments
+        let a = args.get("a")
+            .and_then(|v| v.as_f64())
+            .ok_or_else(|| pmcp::Error::validation("Missing or invalid parameter 'a'"))?;
+            
+        let b = args.get("b")
+            .and_then(|v| v.as_f64())  
+            .ok_or_else(|| pmcp::Error::validation("Missing or invalid parameter 'b'"))?;
+            
+        let operation = args.get("operation")
+            .and_then(|v| v.as_str())
+            .unwrap_or("add");
+
+        // Perform calculation
+        let result = match operation {
+            "add" =&gt; a + b,
+            "subtract" =&gt; a - b,
+            "multiply" =&gt; a * b,
+            "divide" =&gt; {
+                if b == 0.0 {
+                    return Err(pmcp::Error::validation("Division by zero"));
+                }
+                a / b
+            }
+            _ =&gt; return Err(pmcp::Error::validation("Unknown operation")),
+        };
+
+        // Return structured response
+        Ok(json!({
+            "content": [{
+                "type": "text",
+                "text": format!("{} {} {} = {}", a, operation, b, result)
+            }],
+            "isError": false
+        }))
+    }
+}
+
+#[tokio::main]
+async fn main() -&gt; Result&lt;()&gt; {
+    // Create and configure the server
+    let server = Server::builder()
+        .name("calculator-server")
+        .version("1.0.0")
+        .tool("calculate", Calculator)
+        .build()?;
+
+    println!("🧮 Calculator MCP Server starting...");
+    println!("Connect using any MCP client on stdio");
+    
+    // Run on stdio (most common for MCP servers)
+    server.run_stdio().await
+}</code></pre></pre>
+<h2 id="step-3-test-your-server"><a class="header" href="#step-3-test-your-server">Step 3: Test Your Server</a></h2>
+<p>Run the server:</p>
+<pre><code class="language-bash">cargo run
+</code></pre>
+<p>You should see:</p>
+<pre><code>🧮 Calculator MCP Server starting...
+Connect using any MCP client on stdio
+</code></pre>
+<p>The server is now running and waiting for MCP protocol messages on stdin/stdout.</p>
+<h2 id="step-4-test-with-a-client"><a class="header" href="#step-4-test-with-a-client">Step 4: Test with a Client</a></h2>
+<p>Create a simple test client. Add this to <code>src/bin/test-client.rs</code>:</p>
+<pre><pre class="playground"><code class="language-rust edition2021">use pmcp::{Client, ClientCapabilities};
+use serde_json::json;
+
+#[tokio::main]
+async fn main() -&gt; pmcp::Result&lt;()&gt; {
+    // Create a client
+    let mut client = Client::builder()
+        .name("calculator-client")
+        .version("1.0.0")
+        .capabilities(ClientCapabilities::default())
+        .build()?;
+
+    // Connect via stdio to our server
+    // In practice, you'd connect via WebSocket or HTTP
+    println!("🔗 Connecting to calculator server...");
+    
+    // For testing, we'll create a manual request
+    let request = json!({
+        "method": "tools/call",
+        "params": {
+            "name": "calculate",
+            "arguments": {
+                "a": 10,
+                "b": 5,
+                "operation": "multiply"
+            }
+        }
+    });
+
+    println!("📤 Sending request: {}", serde_json::to_string_pretty(&amp;request)?);
+    
+    // In a real client, you'd send this via the transport and get a response
+    println!("✅ Calculator server is ready to receive requests!");
+    
+    Ok(())
+}</code></pre></pre>
+<p>Build the test client:</p>
+<pre><code class="language-bash">cargo build --bin test-client
+</code></pre>
+<h2 id="step-5-enhanced-server-with-multiple-tools"><a class="header" href="#step-5-enhanced-server-with-multiple-tools">Step 5: Enhanced Server with Multiple Tools</a></h2>
+<p>Let’s add more tools to make our server more useful. Update <code>src/main.rs</code>:</p>
+<pre><pre class="playground"><code class="language-rust edition2021">use pmcp::{Server, ToolHandler, RequestHandlerExtra, Result, ServerCapabilities, ToolCapabilities};
+use serde_json::{json, Value};
+use async_trait::async_trait;
+use std::collections::HashMap;
+
+// Calculator tool (same as before)
+struct Calculator;
+
+#[async_trait]
+impl ToolHandler for Calculator {
+    async fn handle(&amp;self, args: Value, _extra: RequestHandlerExtra) -&gt; Result&lt;Value&gt; {
+        let a = args.get("a").and_then(|v| v.as_f64())
+            .ok_or_else(|| pmcp::Error::validation("Missing parameter 'a'"))?;
+        let b = args.get("b").and_then(|v| v.as_f64())  
+            .ok_or_else(|| pmcp::Error::validation("Missing parameter 'b'"))?;
+        let operation = args.get("operation").and_then(|v| v.as_str()).unwrap_or("add");
+
+        let result = match operation {
+            "add" =&gt; a + b,
+            "subtract" =&gt; a - b,
+            "multiply" =&gt; a * b,
+            "divide" =&gt; {
+                if b == 0.0 {
+                    return Err(pmcp::Error::validation("Division by zero"));
+                }
+                a / b
+            }
+            _ =&gt; return Err(pmcp::Error::validation("Unknown operation")),
+        };
+
+        Ok(json!({
+            "content": [{
+                "type": "text",
+                "text": format!("{} {} {} = {}", a, operation, b, result)
+            }],
+            "isError": false
+        }))
+    }
+}
+
+// Statistics tool - demonstrates stateful operations
+struct Statistics {
+    calculations: tokio::sync::Mutex&lt;Vec&lt;f64&gt;&gt;,
+}
+
+impl Statistics {
+    fn new() -&gt; Self {
+        Self {
+            calculations: tokio::sync::Mutex::new(Vec::new()),
+        }
+    }
+}
+
+#[async_trait]
+impl ToolHandler for Statistics {
+    async fn handle(&amp;self, args: Value, _extra: RequestHandlerExtra) -&gt; Result&lt;Value&gt; {
+        let operation = args.get("operation")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| pmcp::Error::validation("Missing 'operation' parameter"))?;
+
+        let mut calculations = self.calculations.lock().await;
+
+        match operation {
+            "add_value" =&gt; {
+                let value = args.get("value").and_then(|v| v.as_f64())
+                    .ok_or_else(|| pmcp::Error::validation("Missing 'value' parameter"))?;
+                calculations.push(value);
+                
+                Ok(json!({
+                    "content": [{
+                        "type": "text",
+                        "text": format!("Added {} to statistics. Total values: {}", value, calculations.len())
+                    }],
+                    "isError": false
+                }))
+            }
+            "get_stats" =&gt; {
+                if calculations.is_empty() {
+                    return Ok(json!({
+                        "content": [{
+                            "type": "text",
+                            "text": "No data available for statistics"
+                        }],
+                        "isError": false
+                    }));
+                }
+
+                let sum: f64 = calculations.iter().sum();
+                let count = calculations.len();
+                let mean = sum / count as f64;
+                let min = calculations.iter().fold(f64::INFINITY, |a, &amp;b| a.min(b));
+                let max = calculations.iter().fold(f64::NEG_INFINITY, |a, &amp;b| a.max(b));
+
+                Ok(json!({
+                    "content": [{
+                        "type": "text",
+                        "text": format!(
+                            "Statistics:\n• Count: {}\n• Sum: {:.2}\n• Mean: {:.2}\n• Min: {:.2}\n• Max: {:.2}",
+                            count, sum, mean, min, max
+                        )
+                    }],
+                    "isError": false
+                }))
+            }
+            "clear" =&gt; {
+                calculations.clear();
+                Ok(json!({
+                    "content": [{
+                        "type": "text",
+                        "text": "Statistics cleared"
+                    }],
+                    "isError": false
+                }))
+            }
+            _ =&gt; Err(pmcp::Error::validation("Unknown statistics operation")),
+        }
+    }
+}
+
+// System info tool - demonstrates environment interaction
+struct SystemInfo;
+
+#[async_trait]
+impl ToolHandler for SystemInfo {
+    async fn handle(&amp;self, _args: Value, _extra: RequestHandlerExtra) -&gt; Result&lt;Value&gt; {
+        let info = json!({
+            "server": "calculator-server",
+            "version": "1.0.0",
+            "protocol_version": "2025-06-18",
+            "features": ["calculation", "statistics", "system_info"],
+            "uptime": "Just started", // In a real app, you'd track actual uptime
+            "rust_version": env!("RUSTC_VERSION")
+        });
+
+        Ok(json!({
+            "content": [{
+                "type": "text",
+                "text": format!("System Information:\n{}", serde_json::to_string_pretty(&amp;info)?)
+            }],
+            "isError": false
+        }))
+    }
+}
+
+#[tokio::main]
+async fn main() -&gt; Result&lt;()&gt; {
+    // Create shared statistics handler
+    let stats_handler = Statistics::new();
+
+    // Create and configure the enhanced server
+    let server = Server::builder()
+        .name("calculator-server")
+        .version("1.0.0")
+        .capabilities(ServerCapabilities {
+            tools: Some(ToolCapabilities {
+                list_changed: Some(true),
+            }),
+            ..Default::default()
+        })
+        .tool("calculate", Calculator)
+        .tool("statistics", stats_handler)
+        .tool("system_info", SystemInfo)
+        .build()?;
+
+    println!("🧮 Enhanced Calculator MCP Server starting...");
+    println!("Available tools:");
+    println!("  • calculate - Basic arithmetic operations");
+    println!("  • statistics - Statistical calculations on datasets");
+    println!("  • system_info - Server information");
+    println!();
+    println!("Connect using any MCP client on stdio");
+    
+    // Run the server
+    server.run_stdio().await
+}</code></pre></pre>
+<h2 id="step-6-error-handling-best-practices"><a class="header" href="#step-6-error-handling-best-practices">Step 6: Error Handling Best Practices</a></h2>
+<p>PMCP provides comprehensive error handling. Here’s how to handle different error scenarios:</p>
+<pre><pre class="playground"><code class="language-rust edition2021"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use pmcp::Error;
+
+// Input validation errors
+if args.is_null() {
+    return Err(Error::validation("Arguments cannot be null"));
+}
+
+// Protocol errors  
+if unsupported_feature {
+    return Err(Error::protocol(
+        pmcp::ErrorCode::InvalidRequest,
+        "This feature is not supported"
+    ));
+}
+
+// Internal errors
+if let Err(e) = some_operation() {
+    return Err(Error::internal(format!("Operation failed: {}", e)));
+}
+
+// Custom errors with structured data
+return Err(Error::custom(
+    -32001,  // Custom error code
+    "Custom error occurred",
+    Some(json!({
+        "error_type": "custom",
+        "context": "additional_info"
+    }))
+));
+<span class="boring">}</span></code></pre></pre>
+<h2 id="step-7-testing-your-server"><a class="header" href="#step-7-testing-your-server">Step 7: Testing Your Server</a></h2>
+<p>Create comprehensive tests in <code>src/lib.rs</code>:</p>
+<pre><pre class="playground"><code class="language-rust edition2021"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[tokio::test]
+    async fn test_calculator_basic_operations() {
+        let calculator = Calculator;
+        let extra = RequestHandlerExtra::new(
+            "test".to_string(),
+            tokio_util::sync::CancellationToken::new(),
+        );
+
+        // Test addition
+        let args = json!({"a": 5, "b": 3, "operation": "add"});
+        let result = calculator.handle(args, extra.clone()).await.unwrap();
+        
+        assert!(!result["isError"].as_bool().unwrap_or(true));
+        assert!(result["content"][0]["text"].as_str().unwrap().contains("5 add 3 = 8"));
+
+        // Test division by zero
+        let args = json!({"a": 5, "b": 0, "operation": "divide"});
+        let result = calculator.handle(args, extra.clone()).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test] 
+    async fn test_statistics() {
+        let stats = Statistics::new();
+        let extra = RequestHandlerExtra::new(
+            "test".to_string(),
+            tokio_util::sync::CancellationToken::new(),
+        );
+
+        // Add some values
+        for value in [1.0, 2.0, 3.0, 4.0, 5.0] {
+            let args = json!({"operation": "add_value", "value": value});
+            let result = stats.handle(args, extra.clone()).await.unwrap();
+            assert!(!result["isError"].as_bool().unwrap_or(true));
+        }
+
+        // Get statistics
+        let args = json!({"operation": "get_stats"});
+        let result = stats.handle(args, extra.clone()).await.unwrap();
+        let text = result["content"][0]["text"].as_str().unwrap();
+        
+        assert!(text.contains("Count: 5"));
+        assert!(text.contains("Mean: 3.00"));
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<p>Run the tests:</p>
+<pre><code class="language-bash">cargo test
+</code></pre>
+<h2 id="step-8-production-considerations"><a class="header" href="#step-8-production-considerations">Step 8: Production Considerations</a></h2>
+<p>For production deployment, consider these enhancements:</p>
+<h3 id="logging-and-tracing"><a class="header" href="#logging-and-tracing">Logging and Tracing</a></h3>
+<pre><pre class="playground"><code class="language-rust edition2021">use tracing::{info, warn, error};
+use tracing_subscriber;
+
+#[tokio::main]
+async fn main() -&gt; Result&lt;()&gt; {
+    // Initialize logging
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::INFO)
+        .init();
+
+    info!("Starting calculator server");
+    
+    // Your server code here...
+    
+    Ok(())
+}</code></pre></pre>
+<h3 id="configuration"><a class="header" href="#configuration">Configuration</a></h3>
+<pre><pre class="playground"><code class="language-rust edition2021"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Deserialize)]
+struct Config {
+    server_name: String,
+    max_connections: usize,
+    log_level: String,
+}
+
+fn load_config() -&gt; Config {
+    // Load from environment variables, config file, etc.
+    Config {
+        server_name: std::env::var("SERVER_NAME")
+            .unwrap_or_else(|_| "calculator-server".to_string()),
+        max_connections: std::env::var("MAX_CONNECTIONS")
+            .unwrap_or_else(|_| "100".to_string())
+            .parse()
+            .unwrap_or(100),
+        log_level: std::env::var("LOG_LEVEL")
+            .unwrap_or_else(|_| "info".to_string()),
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<h3 id="metrics-and-health-checks"><a class="header" href="#metrics-and-health-checks">Metrics and Health Checks</a></h3>
+<pre><pre class="playground"><code class="language-rust edition2021"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
+
+struct Metrics {
+    requests_total: AtomicU64,
+    errors_total: AtomicU64,
+}
+
+impl Metrics {
+    fn new() -&gt; Self {
+        Self {
+            requests_total: AtomicU64::new(0),
+            errors_total: AtomicU64::new(0),
+        }
+    }
+    
+    fn increment_requests(&amp;self) {
+        self.requests_total.fetch_add(1, Ordering::Relaxed);
+    }
+    
+    fn increment_errors(&amp;self) {
+        self.errors_total.fetch_add(1, Ordering::Relaxed);
+    }
+}
+
+// Use metrics in your tool handlers
+#[async_trait]
+impl ToolHandler for Calculator {
+    async fn handle(&amp;self, args: Value, extra: RequestHandlerExtra) -&gt; Result&lt;Value&gt; {
+        // Increment request counter
+        self.metrics.increment_requests();
+        
+        // Your tool logic here...
+        
+        match result {
+            Ok(value) =&gt; Ok(value),
+            Err(e) =&gt; {
+                self.metrics.increment_errors();
+                Err(e)
+            }
+        }
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<h2 id="whats-next-1"><a class="header" href="#whats-next-1">What’s Next?</a></h2>
+<p>You’ve built a complete MCP server with:</p>
+<ul>
+<li>✅ Multiple tool handlers</li>
+<li>✅ Proper error handling</li>
+<li>✅ Stateful operations</li>
+<li>✅ Comprehensive tests</li>
+<li>✅ Production considerations</li>
+</ul>
+<p>In the next chapter, we’ll build a client that connects to your server and demonstrates the full request-response cycle.</p>
+<h2 id="complete-example"><a class="header" href="#complete-example">Complete Example</a></h2>
+<p>The complete working example is available in the PMCP repository:</p>
+<ul>
+<li><strong>Server</strong>: <code>examples/02_server_basic.rs</code></li>
+<li><strong>Enhanced Server</strong>: <code>examples/calculator_server.rs</code></li>
+<li><strong>Tests</strong>: <code>tests/calculator_tests.rs</code></li>
+</ul>
+<h2 id="key-takeaways"><a class="header" href="#key-takeaways">Key Takeaways</a></h2>
+<ol>
+<li><strong>Tool handlers are the core</strong> - They define what your server can do</li>
+<li><strong>Error handling is crucial</strong> - Use PMCP’s error types for protocol compliance</li>
+<li><strong>State management works</strong> - Use Rust’s sync primitives for shared state</li>
+<li><strong>Testing is straightforward</strong> - PMCP handlers are easy to unit test</li>
+<li><strong>Production readiness matters</strong> - Consider logging, metrics, and configuration</li>
+</ol>
+<p>Ready to build a client? Let’s go to Chapter 3!</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch03-first-client"><a class="header" href="#ch03-first-client">Ch03 First Client</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon"><a class="header" href="#coming-soon">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch04-protocol-basics"><a class="header" href="#ch04-protocol-basics">Ch04 Protocol Basics</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-1"><a class="header" href="#coming-soon-1">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch05-tools"><a class="header" href="#ch05-tools">Ch05 Tools</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-2"><a class="header" href="#coming-soon-2">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch06-resources"><a class="header" href="#ch06-resources">Ch06 Resources</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-3"><a class="header" href="#coming-soon-3">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch07-prompts"><a class="header" href="#ch07-prompts">Ch07 Prompts</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-4"><a class="header" href="#coming-soon-4">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch08-error-handling"><a class="header" href="#ch08-error-handling">Ch08 Error Handling</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-5"><a class="header" href="#coming-soon-5">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch09-auth-security"><a class="header" href="#ch09-auth-security">Ch09 Auth Security</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-6"><a class="header" href="#coming-soon-6">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch10-transports"><a class="header" href="#ch10-transports">Ch10 Transports</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-7"><a class="header" href="#coming-soon-7">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch10-01-websocket"><a class="header" href="#ch10-01-websocket">Ch10 01 Websocket</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-8"><a class="header" href="#coming-soon-8">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch10-02-http"><a class="header" href="#ch10-02-http">Ch10 02 Http</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-9"><a class="header" href="#coming-soon-9">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch10-03-streamable-http"><a class="header" href="#ch10-03-streamable-http">Ch10 03 Streamable Http</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-10"><a class="header" href="#coming-soon-10">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch11-middleware"><a class="header" href="#ch11-middleware">Ch11 Middleware</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-11"><a class="header" href="#coming-soon-11">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch12-progress-cancel"><a class="header" href="#ch12-progress-cancel">Ch12 Progress Cancel</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-12"><a class="header" href="#coming-soon-12">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch13-production"><a class="header" href="#ch13-production">Ch13 Production</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-13"><a class="header" href="#coming-soon-13">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch14-performance"><a class="header" href="#ch14-performance">Ch14 Performance</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-14"><a class="header" href="#coming-soon-14">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch15-testing"><a class="header" href="#ch15-testing">Ch15 Testing</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-15"><a class="header" href="#coming-soon-15">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch16-deployment"><a class="header" href="#ch16-deployment">Ch16 Deployment</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-16"><a class="header" href="#coming-soon-16">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch17-examples"><a class="header" href="#ch17-examples">Ch17 Examples</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-17"><a class="header" href="#coming-soon-17">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch17-01-parallel-clients"><a class="header" href="#ch17-01-parallel-clients">Ch17 01 Parallel Clients</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-18"><a class="header" href="#coming-soon-18">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch17-02-structured-output"><a class="header" href="#ch17-02-structured-output">Ch17 02 Structured Output</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-19"><a class="header" href="#coming-soon-19">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch17-03-sampling-tools"><a class="header" href="#ch17-03-sampling-tools">Ch17 03 Sampling Tools</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-20"><a class="header" href="#coming-soon-20">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch18-patterns"><a class="header" href="#ch18-patterns">Ch18 Patterns</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-21"><a class="header" href="#coming-soon-21">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch19-integration"><a class="header" href="#ch19-integration">Ch19 Integration</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-22"><a class="header" href="#coming-soon-22">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch20-typescript-interop"><a class="header" href="#ch20-typescript-interop">Ch20 Typescript Interop</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-23"><a class="header" href="#coming-soon-23">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch21-migration"><a class="header" href="#ch21-migration">Ch21 Migration</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-24"><a class="header" href="#coming-soon-24">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch22-feature-parity"><a class="header" href="#ch22-feature-parity">Ch22 Feature Parity</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-25"><a class="header" href="#coming-soon-25">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch23-custom-transports"><a class="header" href="#ch23-custom-transports">Ch23 Custom Transports</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-26"><a class="header" href="#coming-soon-26">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch24-extensions"><a class="header" href="#ch24-extensions">Ch24 Extensions</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-27"><a class="header" href="#coming-soon-27">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch25-analysis"><a class="header" href="#ch25-analysis">Ch25 Analysis</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-28"><a class="header" href="#coming-soon-28">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ch26-contributing"><a class="header" href="#ch26-contributing">Ch26 Contributing</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-29"><a class="header" href="#coming-soon-29">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="appendix-a-installation"><a class="header" href="#appendix-a-installation">Appendix A Installation</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-30"><a class="header" href="#coming-soon-30">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="appendix-b-config"><a class="header" href="#appendix-b-config">Appendix B Config</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-31"><a class="header" href="#coming-soon-31">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="appendix-c-api"><a class="header" href="#appendix-c-api">Appendix C Api</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-32"><a class="header" href="#coming-soon-32">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="appendix-d-errors"><a class="header" href="#appendix-d-errors">Appendix D Errors</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-33"><a class="header" href="#coming-soon-33">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="appendix-e-troubleshooting"><a class="header" href="#appendix-e-troubleshooting">Appendix E Troubleshooting</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-34"><a class="header" href="#coming-soon-34">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="appendix-f-glossary"><a class="header" href="#appendix-f-glossary">Appendix F Glossary</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-35"><a class="header" href="#coming-soon-35">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="appendix-g-resources"><a class="header" href="#appendix-g-resources">Appendix G Resources</a></h1>
+<p>This chapter is under development. Check back soon!</p>
+<h2 id="coming-soon-36"><a class="header" href="#coming-soon-36">Coming Soon</a></h2>
+<p>This section will cover:</p>
+<ul>
+<li>Core concepts and implementation</li>
+<li>Working examples with explanations</li>
+<li>Best practices and patterns</li>
+<li>Real-world use cases</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+
+
+        <script>
+            window.playground_line_numbers = true;
+        </script>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="ace.js"></script>
+        <script src="mode-rust.js"></script>
+        <script src="editor.js"></script>
+        <script src="theme-dawn.js"></script>
+        <script src="theme-tomorrow_night.js"></script>
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="theme/pmcp-highlight.js"></script>
+        <script src="theme/examples.js"></script>
+
+        <script>
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+
+    </div>
+    </body>
+</html>

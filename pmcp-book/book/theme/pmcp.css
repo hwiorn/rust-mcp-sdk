@@ -1,0 +1,210 @@
+/* PMCP Book Theme - Based on Rust mdBook theme */
+
+:root {
+    /* PMCP Brand Colors */
+    --pmcp-primary: #1E88E5;
+    --pmcp-primary-dark: #1976D2;
+    --pmcp-secondary: #FF6F00;
+    --pmcp-success: #4CAF50;
+    --pmcp-warning: #FF9800;
+    --pmcp-error: #F44336;
+    
+    /* Background Colors */
+    --pmcp-bg-light: #FAFAFA;
+    --pmcp-bg-dark: #0D1117;
+    --pmcp-bg-code: #F5F5F5;
+    --pmcp-bg-code-dark: #161B22;
+    
+    /* Text Colors */
+    --pmcp-text: #212121;
+    --pmcp-text-dark: #E6EDF3;
+    --pmcp-text-muted: #757575;
+    --pmcp-text-muted-dark: #8B949E;
+}
+
+/* Light theme overrides */
+.light {
+    --links: var(--pmcp-primary);
+    --sidebar-active: var(--pmcp-primary);
+    --sidebar-spacer: var(--pmcp-primary);
+}
+
+/* Dark theme overrides */
+.ayu {
+    --links: var(--pmcp-primary);
+    --sidebar-active: var(--pmcp-primary);
+    --sidebar-spacer: var(--pmcp-primary);
+}
+
+/* PMCP-specific styling */
+.pmcp-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 500;
+    color: white;
+}
+
+.pmcp-badge.feature { background-color: var(--pmcp-primary); }
+.pmcp-badge.warning { background-color: var(--pmcp-warning); }
+.pmcp-badge.success { background-color: var(--pmcp-success); }
+.pmcp-badge.error { background-color: var(--pmcp-error); }
+
+/* Code enhancement */
+.hljs-rust .hljs-keyword { color: var(--pmcp-primary); }
+.hljs-rust .hljs-string { color: var(--pmcp-success); }
+.hljs-rust .hljs-comment { color: var(--pmcp-text-muted); }
+
+/* Custom callouts */
+.pmcp-callout {
+    padding: 16px;
+    margin: 16px 0;
+    border-left: 4px solid;
+    border-radius: 4px;
+}
+
+.pmcp-callout.tip {
+    border-color: var(--pmcp-success);
+    background-color: rgba(76, 175, 80, 0.1);
+}
+
+.pmcp-callout.warning {
+    border-color: var(--pmcp-warning);
+    background-color: rgba(255, 152, 0, 0.1);
+}
+
+.pmcp-callout.important {
+    border-color: var(--pmcp-primary);
+    background-color: rgba(30, 136, 229, 0.1);
+}
+
+.pmcp-callout.danger {
+    border-color: var(--pmcp-error);
+    background-color: rgba(244, 67, 54, 0.1);
+}
+
+/* Toyota Way quality indicators */
+.quality-gate {
+    display: flex;
+    align-items: center;
+    margin: 8px 0;
+    font-weight: 500;
+}
+
+.quality-gate::before {
+    content: "✅";
+    margin-right: 8px;
+}
+
+.quality-gate.failing::before {
+    content: "❌";
+}
+
+.quality-gate.warning::before {
+    content: "⚠️";
+}
+
+/* Performance metrics display */
+.performance-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin: 16px 0;
+}
+
+.metric-card {
+    padding: 16px;
+    border: 1px solid var(--theme-hover);
+    border-radius: 8px;
+    text-align: center;
+}
+
+.metric-value {
+    font-size: 2em;
+    font-weight: bold;
+    color: var(--pmcp-primary);
+}
+
+.metric-label {
+    font-size: 0.9em;
+    color: var(--pmcp-text-muted);
+    margin-top: 4px;
+}
+
+/* Protocol flow diagrams */
+.protocol-flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 24px 0;
+    font-family: monospace;
+}
+
+.protocol-step {
+    padding: 8px 16px;
+    background-color: var(--pmcp-bg-code);
+    border-radius: 4px;
+    margin: 0 8px;
+    position: relative;
+}
+
+.protocol-step::after {
+    content: "→";
+    position: absolute;
+    right: -20px;
+    color: var(--pmcp-primary);
+}
+
+.protocol-step:last-child::after {
+    display: none;
+}
+
+/* Feature matrix styling */
+.feature-matrix {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+}
+
+.feature-matrix th,
+.feature-matrix td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--theme-hover);
+}
+
+.feature-matrix th {
+    background-color: var(--pmcp-primary);
+    color: white;
+    font-weight: 500;
+}
+
+.feature-support {
+    text-align: center;
+}
+
+.feature-support.full::after { content: "✅"; }
+.feature-support.partial::after { content: "🔶"; }
+.feature-support.none::after { content: "❌"; }
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .performance-metrics {
+        grid-template-columns: 1fr;
+    }
+    
+    .protocol-flow {
+        flex-direction: column;
+    }
+    
+    .protocol-step::after {
+        content: "↓";
+        right: auto;
+        bottom: -20px;
+    }
+    
+    .protocol-step:last-child::after {
+        display: none;
+    }
+}

@@ -240,14 +240,55 @@ bench:
 # Documentation
 .PHONY: doc
 doc:
-	@echo "$(BLUE)Building documentation...$(NC)"
+	@echo "$(BLUE)Building API documentation...$(NC)"
 	RUSTDOCFLAGS="--cfg docsrs" $(CARGO) doc --all-features --no-deps
-	@echo "$(GREEN)✓ Documentation built$(NC)"
+	@echo "$(GREEN)✓ API documentation built$(NC)"
 
 .PHONY: doc-open
 doc-open: doc
-	@echo "$(BLUE)Opening documentation...$(NC)"
+	@echo "$(BLUE)Opening API documentation...$(NC)"
 	$(CARGO) doc --all-features --no-deps --open
+
+# Book documentation
+.PHONY: book
+book:
+	@echo "$(BLUE)Building PMCP book...$(NC)"
+	@if ! command -v mdbook &> /dev/null; then \
+		echo "$(YELLOW)Installing mdBook...$(NC)"; \
+		$(CARGO) install mdbook; \
+	fi
+	cd pmcp-book && mdbook build
+	@echo "$(GREEN)✓ PMCP book built$(NC)"
+
+.PHONY: book-open
+book-open: book
+	@echo "$(BLUE)Opening PMCP book...$(NC)"
+	cd pmcp-book && mdbook serve --open
+
+.PHONY: book-serve
+book-serve:
+	@echo "$(BLUE)Serving PMCP book...$(NC)"
+	@if ! command -v mdbook &> /dev/null; then \
+		echo "$(YELLOW)Installing mdBook...$(NC)"; \
+		$(CARGO) install mdbook; \
+	fi
+	cd pmcp-book && mdbook serve
+
+.PHONY: book-test
+book-test:
+	@echo "$(BLUE)Testing PMCP book examples...$(NC)"
+	cd pmcp-book && mdbook test
+	@echo "$(GREEN)✓ Book examples tested$(NC)"
+
+.PHONY: book-clean
+book-clean:
+	@echo "$(BLUE)Cleaning book build artifacts...$(NC)"
+	rm -rf pmcp-book/book/
+	@echo "$(GREEN)✓ Book cleaned$(NC)"
+
+.PHONY: docs-all
+docs-all: doc book
+	@echo "$(GREEN)✓ All documentation built$(NC)"
 
 # Quality gate - PAIML/PMAT style with ALWAYS requirements
 .PHONY: quality-gate
@@ -581,8 +622,16 @@ help:
 	@echo "  upgrade-deps    - Upgrade to lockfile versions"
 	@echo "  audit           - Check security vulnerabilities"
 	@echo ""
+	@echo "$(YELLOW)Documentation:$(NC)"
+	@echo "  doc             - Build API documentation"
+	@echo "  doc-open        - Build and open API documentation"
+	@echo "  book            - Build PMCP book"
+	@echo "  book-serve      - Serve PMCP book locally"
+	@echo "  book-open       - Build and open PMCP book"
+	@echo "  book-test       - Test PMCP book examples"
+	@echo "  docs-all        - Build all documentation"
+	@echo ""
 	@echo "$(YELLOW)Other:$(NC)"
-	@echo "  doc             - Build documentation"
 	@echo "  bench           - Run benchmarks"
 	@echo "  clean           - Clean build artifacts"
 	@echo "  help            - Show this help"
