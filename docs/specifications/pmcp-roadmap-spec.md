@@ -82,7 +82,12 @@ Every new feature MUST include:
 - Integration examples demonstrating usage
 - Performance benchmarks for quality checks
 
-### v1.4.0 - Advanced Transport Features
+### v1.4.1 - Developer Experience & TypeScript Parity ✅ COMPLETED
+- **Status**: Released to crates.io (2025-01-16)
+- **Focus**: Enhanced developer ergonomics and TypeScript SDK compatibility
+- **Key Features**: ToolResult type alias, comprehensive testing, new examples
+
+### v1.5.0 - Advanced Transport Features (Future)
 **Timeline**: Q4 2025 (2-3 days)
 **Focus**: Transport layer enhancements, advanced protocols
 
@@ -137,8 +142,8 @@ Every new feature MUST include:
 
 | ID | Description | Status | Complexity | Priority | Target Version |
 |----|-------------|--------|------------|----------|----------------|
-| PMCP-4001 | Advanced WebSocket features | 📋 | High | P1 | v1.4.0 |
-| PMCP-4002 | Transport load balancing | 📋 | High | P1 | v1.4.0 |
+| PMCP-4001 | Advanced WebSocket features | 📋 | High | P1 | v1.5.0 |
+| PMCP-4002 | Transport load balancing | 📋 | High | P1 | v1.5.0 |
 | PMCP-4003 | Enhanced macro system | 📋 | Medium | P1 | v1.5.0 |
 | PMCP-4004 | Observability framework | 📋 | Medium | P1 | v1.5.0 |
 | PMCP-4005 | Security audit framework | 📋 | High | P0 | v2.0.0 |
