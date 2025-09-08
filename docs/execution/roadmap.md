@@ -3,11 +3,12 @@
 ## Current Sprint: v1.4.1 Developer Experience Improvements ✅ COMPLETED
 - **Duration**: 1 day (2025-01-16)  
 - **Completion**: 2025-01-16 ✅
-- **Version Released**: v1.4.1 (Ready for crates.io)
+- **Version Released**: v1.4.1 ✅ PUBLISHED TO CRATES.IO
 - **Priority**: P1 - Important Developer Experience Enhancement
 - **Dependencies**: GitHub issue #37 resolution
 - **Major Features**: ToolResult type alias export, comprehensive testing coverage
 - **Quality Gates**: ✅ ACHIEVED (unit tests, property tests, doctests, examples)
+- **Publication**: ✅ LIVE ON CRATES.IO
 
 ### v1.4.1 Sprint Tasks
 
@@ -20,7 +21,8 @@
 | PMCP-4105 | Create cargo run example (toolresult_usage) | ✅ | Medium | P1 |
 | PMCP-4106 | Update README.md with ToolResult documentation | ✅ | Low | P1 |
 | PMCP-4107 | Update CHANGELOG.md for v1.4.1 release | ✅ | Low | P1 |
-| PMCP-4108 | Prepare version bump and release infrastructure | ⏳ | Low | P1 |
+| PMCP-4108 | Prepare version bump and release infrastructure | ✅ | Low | P1 |
+| PMCP-4109 | Fix cargo publish dependency issues and publish to crates.io | ✅ | High | P1 |
 
 ## Previous Sprints
 
