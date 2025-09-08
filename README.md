@@ -125,11 +125,13 @@ pmcp = "1.4.1"
 ### Complete PMCP Guide
 The comprehensive **PMCP Guide** provides detailed documentation with interactive examples:
 
-```bash
-# Build and serve the documentation book
-make book-serve    # Opens at http://localhost:3000
+**📖 [Read Online](https://paiml.github.io/pmcp/)** - Live documentation updated automatically
 
-# Other book commands
+```bash
+# Local development
+make book-serve    # Serve at http://localhost:3000
+
+# Other book commands  
 make book          # Build the book
 make book-open     # Build and open in browser
 make book-clean    # Clean build artifacts
