@@ -125,7 +125,7 @@ pmcp = "1.4.1"
 ### Complete PMCP Guide
 The comprehensive **PMCP Guide** provides detailed documentation with interactive examples:
 
-**📖 [Read Online](https://paiml.github.io/pmcp/)** - Live documentation updated automatically
+**📖 [Read Online](https://paiml.github.io/rust-mcp-sdk/)** - Live documentation updated automatically
 
 ```bash
 # Local development
