@@ -25,7 +25,28 @@ setup:
 	cargo install cargo-audit cargo-outdated cargo-machete cargo-deny
 	cargo install cargo-llvm-cov cargo-nextest cargo-mutants
 	cargo install pmat  # PAIML MCP Agent Toolkit for extreme quality standards
+	@if ! command -v pre-commit &> /dev/null; then \
+		echo "$(BLUE)Installing pre-commit...$(NC)"; \
+		pip install pre-commit || echo "$(YELLOW)⚠ Failed to install pre-commit via pip. Please install manually.$(NC)"; \
+	fi
 	@echo "$(GREEN)✓ Development environment ready$(NC)"
+
+# Pre-commit setup - Toyota Way quality standards
+.PHONY: setup-pre-commit
+setup-pre-commit:
+	@echo "$(BLUE)Setting up Toyota Way pre-commit hooks...$(NC)"
+	@if ! command -v pre-commit &> /dev/null; then \
+		echo "$(RED)❌ pre-commit not installed. Run 'make setup' first.$(NC)"; \
+		exit 1; \
+	fi
+	pre-commit install
+	pre-commit install --hook-type pre-push
+	pre-commit install --hook-type commit-msg
+	@echo "$(GREEN)✅ Pre-commit hooks installed with Toyota Way standards$(NC)"
+
+.PHONY: setup-full
+setup-full: setup setup-pre-commit
+	@echo "$(GREEN)🏭 Toyota Way development environment fully configured$(NC)"
 
 # Build targets
 .PHONY: build
@@ -274,6 +295,32 @@ pre-commit-gate:
 	@$(MAKE) test-doc
 	@echo "$(GREEN)✅ Pre-commit checks passed - Toyota Way approved!$(NC)"
 
+# Run pre-commit hooks manually (all files)
+.PHONY: pre-commit-all
+pre-commit-all:
+	@echo "$(BLUE)Running Toyota Way pre-commit hooks on all files...$(NC)"
+	@if ! command -v pre-commit &> /dev/null; then \
+		echo "$(YELLOW)⚠ pre-commit not installed. Run 'make setup-pre-commit' first.$(NC)"; \
+		echo "$(BLUE)Falling back to manual checks...$(NC)"; \
+		$(MAKE) pre-commit-gate; \
+	else \
+		pre-commit run --all-files; \
+	fi
+	@echo "$(GREEN)✅ All pre-commit checks completed$(NC)"
+
+# Run pre-commit hooks manually (staged files only)
+.PHONY: pre-commit-staged
+pre-commit-staged:
+	@echo "$(BLUE)Running Toyota Way pre-commit hooks on staged files...$(NC)"
+	@if ! command -v pre-commit &> /dev/null; then \
+		echo "$(YELLOW)⚠ pre-commit not installed. Run 'make setup-pre-commit' first.$(NC)"; \
+		echo "$(BLUE)Falling back to manual checks...$(NC)"; \
+		$(MAKE) pre-commit-gate; \
+	else \
+		pre-commit run; \
+	fi
+	@echo "$(GREEN)✅ Staged files pre-commit checks completed$(NC)"
+
 # Continuous improvement check (Kaizen)
 .PHONY: kaizen-check
 kaizen-check:
@@ -488,12 +535,16 @@ help:
 	@echo ""
 	@echo "$(YELLOW)Setup & Build:$(NC)"
 	@echo "  setup           - Install development tools"
+	@echo "  setup-pre-commit - Install Toyota Way pre-commit hooks"
+	@echo "  setup-full      - Complete development environment setup"
 	@echo "  build           - Build the project"
 	@echo "  build-release   - Build optimized release"
 	@echo ""
 	@echo "$(YELLOW)Quality Checks:$(NC)"
 	@echo "  quality-gate    - Run all quality checks (default)"
 	@echo "  pre-commit-gate - Fast Toyota Way pre-commit checks"
+	@echo "  pre-commit-all  - Run Toyota Way pre-commit hooks on all files"
+	@echo "  pre-commit-staged - Run Toyota Way pre-commit hooks on staged files"
 	@echo "  kaizen-check    - Continuous improvement analysis"
 	@echo "  fmt             - Format code"
 	@echo "  lint            - Run clippy lints"
