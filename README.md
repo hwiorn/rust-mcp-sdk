@@ -109,7 +109,9 @@ Code Name: *Angel Rust*
 - 📊 **Comprehensive Testing**: Property tests, fuzzing, and integration tests
 - 🏗️ **Quality First**: Zero technical debt, no unwraps in production code
 
-## Installation
+## Quick Start
+
+### Installation
 
 Add to your `Cargo.toml`:
 
@@ -117,6 +119,28 @@ Add to your `Cargo.toml`:
 [dependencies]
 pmcp = "1.4.1"
 ```
+
+## 📚 Documentation
+
+### Complete PMCP Guide
+The comprehensive **PMCP Guide** provides detailed documentation with interactive examples:
+
+```bash
+# Build and serve the documentation book
+make book-serve    # Opens at http://localhost:3000
+
+# Other book commands
+make book          # Build the book
+make book-open     # Build and open in browser
+make book-clean    # Clean build artifacts
+```
+
+The guide covers everything from basic concepts to advanced patterns:
+- **Getting Started** - Installation, first server/client
+- **Core Concepts** - Tools, resources, prompts, error handling  
+- **Advanced Features** - Auth, transports, middleware, performance
+- **Real-World Examples** - Production patterns and best practices
+- **TypeScript Migration** - Complete compatibility guide
 
 ## Examples
 
