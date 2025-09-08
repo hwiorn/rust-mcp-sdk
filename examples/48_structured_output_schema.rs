@@ -6,10 +6,8 @@
 //!
 //! Run with: cargo run --example 48_structured_output_schema --features full
 
-use pmcp::{
-    Server, ServerCapabilities, ToolHandler, RequestHandlerExtra, Result,
-};
 use async_trait::async_trait;
+use pmcp::{RequestHandlerExtra, Result, Server, ServerCapabilities, ToolHandler};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -82,10 +80,12 @@ struct WeatherTool;
 impl ToolHandler for WeatherTool {
     async fn handle(&self, args: Value, _extra: RequestHandlerExtra) -> Result<Value> {
         // Parse input arguments
-        let city = args.get("city")
+        let city = args
+            .get("city")
             .and_then(|v| v.as_str())
             .unwrap_or("Unknown City");
-        let country = args.get("country")
+        let country = args
+            .get("country")
             .and_then(|v| v.as_str())
             .unwrap_or("Unknown");
 
@@ -123,7 +123,8 @@ struct ProductTool;
 #[async_trait]
 impl ToolHandler for ProductTool {
     async fn handle(&self, args: Value, _extra: RequestHandlerExtra) -> Result<Value> {
-        let product_id = args.get("product_id")
+        let product_id = args
+            .get("product_id")
             .and_then(|v| v.as_str())
             .unwrap_or("unknown");
 
@@ -140,7 +141,7 @@ impl ToolHandler for ProductTool {
 
         Ok(json!({
             "content": [{
-                "type": "text", 
+                "type": "text",
                 "text": format!("Product information for {}", product.name)
             }],
             "structuredContent": product,
@@ -155,7 +156,8 @@ struct UserProfileTool;
 #[async_trait]
 impl ToolHandler for UserProfileTool {
     async fn handle(&self, args: Value, _extra: RequestHandlerExtra) -> Result<Value> {
-        let user_id = args.get("user_id")
+        let user_id = args
+            .get("user_id")
             .and_then(|v| v.as_str())
             .unwrap_or("unknown");
 
@@ -208,7 +210,7 @@ impl ToolHandler for ValidatedDataTool {
             return Ok(json!({
                 "content": [{
                     "type": "text",
-                    "text": format!("Validation failed: missing required fields: {}", 
+                    "text": format!("Validation failed: missing required fields: {}",
                              missing_fields.join(", "))
                 }],
                 "structuredContent": {
@@ -270,7 +272,7 @@ async fn main() -> Result<()> {
 
     println!("📋 Available tools with structured output:");
     println!("  • get_weather - Returns structured weather data");
-    println!("  • get_product - Returns structured product information"); 
+    println!("  • get_product - Returns structured product information");
     println!("  • get_user_profile - Returns structured user profiles");
     println!("  • validate_data - Demonstrates structured validation");
     println!();
@@ -306,9 +308,12 @@ mod tests {
 
         let json_str = serde_json::to_string(&weather).unwrap();
         let deserialized: WeatherData = serde_json::from_str(&json_str).unwrap();
-        
+
         assert_eq!(weather.location, deserialized.location);
-        assert_eq!(weather.temperature.celsius, deserialized.temperature.celsius);
+        assert_eq!(
+            weather.temperature.celsius,
+            deserialized.temperature.celsius
+        );
     }
 
     #[test]

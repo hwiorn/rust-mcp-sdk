@@ -1,25 +1,23 @@
 //! Tool with Sampling Server Example
 //!
 //! This example demonstrates how to create an MCP tool that uses LLM sampling
-//! to provide text summarization capabilities, similar to the TypeScript SDK's 
+//! to provide text summarization capabilities, similar to the TypeScript SDK's
 //! toolWithSampleServer.ts example.
 //!
 //! Key features:
-//! - Tool that internally uses LLM sampling 
+//! - Tool that internally uses LLM sampling
 //! - Text summarization using sampling API
 //! - Error handling and input validation
 //! - Structured responses with human-readable content
 //!
 //! Run with: cargo run --example 49_tool_with_sampling_server --features full
 
-use pmcp::{
-    Server, ServerCapabilities, ToolHandler, RequestHandlerExtra, Result, Error,
-};
 use async_trait::async_trait;
+use pmcp::{Error, RequestHandlerExtra, Result, Server, ServerCapabilities, ToolHandler};
 use serde_json::{json, Value};
 
 /// Text summarization tool that uses LLM sampling
-/// 
+///
 /// This tool demonstrates how to create MCP tools that use sampling APIs
 /// for text processing tasks like summarization.
 struct SummarizeTool;
@@ -28,7 +26,8 @@ struct SummarizeTool;
 impl ToolHandler for SummarizeTool {
     async fn handle(&self, args: Value, _extra: RequestHandlerExtra) -> Result<Value> {
         // Extract and validate input text
-        let text = args.get("text")
+        let text = args
+            .get("text")
             .and_then(|v| v.as_str())
             .ok_or_else(|| Error::validation("Missing required 'text' parameter"))?;
 
@@ -39,7 +38,7 @@ impl ToolHandler for SummarizeTool {
         // In a real implementation, this would call an actual LLM API
         // For this example, we'll simulate the summarization process
         let summary = simulate_llm_summarization(text).await?;
-        
+
         // Return structured response with both human-readable content and metadata
         Ok(json!({
             "content": [{
@@ -58,15 +57,16 @@ impl ToolHandler for SummarizeTool {
 }
 
 /// Simulates LLM summarization
-/// 
+///
 /// In a real implementation, this would make calls to an actual LLM service
 /// using the MCP sampling API through server.create_message() or similar.
 async fn simulate_llm_summarization(text: &str) -> Result<String> {
     // Simulate processing time
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-    
+
     // Simple extractive summarization algorithm for demonstration
-    let sentences: Vec<&str> = text.split(['.', '!', '?'])
+    let sentences: Vec<&str> = text
+        .split(['.', '!', '?'])
         .map(|s| s.trim())
         .filter(|s| !s.is_empty())
         .collect();
@@ -98,14 +98,15 @@ async fn simulate_llm_summarization(text: &str) -> Result<String> {
 }
 
 /// Advanced text analysis tool
-/// 
+///
 /// Demonstrates more sophisticated text processing capabilities
 struct AnalyzeTextTool;
 
 #[async_trait]
 impl ToolHandler for AnalyzeTextTool {
     async fn handle(&self, args: Value, _extra: RequestHandlerExtra) -> Result<Value> {
-        let text = args.get("text")
+        let text = args
+            .get("text")
             .and_then(|v| v.as_str())
             .ok_or_else(|| Error::validation("Missing required 'text' parameter"))?;
 
@@ -115,14 +116,14 @@ impl ToolHandler for AnalyzeTextTool {
 
         // Perform text analysis
         let analysis = analyze_text_structure(text);
-        
+
         Ok(json!({
             "content": [{
                 "type": "text",
                 "text": format!(
                     "Text Analysis:\n• {} characters\n• {} words\n• {} sentences\n• {} paragraphs\n• Readability: {}",
                     analysis.char_count,
-                    analysis.word_count, 
+                    analysis.word_count,
                     analysis.sentence_count,
                     analysis.paragraph_count,
                     analysis.readability_level
@@ -154,21 +155,21 @@ fn analyze_text_structure(text: &str) -> TextAnalysis {
     let word_count = text.split_whitespace().count();
     let sentence_count = text.matches(['.', '!', '?']).count();
     let paragraph_count = text.split("\n\n").filter(|p| !p.trim().is_empty()).count();
-    
+
     let avg_sentence_length = if sentence_count > 0 {
         word_count as f64 / sentence_count as f64
     } else {
         0.0
     };
-    
+
     let avg_word_length = if word_count > 0 {
         text.chars().filter(|c| !c.is_whitespace()).count() as f64 / word_count as f64
     } else {
         0.0
     };
-    
+
     let readability_level = determine_readability_level(avg_sentence_length, avg_word_length);
-    
+
     TextAnalysis {
         char_count,
         word_count,
@@ -199,14 +200,14 @@ async fn main() -> Result<()> {
 
     println!("🤖 Tool with Sampling Server Example");
     println!("====================================");
-    
+
     // Create server with sampling-based tools
     let server = Server::builder()
         .name("sampling-tools-server")
         .version("1.0.0")
         .capabilities(ServerCapabilities {
-            tools: Some(pmcp::ToolCapabilities { 
-                list_changed: Some(true) 
+            tools: Some(pmcp::ToolCapabilities {
+                list_changed: Some(true),
             }),
             // In a real implementation, you would also enable sampling capabilities
             sampling: Some(pmcp::SamplingCapabilities {
@@ -244,7 +245,7 @@ mod tests {
     fn test_text_analysis() {
         let text = "This is a test. It has multiple sentences! How interesting?";
         let analysis = analyze_text_structure(text);
-        
+
         assert_eq!(analysis.sentence_count, 3);
         assert!(analysis.word_count > 0);
         assert!(!analysis.readability_level.is_empty());
@@ -254,7 +255,7 @@ mod tests {
     async fn test_summarization() {
         let text = "This is a long piece of text that needs to be summarized. It contains multiple sentences and ideas. The summarization should extract key information.";
         let result = simulate_llm_summarization(text).await;
-        
+
         assert!(result.is_ok());
         let summary = result.unwrap();
         assert!(!summary.is_empty());
@@ -280,14 +281,15 @@ mod tests {
     async fn test_summarize_tool_handler() {
         let tool = SummarizeTool;
         let args = json!({"text": "This is a test sentence."});
-        let extra = RequestHandlerExtra::new("test".to_string(), 
+        let extra = RequestHandlerExtra::new(
+            "test".to_string(),
             #[cfg(not(target_arch = "wasm32"))]
-            tokio_util::sync::CancellationToken::new()
+            tokio_util::sync::CancellationToken::new(),
         );
-        
+
         let result = tool.handle(args, extra).await;
         assert!(result.is_ok());
-        
+
         let response = result.unwrap();
         assert!(!response["isError"].as_bool().unwrap_or(true));
         assert!(response["content"].is_array());
@@ -298,14 +300,15 @@ mod tests {
     async fn test_analyze_text_tool_handler() {
         let tool = AnalyzeTextTool;
         let args = json!({"text": "This is a test. It has two sentences."});
-        let extra = RequestHandlerExtra::new("test".to_string(), 
+        let extra = RequestHandlerExtra::new(
+            "test".to_string(),
             #[cfg(not(target_arch = "wasm32"))]
-            tokio_util::sync::CancellationToken::new()
+            tokio_util::sync::CancellationToken::new(),
         );
-        
+
         let result = tool.handle(args, extra).await;
         assert!(result.is_ok());
-        
+
         let response = result.unwrap();
         assert!(!response["isError"].as_bool().unwrap_or(true));
         assert!(response["content"].is_array());

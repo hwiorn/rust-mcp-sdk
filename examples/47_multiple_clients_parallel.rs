@@ -11,7 +11,7 @@
 //!
 //! Run with: cargo run --example 47_multiple_clients_parallel --features full
 
-use pmcp::{Result, Error};
+use pmcp::{Error, Result};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use tokio::task::JoinSet;
@@ -41,8 +41,12 @@ async fn simulate_client_operation(config: ClientConfig) -> (String, Result<Valu
             "calculate" => {
                 let a = config.data.get("a").and_then(|v| v.as_f64()).unwrap_or(0.0);
                 let b = config.data.get("b").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                let op = config.data.get("op").and_then(|v| v.as_str()).unwrap_or("add");
-                
+                let op = config
+                    .data
+                    .get("op")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("add");
+
                 let result = match op {
                     "add" => a + b,
                     "multiply" => a * b,
@@ -54,20 +58,28 @@ async fn simulate_client_operation(config: ClientConfig) -> (String, Result<Valu
                     },
                     _ => return Err(Error::validation("Unknown operation")),
                 };
-                
+
                 Ok(json!({
                     "result": result,
                     "expression": format!("{} {} {} = {}", a, op, b, result)
                 }))
             },
             "text_process" => {
-                let text = config.data.get("text").and_then(|v| v.as_str()).unwrap_or("");
-                let operation = config.data.get("operation").and_then(|v| v.as_str()).unwrap_or("uppercase");
-                
+                let text = config
+                    .data
+                    .get("text")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                let operation = config
+                    .data
+                    .get("operation")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("uppercase");
+
                 if text.is_empty() {
                     return Err(Error::validation("Text cannot be empty"));
                 }
-                
+
                 let result = match operation {
                     "uppercase" => text.to_uppercase(),
                     "lowercase" => text.to_lowercase(),
@@ -75,7 +87,7 @@ async fn simulate_client_operation(config: ClientConfig) -> (String, Result<Valu
                     "length" => text.len().to_string(),
                     _ => return Err(Error::validation("Unknown text operation")),
                 };
-                
+
                 Ok(json!({
                     "original": text,
                     "result": result,
@@ -83,8 +95,12 @@ async fn simulate_client_operation(config: ClientConfig) -> (String, Result<Valu
                 }))
             },
             "data_fetch" => {
-                let resource = config.data.get("resource").and_then(|v| v.as_str()).unwrap_or("default");
-                
+                let resource = config
+                    .data
+                    .get("resource")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("default");
+
                 // Simulate fetching different types of data
                 let data = match resource {
                     "weather" => {
@@ -112,7 +128,7 @@ async fn simulate_client_operation(config: ClientConfig) -> (String, Result<Valu
                     },
                     _ => return Err(Error::validation("Unknown resource type")),
                 };
-                
+
                 Ok(json!({
                     "resource": resource,
                     "data": data,
@@ -121,7 +137,8 @@ async fn simulate_client_operation(config: ClientConfig) -> (String, Result<Valu
             },
             _ => Err(Error::validation("Unknown operation type")),
         }
-    }.await;
+    }
+    .await;
 
     match &result {
         Ok(_) => info!("[{}] Operation completed successfully", client_id),
@@ -205,12 +222,15 @@ async fn main() -> Result<()> {
             Ok((client_id, operation_result)) => {
                 results.insert(client_id.clone(), operation_result);
                 completed += 1;
-                info!("✅ Client {} completed ({}/{})", client_id, completed, total);
-            }
+                info!(
+                    "✅ Client {} completed ({}/{})",
+                    client_id, completed, total
+                );
+            },
             Err(join_error) => {
                 error!("❌ Join error: {}", join_error);
                 completed += 1;
-            }
+            },
         }
     }
 
@@ -231,10 +251,10 @@ async fn main() -> Result<()> {
                     result_str
                 };
                 info!("   Result: {}", truncated);
-            }
+            },
             Err(e) => {
                 error!("❌ {}: Error - {}", client_id, e);
-            }
+            },
         }
     }
 
@@ -247,7 +267,10 @@ async fn main() -> Result<()> {
     info!("Total clients: {}", results.len());
     info!("Successful: {}", successful);
     info!("Failed: {}", failed);
-    info!("Success rate: {:.1}%", (successful as f64 / results.len() as f64) * 100.0);
+    info!(
+        "Success rate: {:.1}%",
+        (successful as f64 / results.len() as f64) * 100.0
+    );
 
     if successful > 0 {
         info!("✨ Multiple parallel clients simulation completed successfully!");
@@ -289,7 +312,7 @@ mod tests {
         let (client_id, result) = simulate_client_operation(config).await;
         assert_eq!(client_id, "test-calc");
         assert!(result.is_ok());
-        
+
         let data = result.unwrap();
         assert_eq!(data["result"], 15);
     }
@@ -306,7 +329,7 @@ mod tests {
         let (client_id, result) = simulate_client_operation(config).await;
         assert_eq!(client_id, "test-text");
         assert!(result.is_ok());
-        
+
         let data = result.unwrap();
         assert_eq!(data["result"], "HELLO");
     }
@@ -323,7 +346,7 @@ mod tests {
         let (client_id, result) = simulate_client_operation(config).await;
         assert_eq!(client_id, "test-fetch");
         assert!(result.is_ok());
-        
+
         let data = result.unwrap();
         assert_eq!(data["resource"], "time");
         assert!(data["data"]["timestamp"].is_string());
