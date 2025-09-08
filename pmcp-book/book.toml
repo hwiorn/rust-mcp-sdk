@@ -1,0 +1,68 @@
+# The PMCP (Pragmatic Model Context Protocol) Book Configuration
+# Implementation-first documentation with working examples
+
+[book]
+title = "The PMCP Guide: Pragmatic Model Context Protocol"
+authors = ["PAIML Team"]
+description = "The comprehensive guide to PMCP - High-performance Rust SDK for Model Context Protocol"
+language = "en"
+multilingual = false
+src = "src"
+
+[build]
+build-dir = "book"
+create-missing = false  # Prevent accidental file creation
+
+[preprocessor.index]
+
+[preprocessor.links]
+
+# Custom PMCP preprocessor for code validation
+# [preprocessor.pmcp]
+# command = "./tools/pmcp-preprocessor"
+# renderer = ["html"]
+
+[output.html]
+default-theme = "rust"
+preferred-dark-theme = "ayu"
+smart-punctuation = true
+mathjax-support = false
+copy-fonts = true
+additional-css = ["theme/pmcp.css", "theme/code-enhancements.css", "theme/syntax-highlight.css"]
+additional-js = ["theme/pmcp-highlight.js", "theme/examples.js"]
+git-repository-url = "https://github.com/paiml/pmcp"
+git-repository-icon = "fa-github"
+edit-url-template = "https://github.com/paiml/pmcp/edit/main/pmcp-book/{path}"
+
+[output.html.print]
+enable = true
+page-break = true
+
+[output.html.fold]
+enable = true
+level = 2
+
+[output.html.playground]
+editable = true
+copyable = true
+copy-js = true
+line-numbers = true
+runnable = true
+
+[output.html.search]
+enable = true
+limit-results = 30
+teaser-word-count = 30
+use-boolean-and = true
+boost-title = 2
+boost-hierarchy = 1
+boost-paragraph = 1
+expand = true
+heading-split-level = 3
+copy-js = true
+
+# Rust configuration for PMCP examples
+# Disable doctests for now since PMCP crate isn't available in test environment
+# TODO: Enable when PMCP is published or configure test dependencies
+[rust]
+edition = "2021"

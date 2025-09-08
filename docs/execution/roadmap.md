@@ -1,6 +1,32 @@
 # PMCP Development Roadmap
 
-## Current Sprint: v1.3.0 Quality Gates & Toyota Way Infrastructure ✅ COMPLETED
+## Current Sprint: v1.4.1 Developer Experience Improvements ✅ COMPLETED
+- **Duration**: 1 day (2025-01-16)  
+- **Completion**: 2025-01-16 ✅
+- **Version Released**: v1.4.1 ✅ PUBLISHED TO CRATES.IO
+- **Priority**: P1 - Important Developer Experience Enhancement
+- **Dependencies**: GitHub issue #37 resolution
+- **Major Features**: ToolResult type alias export, comprehensive testing coverage
+- **Quality Gates**: ✅ ACHIEVED (unit tests, property tests, doctests, examples)
+- **Publication**: ✅ LIVE ON CRATES.IO
+
+### v1.4.1 Sprint Tasks
+
+| ID | Description | Status | Complexity | Priority |
+|----|-------------|--------|------------|---------|
+| PMCP-4101 | Add ToolResult type alias to lib.rs exports | ✅ | Low | P1 |
+| PMCP-4102 | Create comprehensive unit tests for ToolResult | ✅ | Medium | P1 |  
+| PMCP-4103 | Implement property tests for ToolResult invariants | ✅ | Medium | P1 |
+| PMCP-4104 | Add extensive doctests with usage examples | ✅ | Medium | P1 |
+| PMCP-4105 | Create cargo run example (toolresult_usage) | ✅ | Medium | P1 |
+| PMCP-4106 | Update README.md with ToolResult documentation | ✅ | Low | P1 |
+| PMCP-4107 | Update CHANGELOG.md for v1.4.1 release | ✅ | Low | P1 |
+| PMCP-4108 | Prepare version bump and release infrastructure | ✅ | Low | P1 |
+| PMCP-4109 | Fix cargo publish dependency issues and publish to crates.io | ✅ | High | P1 |
+
+## Previous Sprints
+
+### v1.3.0 Quality Gates & Toyota Way Infrastructure ✅ COMPLETED
 - **Duration**: 1 day (2025-08-22)
 - **Completion**: 2025-08-22 ✅
 - **Version Released**: v1.3.0 (Published to crates.io)
