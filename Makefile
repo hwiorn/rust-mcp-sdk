@@ -25,7 +25,28 @@ setup:
 	cargo install cargo-audit cargo-outdated cargo-machete cargo-deny
 	cargo install cargo-llvm-cov cargo-nextest cargo-mutants
 	cargo install pmat  # PAIML MCP Agent Toolkit for extreme quality standards
+	@if ! command -v pre-commit &> /dev/null; then \
+		echo "$(BLUE)Installing pre-commit...$(NC)"; \
+		pip install pre-commit || echo "$(YELLOW)⚠ Failed to install pre-commit via pip. Please install manually.$(NC)"; \
+	fi
 	@echo "$(GREEN)✓ Development environment ready$(NC)"
+
+# Pre-commit setup - Toyota Way quality standards
+.PHONY: setup-pre-commit
+setup-pre-commit:
+	@echo "$(BLUE)Setting up Toyota Way pre-commit hooks...$(NC)"
+	@if ! command -v pre-commit &> /dev/null; then \
+		echo "$(RED)❌ pre-commit not installed. Run 'make setup' first.$(NC)"; \
+		exit 1; \
+	fi
+	pre-commit install
+	pre-commit install --hook-type pre-push
+	pre-commit install --hook-type commit-msg
+	@echo "$(GREEN)✅ Pre-commit hooks installed with Toyota Way standards$(NC)"
+
+.PHONY: setup-full
+setup-full: setup setup-pre-commit
+	@echo "$(GREEN)🏭 Toyota Way development environment fully configured$(NC)"
 
 # Build targets
 .PHONY: build
@@ -193,16 +214,21 @@ validate-always:
 .PHONY: coverage
 coverage:
 	@echo "$(BLUE)Running coverage analysis...$(NC)"
-	$(CARGO) llvm-cov --all-features --workspace --lcov --output-path lcov.info
-	$(CARGO) llvm-cov report --html
-	@echo "$(GREEN)✓ Coverage report generated$(NC)"
+	$(CARGO) llvm-cov --all-features --package pmcp --lcov --output-path lcov.info
+	@echo "$(BLUE)Calculating coverage percentage...$(NC)"
+	@TOTAL_LINES=$$(grep "^LF:" lcov.info | awk -F: '{sum+=$$2} END {print sum}'); \
+	HIT_LINES=$$(grep "^LH:" lcov.info | awk -F: '{sum+=$$2} END {print sum}'); \
+	PERCENTAGE=$$(echo "scale=2; $$HIT_LINES / $$TOTAL_LINES * 100" | bc); \
+	echo "$(GREEN)✓ Coverage: $$PERCENTAGE% ($$HIT_LINES/$$TOTAL_LINES lines)$(NC)"
 
 .PHONY: coverage-ci
 coverage-ci:
 	@echo "$(BLUE)Running CI coverage...$(NC)"
-	$(CARGO) llvm-cov --all-features --workspace --lcov --output-path lcov.info
-	$(CARGO) llvm-cov report
-	@echo "$(GREEN)✓ CI coverage complete$(NC)"
+	$(CARGO) llvm-cov --all-features --package pmcp --lcov --output-path lcov.info
+	@TOTAL_LINES=$$(grep "^LF:" lcov.info | awk -F: '{sum+=$$2} END {print sum}'); \
+	HIT_LINES=$$(grep "^LH:" lcov.info | awk -F: '{sum+=$$2} END {print sum}'); \
+	PERCENTAGE=$$(echo "scale=2; $$HIT_LINES / $$TOTAL_LINES * 100" | bc); \
+	echo "Coverage: $$PERCENTAGE% ($$HIT_LINES/$$TOTAL_LINES lines)"
 
 # Benchmarks
 .PHONY: bench
@@ -214,14 +240,55 @@ bench:
 # Documentation
 .PHONY: doc
 doc:
-	@echo "$(BLUE)Building documentation...$(NC)"
+	@echo "$(BLUE)Building API documentation...$(NC)"
 	RUSTDOCFLAGS="--cfg docsrs" $(CARGO) doc --all-features --no-deps
-	@echo "$(GREEN)✓ Documentation built$(NC)"
+	@echo "$(GREEN)✓ API documentation built$(NC)"
 
 .PHONY: doc-open
 doc-open: doc
-	@echo "$(BLUE)Opening documentation...$(NC)"
+	@echo "$(BLUE)Opening API documentation...$(NC)"
 	$(CARGO) doc --all-features --no-deps --open
+
+# Book documentation
+.PHONY: book
+book:
+	@echo "$(BLUE)Building PMCP book...$(NC)"
+	@if ! command -v mdbook &> /dev/null; then \
+		echo "$(YELLOW)Installing mdBook...$(NC)"; \
+		$(CARGO) install mdbook; \
+	fi
+	cd pmcp-book && mdbook build
+	@echo "$(GREEN)✓ PMCP book built$(NC)"
+
+.PHONY: book-open
+book-open: book
+	@echo "$(BLUE)Opening PMCP book...$(NC)"
+	cd pmcp-book && mdbook serve --open
+
+.PHONY: book-serve
+book-serve:
+	@echo "$(BLUE)Serving PMCP book...$(NC)"
+	@if ! command -v mdbook &> /dev/null; then \
+		echo "$(YELLOW)Installing mdBook...$(NC)"; \
+		$(CARGO) install mdbook; \
+	fi
+	cd pmcp-book && mdbook serve
+
+.PHONY: book-test
+book-test:
+	@echo "$(BLUE)Testing PMCP book examples...$(NC)"
+	cd pmcp-book && mdbook test
+	@echo "$(GREEN)✓ Book examples tested$(NC)"
+
+.PHONY: book-clean
+book-clean:
+	@echo "$(BLUE)Cleaning book build artifacts...$(NC)"
+	rm -rf pmcp-book/book/
+	@echo "$(GREEN)✓ Book cleaned$(NC)"
+
+.PHONY: docs-all
+docs-all: doc book
+	@echo "$(GREEN)✓ All documentation built$(NC)"
 
 # Quality gate - PAIML/PMAT style with ALWAYS requirements
 .PHONY: quality-gate
@@ -273,6 +340,32 @@ pre-commit-gate:
 	@$(MAKE) build
 	@$(MAKE) test-doc
 	@echo "$(GREEN)✅ Pre-commit checks passed - Toyota Way approved!$(NC)"
+
+# Run pre-commit hooks manually (all files)
+.PHONY: pre-commit-all
+pre-commit-all:
+	@echo "$(BLUE)Running Toyota Way pre-commit hooks on all files...$(NC)"
+	@if ! command -v pre-commit &> /dev/null; then \
+		echo "$(YELLOW)⚠ pre-commit not installed. Run 'make setup-pre-commit' first.$(NC)"; \
+		echo "$(BLUE)Falling back to manual checks...$(NC)"; \
+		$(MAKE) pre-commit-gate; \
+	else \
+		pre-commit run --all-files; \
+	fi
+	@echo "$(GREEN)✅ All pre-commit checks completed$(NC)"
+
+# Run pre-commit hooks manually (staged files only)
+.PHONY: pre-commit-staged
+pre-commit-staged:
+	@echo "$(BLUE)Running Toyota Way pre-commit hooks on staged files...$(NC)"
+	@if ! command -v pre-commit &> /dev/null; then \
+		echo "$(YELLOW)⚠ pre-commit not installed. Run 'make setup-pre-commit' first.$(NC)"; \
+		echo "$(BLUE)Falling back to manual checks...$(NC)"; \
+		$(MAKE) pre-commit-gate; \
+	else \
+		pre-commit run; \
+	fi
+	@echo "$(GREEN)✅ Staged files pre-commit checks completed$(NC)"
 
 # Continuous improvement check (Kaizen)
 .PHONY: kaizen-check
@@ -488,12 +581,16 @@ help:
 	@echo ""
 	@echo "$(YELLOW)Setup & Build:$(NC)"
 	@echo "  setup           - Install development tools"
+	@echo "  setup-pre-commit - Install Toyota Way pre-commit hooks"
+	@echo "  setup-full      - Complete development environment setup"
 	@echo "  build           - Build the project"
 	@echo "  build-release   - Build optimized release"
 	@echo ""
 	@echo "$(YELLOW)Quality Checks:$(NC)"
 	@echo "  quality-gate    - Run all quality checks (default)"
 	@echo "  pre-commit-gate - Fast Toyota Way pre-commit checks"
+	@echo "  pre-commit-all  - Run Toyota Way pre-commit hooks on all files"
+	@echo "  pre-commit-staged - Run Toyota Way pre-commit hooks on staged files"
 	@echo "  kaizen-check    - Continuous improvement analysis"
 	@echo "  fmt             - Format code"
 	@echo "  lint            - Run clippy lints"
@@ -525,8 +622,16 @@ help:
 	@echo "  upgrade-deps    - Upgrade to lockfile versions"
 	@echo "  audit           - Check security vulnerabilities"
 	@echo ""
+	@echo "$(YELLOW)Documentation:$(NC)"
+	@echo "  doc             - Build API documentation"
+	@echo "  doc-open        - Build and open API documentation"
+	@echo "  book            - Build PMCP book"
+	@echo "  book-serve      - Serve PMCP book locally"
+	@echo "  book-open       - Build and open PMCP book"
+	@echo "  book-test       - Test PMCP book examples"
+	@echo "  docs-all        - Build all documentation"
+	@echo ""
 	@echo "$(YELLOW)Other:$(NC)"
-	@echo "  doc             - Build documentation"
 	@echo "  bench           - Run benchmarks"
 	@echo "  clean           - Clean build artifacts"
 	@echo "  help            - Show this help"
