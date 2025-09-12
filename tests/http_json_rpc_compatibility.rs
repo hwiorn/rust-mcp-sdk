@@ -29,6 +29,34 @@ mod http_tests {
     }
 
     #[test]
+    fn test_parse_tools_list_with_null_params() {
+        // Test that we can parse tools/list with null params (common from Claude Code)
+        let json_rpc = r#"{"jsonrpc":"2.0","id":1,"method":"tools/list","params":null}"#;
+
+        let result = StdioTransport::parse_message(json_rpc.as_bytes());
+        assert!(
+            result.is_ok(),
+            "Failed to parse tools/list with null params: {:?}",
+            result.err()
+        );
+
+        // Verify it parses to the correct request type
+        if let Ok(pmcp::shared::TransportMessage::Request { id, request }) = result {
+            assert_eq!(id, pmcp::types::RequestId::Number(1));
+            if let pmcp::types::Request::Client(boxed) = request {
+                assert!(
+                    matches!(*boxed, pmcp::types::ClientRequest::ListTools(_)),
+                    "Expected ListTools request"
+                );
+            } else {
+                panic!("Expected Client request");
+            }
+        } else {
+            panic!("Expected Request message");
+        }
+    }
+
+    #[test]
     fn test_serialize_message_compatibility() {
         // Test that StdioTransport::serialize_message produces JSON-RPC 2.0
         use pmcp::shared::TransportMessage;
