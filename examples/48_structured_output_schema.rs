@@ -200,7 +200,7 @@ impl ToolHandler for ValidatedDataTool {
         let mut missing_fields = Vec::new();
 
         for field in &required_fields {
-            if !args.get(field).is_some() {
+            if args.get(field).is_none() {
                 missing_fields.push(field.to_string());
             }
         }
