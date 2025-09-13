@@ -1,12 +1,12 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use bytes::{Bytes, BytesMut, BufMut};
-use serde_json::{Value, json};
+use bytes::{BytesMut, BufMut};
 use arbitrary::{Arbitrary, Unstructured};
 
 // Custom types for fuzzing transport behavior
 #[derive(Debug, Arbitrary)]
+#[allow(dead_code)]
 struct FuzzTransportMessage {
     message_type: FuzzMessageType,
     payload: Vec<u8>,
@@ -23,6 +23,7 @@ enum FuzzMessageType {
 }
 
 #[derive(Debug, Arbitrary)]
+#[allow(dead_code)]
 struct FuzzMetadata {
     timestamp: u64,
     sequence: u32,
@@ -96,7 +97,7 @@ fn test_websocket_framing(data: &[u8]) {
         return;
     }
     
-    let fin = (data[0] & 0x80) != 0;
+    let _fin = (data[0] & 0x80) != 0;
     let opcode = data[0] & 0x0F;
     let masked = (data[1] & 0x80) != 0;
     let payload_len = data[1] & 0x7F;
@@ -227,7 +228,12 @@ fuzz_target!(|data: &[u8]| {
             1 => {   // Connected - can send/receive
                 let can_send = data.len() > 1 && data[1] & 0x01 != 0;
                 let can_receive = data.len() > 1 && data[1] & 0x02 != 0;
-                assert!(can_send || can_receive);
+                // In a connected state, at least one capability should be present
+                // but for fuzzing, we should handle the case where neither is set
+                if !can_send && !can_receive {
+                    // Invalid state - skip this iteration
+                    return;
+                }
             },
             2 => {}, // Closing - wait for close confirmation
             3 => {}, // Closed - no operations allowed
