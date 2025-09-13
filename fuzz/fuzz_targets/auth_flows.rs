@@ -316,12 +316,14 @@ fuzz_target!(|data: &[u8]| {
             3600 // Default 1 hour
         };
         
-        let current_time = issued_at + (expires_in as u64 / 2);
-        let is_expired = current_time > issued_at + expires_in as u64;
+        // Use saturating operations to prevent overflow
+        let current_time = issued_at.saturating_add(expires_in as u64 / 2);
+        let expiry_time = issued_at.saturating_add(expires_in as u64);
+        let is_expired = current_time > expiry_time;
         
         if !is_expired {
             // Token is still valid
-            if current_time < issued_at || current_time >= issued_at + expires_in as u64 {
+            if current_time < issued_at || current_time >= expiry_time {
                 return; // Invalid token timing, skip
             }
         }
