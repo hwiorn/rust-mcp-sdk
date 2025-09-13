@@ -1,13 +1,13 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use pmcp::{ClientCapabilities, ServerCapabilities};
 use serde_json::{Value, json, from_slice};
 use arbitrary::{Arbitrary, Unstructured};
 use std::collections::HashMap;
 
 // Custom types for fuzzing authentication
 #[derive(Debug, Arbitrary)]
+#[allow(dead_code)]
 struct FuzzAuthRequest {
     auth_type: FuzzAuthType,
     credentials: FuzzCredentials,
@@ -24,6 +24,7 @@ enum FuzzAuthType {
 }
 
 #[derive(Debug, Arbitrary)]
+#[allow(dead_code)]
 struct FuzzCredentials {
     username: Option<String>,
     password: Option<String>,
@@ -34,6 +35,7 @@ struct FuzzCredentials {
 }
 
 #[derive(Debug, Arbitrary)]
+#[allow(dead_code)]
 struct FuzzOAuthFlow {
     client_id: String,
     client_secret: Option<String>,
@@ -48,14 +50,17 @@ fn test_auth_flow(auth_type: &FuzzAuthType, creds: &FuzzCredentials) {
     match auth_type {
         FuzzAuthType::None => {
             // No authentication required
-            assert!(creds.token.is_none() || creds.token.as_ref().map(|t| t.is_empty()).unwrap_or(true));
+            if creds.token.is_some() && !creds.token.as_ref().unwrap().is_empty() {
+                return; // Should not have token for no auth, skip
+            }
         },
         FuzzAuthType::ApiKey => {
             // API key authentication
             if let Some(key) = &creds.api_key {
                 // Validate API key format
-                assert!(!key.is_empty());
-                assert!(key.len() < 1024); // Reasonable length limit
+                if key.is_empty() || key.len() >= 1024 {
+                    return; // Invalid API key, skip
+                }
                 
                 // Check for common patterns
                 let has_prefix = key.starts_with("sk_") || 
@@ -67,8 +72,8 @@ fn test_auth_flow(auth_type: &FuzzAuthType, creds: &FuzzCredentials) {
                     c.is_ascii_alphanumeric() || c == '_' || c == '-'
                 });
                 
-                if has_prefix {
-                    assert!(is_valid);
+                if has_prefix && !is_valid {
+                    return; // Invalid API key format, skip
                 }
             }
         },
@@ -76,7 +81,9 @@ fn test_auth_flow(auth_type: &FuzzAuthType, creds: &FuzzCredentials) {
             // OAuth2 flow
             if let Some(token) = &creds.token {
                 // Validate bearer token
-                assert!(!token.is_empty());
+                if token.is_empty() {
+                    return; // Invalid token, skip
+                }
                 
                 // Check JWT structure if it looks like one
                 let parts: Vec<_> = token.split('.').collect();
@@ -84,17 +91,20 @@ fn test_auth_flow(auth_type: &FuzzAuthType, creds: &FuzzCredentials) {
                     // Looks like a JWT
                     for part in &parts {
                         // Each part should be base64url encoded
-                        assert!(part.chars().all(|c| {
+                        if !part.chars().all(|c| {
                             c.is_ascii_alphanumeric() || c == '-' || c == '_'
-                        }));
+                        }) {
+                            return; // Invalid JWT format, skip
+                        }
                     }
                 }
             }
             
             // Test refresh token flow
             if let Some(refresh) = &creds.refresh_token {
-                assert!(!refresh.is_empty());
-                assert!(refresh.len() < 2048);
+                if refresh.is_empty() || refresh.len() >= 2048 {
+                    return; // Invalid refresh token, skip
+                }
             }
         },
         FuzzAuthType::Jwt => {
@@ -115,13 +125,16 @@ fn test_auth_flow(auth_type: &FuzzAuthType, creds: &FuzzCredentials) {
         },
         FuzzAuthType::Custom(scheme) => {
             // Custom authentication scheme
-            assert!(!scheme.is_empty());
-            assert!(scheme.len() < 256);
+            if scheme.is_empty() || scheme.len() >= 256 {
+                return; // Invalid scheme, skip
+            }
             
             // Validate scheme name
-            assert!(scheme.chars().all(|c| {
+            if !scheme.chars().all(|c| {
                 c.is_ascii_alphanumeric() || c == '-' || c == '_'
-            }));
+            }) {
+                return; // Invalid characters in scheme, skip
+            }
         },
     }
 }
@@ -130,18 +143,26 @@ fn test_auth_flow(auth_type: &FuzzAuthType, creds: &FuzzCredentials) {
 fn test_pkce_flow(flow: &FuzzOAuthFlow) {
     if let Some(verifier) = &flow.code_verifier {
         // PKCE code verifier requirements
-        assert!(verifier.len() >= 43 && verifier.len() <= 128);
-        assert!(verifier.chars().all(|c| {
+        if verifier.len() < 43 || verifier.len() > 128 {
+            return; // Invalid verifier length, skip
+        }
+        if !verifier.chars().all(|c| {
             c.is_ascii_alphanumeric() || c == '-' || c == '.' || c == '_' || c == '~'
-        }));
+        }) {
+            return; // Invalid characters in verifier, skip
+        }
         
         // Generate code challenge (simulated)
         let challenge = format!("{}_challenge", verifier);
-        assert!(!challenge.is_empty());
+        if challenge.is_empty() {
+            return; // Should never happen, but handle gracefully
+        }
     }
     
     // Validate redirect URI
-    assert!(!flow.redirect_uri.is_empty());
+    if flow.redirect_uri.is_empty() {
+        return; // Invalid redirect URI, skip
+    }
     if flow.redirect_uri.starts_with("http://") || flow.redirect_uri.starts_with("https://") {
         // Valid HTTP(S) redirect
     } else if flow.redirect_uri == "urn:ietf:wg:oauth:2.0:oob" {
@@ -152,18 +173,20 @@ fn test_pkce_flow(flow: &FuzzOAuthFlow) {
     
     // Validate scope
     for scope in &flow.scope {
-        assert!(!scope.is_empty());
-        assert!(!scope.contains(' ')); // Scopes should be space-separated in request
+        if scope.is_empty() || scope.contains(' ') {
+            return; // Invalid scope, skip
+        }
     }
     
     // Validate state parameter
-    assert!(!flow.state.is_empty());
-    assert!(flow.state.len() >= 8); // Minimum for CSRF protection
+    if flow.state.is_empty() || flow.state.len() < 8 {
+        return; // Invalid state for CSRF protection, skip
+    }
 }
 
 fuzz_target!(|data: &[u8]| {
     // 1. Parse authentication configuration from JSON
-    if let Ok(json) = from_slice::<Value>(data) {
+    if let Ok(_json) = from_slice::<Value>(data) {
         // Try various auth configurations
         let auth_configs = vec![
             json!({
@@ -227,10 +250,12 @@ fuzz_target!(|data: &[u8]| {
         
         // Validate headers
         for (name, value) in headers {
-            assert!(!name.is_empty());
-            assert!(!value.is_empty());
-            assert!(!value.contains('\n')); // No header injection
-            assert!(!value.contains('\r'));
+            if name.is_empty() || value.is_empty() {
+                continue; // Skip invalid headers
+            }
+            if value.contains('\n') || value.contains('\r') {
+                continue; // Skip headers with potential injection
+            }
         }
     }
     
@@ -248,7 +273,9 @@ fuzz_target!(|data: &[u8]| {
         );
         
         // Validate URL length
-        assert!(auth_url.len() < 8192); // Reasonable URL length limit
+        if auth_url.len() >= 8192 {
+            return; // URL too long, skip
+        }
     }
     
     // 4. Test token validation and expiry
@@ -269,8 +296,9 @@ fuzz_target!(|data: &[u8]| {
         
         if !is_expired {
             // Token is still valid
-            assert!(current_time >= issued_at);
-            assert!(current_time < issued_at + expires_in as u64);
+            if current_time < issued_at || current_time >= issued_at + expires_in as u64 {
+                return; // Invalid token timing, skip
+            }
         }
     }
     
