@@ -34,12 +34,11 @@ jobs:
 
       - name: Build binary
         run: cargo build --release --package mcp-server-tester --target ${{ matrix.target }}
-        working-directory: ./examples/26-server-tester
 
       - name: Prepare artifact for upload
         shell: bash
         run: |
-          cd examples/26-server-tester/target/${{ matrix.target }}/release
+          cd target/${{ matrix.target }}/release
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             mv mcp-tester.exe ${{ matrix.asset_name }}
           else

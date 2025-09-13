@@ -632,7 +632,10 @@ impl Server {
             .map(|name| crate::types::ToolInfo {
                 name: name.clone(),
                 description: None,
-                input_schema: serde_json::json!({}),
+                input_schema: serde_json::json!({
+                    "type": "object",
+                    "properties": {}
+                }),
             })
             .collect::<Vec<_>>();
 

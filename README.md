@@ -22,6 +22,8 @@ A high-quality Rust implementation of the [Model Context Protocol](https://model
 
 Code Name: *Angel Rust*
 
+> **🎉 Claude Code Compatible!** Version 1.4.0+ includes full JSON-RPC 2.0 compatibility, enabling seamless integration with Claude Code and all standard MCP clients. If you're experiencing connection issues, please [upgrade to v1.4.1+](MIGRATION_GUIDE.md).
+
 ## 🎉 Version 1.4.1 - Enhanced Developer Experience & TypeScript Parity!
 
 ### 🔧 **NEW: Enhanced Type Ergonomics**
@@ -119,6 +121,8 @@ Add to your `Cargo.toml`:
 [dependencies]
 pmcp = "1.4.1"
 ```
+
+> **⚠️ Important for Claude Code users**: Version 1.4.0+ is required for Claude Code compatibility. Earlier versions use a different message format that is incompatible with standard MCP clients. See the [Migration Guide](MIGRATION_GUIDE.md) if upgrading from < 1.4.0.
 
 ## 📚 Documentation
 

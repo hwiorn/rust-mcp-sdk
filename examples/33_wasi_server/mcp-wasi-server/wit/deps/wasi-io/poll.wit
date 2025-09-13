@@ -1,0 +1,9 @@
+package wasi:io/poll@0.2.0;
+
+interface poll {
+    resource pollable {
+        ready: func() -> bool;
+        block: func();
+    }
+    poll: func(list: list<pollable>) -> list<u32>;
+}
