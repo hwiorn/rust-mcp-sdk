@@ -65,11 +65,12 @@ fn simulate_transport_operations(data: &[u8]) {
     }
     
     // 3. Test message compression simulation
-    if data.len() > 10 {
+    if data.len() > 10 && data.len() < 10000 {  // Add upper bound to prevent issues
         // Simulate simple run-length encoding
         let mut compressed = Vec::new();
+        let max_compressed_size = 20000; // Limit compressed size too
         let mut i = 0;
-        while i < data.len() {
+        while i < data.len() && compressed.len() < max_compressed_size {
             let byte = data[i];
             let mut count = 1;
             while i + count < data.len() && data[i + count] == byte && count < 255 {
@@ -120,7 +121,8 @@ fn test_websocket_framing(data: &[u8]) {
         }
         let len = u16::from_be_bytes([data[offset], data[offset + 1]]) as usize;
         offset += 2;
-        len
+        // Limit to reasonable size for fuzzing
+        len.min(100_000)
     } else if payload_len == 127 {
         if data.len() < offset + 8 {
             return;
@@ -128,9 +130,10 @@ fn test_websocket_framing(data: &[u8]) {
         let len = u64::from_be_bytes([
             data[offset], data[offset + 1], data[offset + 2], data[offset + 3],
             data[offset + 4], data[offset + 5], data[offset + 6], data[offset + 7],
-        ]) as usize;
+        ]);
         offset += 8;
-        len
+        // Limit to reasonable size for fuzzing - prevent huge allocations
+        (len as usize).min(100_000)
     } else {
         payload_len as usize
     };
@@ -146,8 +149,10 @@ fn test_websocket_framing(data: &[u8]) {
         None
     };
     
-    if data.len() >= offset + actual_len {
-        let mut payload = data[offset..offset + actual_len].to_vec();
+    // Make sure we don't try to read more than available
+    let safe_len = actual_len.min(data.len().saturating_sub(offset));
+    if data.len() >= offset + safe_len && safe_len > 0 {
+        let mut payload = data[offset..offset + safe_len].to_vec();
         
         // Unmask if needed
         if let Some(key) = mask_key {
