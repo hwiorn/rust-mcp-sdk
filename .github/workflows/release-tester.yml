@@ -46,7 +46,22 @@ jobs:
           fi
           echo "ASSET_PATH=$(pwd)/${{ matrix.asset_name }}" >> $GITHUB_ENV
 
+      - name: Get release tag
+        id: get_tag
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "TAG_NAME=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
+          else
+            # For workflow_dispatch, use the latest release tag
+            TAG=$(gh release list --limit 1 --json tagName -q '.[0].tagName')
+            echo "TAG_NAME=${TAG}" >> $GITHUB_ENV
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Upload release asset
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload ${{ github.event.release.tag_name }} ${{ env.ASSET_PATH }}
+        run: |
+          gh release upload "${{ env.TAG_NAME }}" "${{ env.ASSET_PATH }}" --clobber
