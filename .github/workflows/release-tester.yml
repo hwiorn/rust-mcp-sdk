@@ -19,6 +19,9 @@ jobs:
           - os: macos-latest
             asset_name: mcp-tester-macos-x86_64
             target: x86_64-apple-darwin
+          - os: macos-latest
+            asset_name: mcp-tester-macos-aarch64
+            target: aarch64-apple-darwin
           - os: windows-latest
             asset_name: mcp-tester-windows-x86_64.exe
             target: x86_64-pc-windows-msvc
