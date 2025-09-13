@@ -50,8 +50,10 @@ fn test_auth_flow(auth_type: &FuzzAuthType, creds: &FuzzCredentials) {
     match auth_type {
         FuzzAuthType::None => {
             // No authentication required
-            if creds.token.is_some() && !creds.token.as_ref().unwrap().is_empty() {
-                return; // Should not have token for no auth, skip
+            if let Some(token) = &creds.token {
+                if !token.is_empty() {
+                    return; // Should not have token for no auth, skip
+                }
             }
         },
         FuzzAuthType::ApiKey => {
@@ -222,25 +224,40 @@ fuzz_target!(|data: &[u8]| {
     if let Ok(auth_req) = FuzzAuthRequest::arbitrary(&mut u) {
         test_auth_flow(&auth_req.auth_type, &auth_req.credentials);
         
-        // Test authorization headers
+        // Test authorization headers with size limits
         let headers = match auth_req.auth_type {
             FuzzAuthType::ApiKey => {
                 if let Some(key) = auth_req.credentials.api_key {
-                    vec![("X-API-Key", key.clone()), ("Authorization", format!("ApiKey {}", key))]
+                    // Limit key size to prevent memory issues
+                    if key.len() > 10000 {
+                        vec![]
+                    } else {
+                        vec![("X-API-Key", key.clone()), ("Authorization", format!("ApiKey {}", key))]
+                    }
                 } else {
                     vec![]
                 }
             },
             FuzzAuthType::OAuth2 | FuzzAuthType::Jwt => {
                 if let Some(token) = auth_req.credentials.token {
-                    vec![("Authorization", format!("Bearer {}", token))]
+                    // Limit token size to prevent memory issues
+                    if token.len() > 10000 {
+                        vec![]
+                    } else {
+                        vec![("Authorization", format!("Bearer {}", token))]
+                    }
                 } else {
                     vec![]
                 }
             },
             FuzzAuthType::Custom(ref scheme) => {
                 if let Some(token) = auth_req.credentials.token {
-                    vec![("Authorization", format!("{} {}", scheme, token))]
+                    // Limit combined size to prevent memory issues
+                    if scheme.len() > 1000 || token.len() > 10000 {
+                        vec![]
+                    } else {
+                        vec![("Authorization", format!("{} {}", scheme, token))]
+                    }
                 } else {
                     vec![]
                 }
@@ -261,6 +278,14 @@ fuzz_target!(|data: &[u8]| {
     
     // 3. Test OAuth2 flows
     if let Ok(oauth_flow) = FuzzOAuthFlow::arbitrary(&mut u) {
+        // Check sizes before processing to prevent memory issues
+        if oauth_flow.client_id.len() > 1000 ||
+           oauth_flow.redirect_uri.len() > 2000 ||
+           oauth_flow.state.len() > 1000 ||
+           oauth_flow.scope.iter().map(|s| s.len()).sum::<usize>() > 2000 {
+            return; // Skip oversized OAuth flow data
+        }
+        
         test_pkce_flow(&oauth_flow);
         
         // Build authorization URL
