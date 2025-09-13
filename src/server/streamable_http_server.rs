@@ -470,8 +470,31 @@ fn build_response(
     session_id: Option<&String>,
 ) -> Response {
     if state.config.enable_json_response {
-        // JSON response mode
-        let mut resp = (StatusCode::OK, Json(response)).into_response();
+        // JSON response mode - use JSON-RPC compatibility layer
+        let json_bytes = match crate::shared::StdioTransport::serialize_message(&response) {
+            Ok(bytes) => bytes,
+            Err(e) => {
+                return create_error_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    -32603,
+                    &format!("Failed to serialize response: {}", e),
+                );
+            },
+        };
+
+        // Parse JSON bytes to Value for Json response
+        let json_value: serde_json::Value = match serde_json::from_slice(&json_bytes) {
+            Ok(val) => val,
+            Err(e) => {
+                return create_error_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    -32603,
+                    &format!("Failed to parse JSON response: {}", e),
+                );
+            },
+        };
+
+        let mut resp = (StatusCode::OK, Json(json_value)).into_response();
         add_cors_headers(resp.headers_mut());
         resp
     } else {
@@ -489,19 +512,49 @@ fn build_response(
                 let stream = UnboundedReceiverStream::new(rx);
                 let sse = Sse::new(stream.map(|msg| {
                     let event_id = Uuid::new_v4().to_string();
+                    // Use JSON-RPC compatibility layer for SSE messages
+                    let json_bytes = crate::shared::StdioTransport::serialize_message(&msg)
+                        .unwrap_or_else(|e| {
+                            eprintln!("Failed to serialize SSE message: {}", e);
+                            Vec::new()
+                        });
+                    let json_str =
+                        String::from_utf8(json_bytes).unwrap_or_else(|_| "{}".to_string());
                     Ok::<_, Infallible>(
                         Event::default()
                             .id(event_id)
                             .event("message")
-                            .data(serde_json::to_string(&msg).unwrap()),
+                            .data(json_str),
                     )
                 }));
 
                 sse.into_response()
             }
         } else {
-            // No session, return JSON
-            (StatusCode::OK, Json(response)).into_response()
+            // No session, return JSON using JSON-RPC compatibility layer
+            let json_bytes = match crate::shared::StdioTransport::serialize_message(&response) {
+                Ok(bytes) => bytes,
+                Err(e) => {
+                    return create_error_response(
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        -32603,
+                        &format!("Failed to serialize response: {}", e),
+                    );
+                },
+            };
+
+            let json_value: serde_json::Value = match serde_json::from_slice(&json_bytes) {
+                Ok(val) => val,
+                Err(e) => {
+                    return create_error_response(
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        -32603,
+                        &format!("Failed to parse JSON response: {}", e),
+                    );
+                },
+            };
+
+            (StatusCode::OK, Json(json_value)).into_response()
         }
     }
 }
@@ -559,17 +612,18 @@ async fn handle_post_request(
         return error_response;
     }
 
-    // Parse the JSON body
-    let message: TransportMessage = match serde_json::from_str(&body) {
-        Ok(msg) => msg,
-        Err(e) => {
-            return create_error_response(
-                StatusCode::BAD_REQUEST,
-                -32700,
-                &format!("Invalid JSON: {}", e),
-            );
-        },
-    };
+    // Parse the JSON body using JSON-RPC compatibility layer
+    let message: TransportMessage =
+        match crate::shared::StdioTransport::parse_message(body.as_bytes()) {
+            Ok(msg) => msg,
+            Err(e) => {
+                return create_error_response(
+                    StatusCode::BAD_REQUEST,
+                    -32700,
+                    &format!("Invalid JSON: {}", e),
+                );
+            },
+        };
 
     // Extract session ID from headers
     let session_id = headers
