@@ -64,8 +64,13 @@ jobs:
           if [ "${{ github.event_name }}" = "release" ]; then
             echo "TAG_NAME=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
           else
-            # For workflow_dispatch, use the latest release tag
-            TAG=$(gh release list --limit 1 --json tagName -q '.[0].tagName')
+            # For workflow_dispatch or push, use the latest release tag or create a dev release
+            TAG=$(gh release list --limit 1 --json tagName -q '.[0].tagName' || echo "")
+            if [ -z "$TAG" ]; then
+              # No releases exist, create a dev release
+              TAG="dev-$(date +%Y%m%d-%H%M%S)"
+              gh release create "$TAG" --title "Development Build $TAG" --notes "Automated development build" --prerelease
+            fi
             echo "TAG_NAME=${TAG}" >> $GITHUB_ENV
           fi
         env:
