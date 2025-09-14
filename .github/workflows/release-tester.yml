@@ -19,6 +19,11 @@ jobs:
           - os: macos-latest
             asset_name: mcp-tester-macos-x86_64
             target: x86_64-apple-darwin
+          # Note: Apple Silicon cross-compilation disabled due to ring crate limitations
+          # GitHub Actions doesn't provide ARM64 macOS runners yet
+          # - os: macos-latest
+          #   asset_name: mcp-tester-macos-aarch64
+          #   target: aarch64-apple-darwin
           - os: windows-latest
             asset_name: mcp-tester-windows-x86_64.exe
             target: x86_64-pc-windows-msvc
@@ -41,10 +46,13 @@ jobs:
           cd target/${{ matrix.target }}/release
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             mv mcp-tester.exe ${{ matrix.asset_name }}
+            # Convert Unix path to Windows path for gh command on Windows
+            WIN_PATH=$(cygpath -w "$(pwd)/${{ matrix.asset_name }}")
+            echo "ASSET_PATH=$WIN_PATH" >> $GITHUB_ENV
           else
             mv mcp-tester ${{ matrix.asset_name }}
+            echo "ASSET_PATH=$(pwd)/${{ matrix.asset_name }}" >> $GITHUB_ENV
           fi
-          echo "ASSET_PATH=$(pwd)/${{ matrix.asset_name }}" >> $GITHUB_ENV
 
       - name: Get release tag
         id: get_tag
@@ -53,8 +61,13 @@ jobs:
           if [ "${{ github.event_name }}" = "release" ]; then
             echo "TAG_NAME=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
           else
-            # For workflow_dispatch, use the latest release tag
-            TAG=$(gh release list --limit 1 --json tagName -q '.[0].tagName')
+            # For workflow_dispatch or push, use the latest release tag or create a dev release
+            TAG=$(gh release list --limit 1 --json tagName -q '.[0].tagName' || echo "")
+            if [ -z "$TAG" ]; then
+              # No releases exist, create a dev release
+              TAG="dev-$(date +%Y%m%d-%H%M%S)"
+              gh release create "$TAG" --title "Development Build $TAG" --notes "Automated development build" --prerelease
+            fi
             echo "TAG_NAME=${TAG}" >> $GITHUB_ENV
           fi
         env:

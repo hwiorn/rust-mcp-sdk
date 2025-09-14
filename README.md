@@ -228,11 +228,11 @@ cargo run --example 24_streamable_http_client --features streamable-http
 # WASM client (browser-based) - see examples/wasm-client/README.md
 cd examples/wasm-client && bash build.sh
 
-# MCP server tester - comprehensive testing tool for MCP servers
-cargo run --example 26-server-tester -- test http://localhost:8080
-
 # WebSocket server implementation with connection management
 cargo run --example 25_websocket_server --features full
+
+# MCP server tester - comprehensive testing tool for MCP servers
+cargo run --example 26-server-tester -- test http://localhost:8080
 
 # HTTP/SSE transport optimizations with connection pooling
 cargo run --example 26_http_sse_optimizations --features full
@@ -263,6 +263,52 @@ cargo run --example 48_structured_output_schema --features full
 # Tool with LLM sampling integration for text processing
 cargo run --example 49_tool_with_sampling_server --features full
 ```
+
+## MCP Server Tester
+
+The SDK includes a comprehensive testing tool for validating MCP server implementations. The tester ensures protocol compliance, validates capabilities, and provides detailed diagnostics.
+
+### Features
+
+- **Protocol Compliance**: Validates JSON-RPC 2.0 and MCP protocol compliance
+- **Multi-Transport Support**: Tests HTTP, HTTPS, WebSocket, and stdio transports  
+- **Comprehensive Diagnostics**: Layer-by-layer connection troubleshooting
+- **Tool Testing**: Discover and test individual tools with custom arguments
+- **CI/CD Ready**: JSON output for automated testing pipelines
+
+### Installation
+
+Pre-built binaries are available from [releases](https://github.com/paiml/rust-mcp-sdk/releases):
+- `mcp-tester-linux-x86_64` (Linux)
+- `mcp-tester-macos-x86_64` (macOS Intel/Apple Silicon via Rosetta)
+- `mcp-tester-windows-x86_64.exe` (Windows)
+
+Or build from source:
+```bash
+cargo build --release --package mcp-server-tester
+# Binary will be at target/release/mcp-tester
+```
+
+### Usage
+
+```bash
+# Test an MCP server
+mcp-tester test http://localhost:8080
+
+# Test with tools validation
+mcp-tester test http://localhost:8080 --with-tools
+
+# Protocol compliance check
+mcp-tester compliance http://localhost:8080 --strict
+
+# Connection diagnostics
+mcp-tester diagnose http://localhost:8080
+
+# Compare two servers
+mcp-tester compare http://server1:8080 http://server2:8080
+```
+
+For detailed usage, see [examples/26-server-tester/README.md](examples/26-server-tester/README.md).
 
 See the [examples directory](examples/) for detailed documentation.
 
