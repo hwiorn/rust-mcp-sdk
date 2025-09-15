@@ -6,6 +6,8 @@ use tracing_subscriber;
 
 mod diagnostics;
 mod report;
+mod scenario;
+mod scenario_executor;
 mod tester;
 mod validators;
 
@@ -118,6 +120,19 @@ enum Commands {
     Health {
         /// Server URL
         url: String,
+    },
+    
+    /// Run test scenarios from file
+    Scenario {
+        /// Server URL
+        url: String,
+        
+        /// Path to scenario file (YAML or JSON)
+        file: String,
+        
+        /// Show detailed output for scenario execution
+        #[arg(long)]
+        detailed: bool,
     },
 }
 
@@ -236,6 +251,19 @@ async fn main() -> Result<()> {
         Commands::Health { url } => {
             run_health_check(
                 &url,
+                cli.timeout,
+                cli.insecure,
+                cli.api_key.as_deref(),
+                cli.transport.as_deref(),
+            )
+            .await
+        },
+        
+        Commands::Scenario { url, file, detailed } => {
+            run_scenario(
+                &url,
+                &file,
+                detailed,
                 cli.timeout,
                 cli.insecure,
                 cli.api_key.as_deref(),
@@ -468,4 +496,73 @@ async fn run_health_check(
     println!();
 
     tester.run_health_check().await
+}
+
+async fn run_scenario(
+    url: &str,
+    file: &str,
+    verbose: bool,
+    timeout: u64,
+    insecure: bool,
+    api_key: Option<&str>,
+    transport: Option<&str>,
+) -> Result<TestReport> {
+    use scenario::TestScenario;
+    use scenario_executor::ScenarioExecutor;
+    
+    let mut tester = ServerTester::new(
+        url,
+        Duration::from_secs(timeout),
+        insecure,
+        api_key,
+        transport,
+    )?;
+    
+    // Initialize the server first
+    println!("{}", "Initializing server connection...".green());
+    let init_report = tester.run_quick_test().await?;
+    if init_report.has_failures() {
+        return Ok(init_report);
+    }
+    
+    // Load the scenario file
+    println!("{}", format!("Loading scenario from: {}", file).cyan());
+    let scenario = TestScenario::from_file(file)
+        .context("Failed to load scenario file")?;
+    
+    // Execute the scenario
+    let mut executor = ScenarioExecutor::new(&mut tester, verbose);
+    let scenario_result = executor.execute(scenario).await?;
+    
+    // Convert scenario result to test report
+    let mut report = TestReport::new();
+    
+    for step_result in scenario_result.step_results {
+        let test_result = crate::report::TestResult {
+            name: step_result.step_name,
+            category: crate::report::TestCategory::Tools,
+            status: if step_result.success {
+                crate::report::TestStatus::Passed
+            } else {
+                crate::report::TestStatus::Failed
+            },
+            duration: step_result.duration,
+            error: step_result.error,
+            details: step_result.response.map(|r| r.to_string()),
+        };
+        report.add_test(test_result);
+    }
+    
+    if let Some(error) = scenario_result.error {
+        report.add_test(crate::report::TestResult {
+            name: "Scenario Execution".to_string(),
+            category: crate::report::TestCategory::Core,
+            status: crate::report::TestStatus::Failed,
+            duration: scenario_result.duration,
+            error: Some(error),
+            details: None,
+        });
+    }
+    
+    Ok(report)
 }
