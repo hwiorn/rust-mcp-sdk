@@ -89,6 +89,31 @@ jobs:
           cargo install cargo-fuzz
           cargo install rustfilt
       
+      - name: Cache fuzz corpus
+        uses: actions/cache@v4
+        with:
+          path: fuzz/corpus
+          key: fuzz-corpus-all-${{ github.sha }}
+          restore-keys: |
+            fuzz-corpus-all-
+            fuzz-corpus-
+      
+      - name: Generate minimal corpus if needed
+        run: |
+          for target in protocol_parsing jsonrpc_handling transport_layer auth_flows; do
+            # Create corpus directory if it doesn't exist
+            mkdir -p fuzz/corpus/$target
+            
+            # If corpus is empty, run fuzzer briefly to generate some inputs
+            if [ -z "$(ls -A fuzz/corpus/$target 2>/dev/null)" ]; then
+              echo "No corpus found for $target, generating minimal corpus..."
+              cargo fuzz run $target -- \
+                -max_total_time=10 \
+                -print_final_stats=1 \
+                -detect_leaks=0 || true
+            fi
+          done
+      
       - name: Generate coverage
         run: |
           for target in protocol_parsing jsonrpc_handling transport_layer auth_flows; do
