@@ -22,7 +22,7 @@ A high-quality Rust implementation of the [Model Context Protocol](https://model
 
 Code Name: *Angel Rust*
 
-## 🎉 Version 1.2.1 - Toyota Way Quality Excellence & PMAT Integration!
+## 🎉 Version 1.4.2 - Toyota Way Quality Excellence & PMAT Integration!
 
 - 🏭 **Toyota Way Implementation**: Zero-defect development with Jidoka, Genchi Genbutsu, and Kaizen principles
 - 📊 **PMAT Quality Analysis**: Comprehensive code quality metrics with TDG scoring (0.76)
@@ -63,7 +63,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-pmcp = "1.2"
+pmcp = "1.4"
 ```
 
 ## Examples
