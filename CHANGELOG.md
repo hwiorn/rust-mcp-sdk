@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.2] - 2025-01-15
+
+### Added
+- **MCP Server Tester**: Comprehensive testing tool for MCP server validation
+  - Protocol compliance validation for JSON-RPC 2.0 and MCP
+  - Multi-transport support (HTTP, HTTPS, WebSocket, stdio)
+  - Layer-by-layer connection diagnostics
+  - Tool testing with custom arguments
+  - Server comparison capabilities
+  - CI/CD ready with JSON output format
+- **Release Workflow**: Automated binary builds and distribution
+  - Pre-built binaries for Linux, macOS, and Windows
+  - Automatic release creation for forks
+  - Cross-platform path compatibility
+
+### Fixed
+- JSON-RPC 2.0 compatibility for HTTP transport (Issue #38)
+- Null params handling for various MCP methods
+- Transport layer fuzz test memory exhaustion issues
+- Auth flows fuzz test integer overflow protection
+- Windows path format compatibility in CI workflows
+
 ## [1.4.1] - 2025-01-16
 
 ### 🔧 Enhanced Developer Experience & TypeScript SDK Parity
