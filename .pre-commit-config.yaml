@@ -1,0 +1,184 @@
+# PMCP SDK - Toyota Way Quality Standards Pre-commit Configuration
+# Implementing PAIML MCP Agent Toolkit style with zero tolerance for defects
+# Based on Toyota manufacturing principles: Jidoka (自働化), Kaizen (改善), Genchi Genbutsu (現地現物)
+
+repos:
+  # Standard pre-commit hooks for basic quality
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  # Rust-specific quality gates - ZERO TOLERANCE FOR DEFECTS
+  - repo: https://github.com/doublify/pre-commit-rust
+    rev: v1.0
+    hooks:
+      # Toyota Way Principle: Jidoka - Stop the line when defects are detected
+      - id: fmt
+        name: "🏭 Toyota Way: Code Formatting (Jidoka)"
+        args: ["--", "--check"]
+        fail_fast: true  # Stop immediately on formatting issues
+        
+      - id: clippy
+        name: "🏭 Toyota Way: Lint Analysis (Zero Defects)"
+        args: 
+          - "--workspace"
+          - "--all-targets" 
+          - "--all-features"
+          - "--"
+          - "-D"
+          - "warnings"
+          - "-D"
+          - "clippy::all"
+          - "-W"
+          - "clippy::pedantic"
+          - "-W"
+          - "clippy::nursery" 
+          - "-W"
+          - "clippy::cargo"
+          # Allow specific patterns matching CLAUDE.md requirements
+          - "-A"
+          - "clippy::module_name_repetitions"
+          - "-A"
+          - "clippy::must_use_candidate"
+          - "-A"
+          - "clippy::missing_errors_doc"
+          - "-A"
+          - "clippy::missing_const_for_fn"
+          - "-A"
+          - "clippy::return_self_not_must_use"
+          - "-A"
+          - "clippy::missing_fields_in_debug"
+          - "-A"
+          - "clippy::uninlined_format_args"
+          - "-A"
+          - "clippy::if_not_else"
+          - "-A"
+          - "clippy::result_large_err"
+          - "-A"
+          - "clippy::multiple_crate_versions"
+          - "-A"
+          - "clippy::implicit_hasher"
+          - "-A"
+          - "clippy::unused_async"
+          - "-A"
+          - "clippy::cast_lossless"
+          - "-A"
+          - "clippy::redundant_clone"
+          - "-A"
+          - "clippy::redundant_closure_for_method_calls"
+          - "-A"
+          - "clippy::significant_drop_tightening"
+          - "-A"
+          - "clippy::missing_panics_doc"
+          - "-A"
+          - "clippy::cast_possible_truncation"
+          - "-A"
+          - "clippy::cast_precision_loss"
+          - "-A"
+          - "clippy::option_if_let_else"
+          - "-A"
+          - "clippy::derive_partial_eq_without_eq"
+          - "-A"
+          - "clippy::redundant_else"
+          - "-A"
+          - "clippy::match_same_arms"
+          - "-A"
+          - "clippy::manual_string_new"
+          - "-A"
+          - "clippy::default_trait_access"
+          - "-A"
+          - "clippy::format_push_string"
+          - "-A"
+          - "clippy::too_many_lines"
+        fail_fast: true  # Stop immediately on lint violations
+
+      - id: cargo-check
+        name: "🏭 Toyota Way: Compilation Verification"
+        args: ["--workspace", "--all-features", "--all-targets"]
+        fail_fast: true  # Stop immediately on compilation failures
+
+  # Local hooks for Toyota Way quality enforcement
+  - repo: local
+    hooks:
+      # Toyota Way Principle: Genchi Genbutsu - Go see the actual situation
+      - id: check-todos
+        name: "🏭 Toyota Way: Zero SATD Tolerance"
+        entry: sh
+        args: ["-c", "! grep -r 'TODO\\|FIXME\\|HACK\\|XXX' src/ --include='*.rs' || exit 1"]
+        language: system
+        types: [rust]
+        fail_fast: true
+        
+      - id: check-unwraps
+        name: "🏭 Toyota Way: No unwrap() in Production"
+        entry: sh
+        args: ["-c", "! grep -r '\\.unwrap()' src/ --include='*.rs' | grep -v test || exit 1"]
+        language: system
+        types: [rust]
+        fail_fast: true
+
+      # Doctest validation - part of ALWAYS requirements
+      - id: cargo-test-doc
+        name: "🏭 Toyota Way: Documentation Tests"
+        entry: cargo
+        args: ["test", "--doc", "--all-features"]
+        language: system
+        types: [rust]
+        pass_filenames: false
+        fail_fast: true
+
+      # Security audit - zero tolerance for vulnerabilities
+      - id: cargo-audit
+        name: "🏭 Toyota Way: Security Vulnerability Check"
+        entry: cargo
+        args: ["audit"]
+        language: system
+        types: [rust]
+        pass_filenames: false
+        fail_fast: true
+
+      # Version file synchronization check
+      - id: version-sync
+        name: "🏭 Toyota Way: Version Synchronization"
+        entry: sh
+        args: ["-c", "test $(cat VERSION) = $(grep '^version' Cargo.toml | cut -d'\"' -f2)"]
+        language: system
+        files: '^(VERSION|Cargo\.toml)$'
+        fail_fast: true
+
+  # Advanced quality checks (optional but recommended for Toyota Way)
+  - repo: https://github.com/Lucas-C/pre-commit-hooks
+    rev: v1.5.5
+    hooks:
+      - id: forbid-crlf
+        name: "🏭 Toyota Way: Enforce Unix Line Endings"
+      - id: remove-crlf
+        name: "🏭 Toyota Way: Remove Windows Line Endings"
+
+# Global configuration following Toyota Way principles
+default_stages: [commit]  # Run on every commit - Jidoka principle
+fail_fast: true  # Stop the production line immediately when defects are found
+
+# Multi-stage quality gates
+default_install_hook_types:
+  - pre-commit
+  - pre-push
+  - commit-msg
+
+# Toyota Way: Continuous improvement (Kaizen) through comprehensive checks
+ci:
+  autofix_prs: false  # Manual review required for all changes
+  skip: []  # No skips - zero tolerance

@@ -12,6 +12,7 @@ use crate::types::capabilities::SamplingCapabilities;
 use crate::types::{PromptInfo, ServerCapabilities, ToolInfo};
 use std::collections::HashMap;
 use std::sync::Arc;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::RwLock;
 use tracing::info;
 

@@ -7,8 +7,7 @@ runner = "wasm-bindgen-test-runner"
 [target.'cfg(target_arch = "wasm32")']
 rustflags = [
     "-C", "opt-level=z",     # Optimize for size
-    "-C", "lto=fat",          # Enable link-time optimization
-    "-C", "embed-bitcode=yes" # Required for LTO
+    # LTO is handled in individual Cargo.toml files to avoid issues with dependencies
 ]
 
 # Native build optimizations

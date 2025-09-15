@@ -5,7 +5,9 @@ use crate::types::elicitation::{ElicitInputRequest, ElicitInputResponse};
 use crate::types::protocol::ServerRequest;
 use std::collections::HashMap;
 use std::sync::Arc;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::{mpsc, oneshot, RwLock};
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::time::{timeout, Duration};
 use tracing::{debug, warn};
 

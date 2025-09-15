@@ -6,7 +6,9 @@
 use crate::error::{Result, TransportError};
 use crate::shared::transport::{Transport, TransportMessage};
 use async_trait::async_trait;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::Mutex;
 
 /// Line-delimited JSON framing header.

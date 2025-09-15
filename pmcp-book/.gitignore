@@ -1,0 +1,15 @@
+# mdBook build output
+book/
+
+# mdBook cache
+.mdbook-cache/
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~
+
+# OS-specific files
+.DS_Store
+Thumbs.db

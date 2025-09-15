@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "mcp-wasi-host",
+    "mcp-wasi-server",
+]

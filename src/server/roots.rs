@@ -7,6 +7,7 @@ use crate::error::Result;
 use crate::types::{ServerNotification, ServerRequest};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::RwLock;
 use tracing::info;
 

@@ -1,11 +1,16 @@
 //! Protocol helper functions for parsing and creating messages.
 
 use crate::error::{Error, Result};
+use crate::shared::simd_parsing::SimdJsonParser;
 use crate::types::{
     ClientNotification, ClientRequest, JSONRPCNotification, JSONRPCRequest, Notification, Request,
     RequestId, ServerNotification, ServerRequest,
 };
 use serde_json::Value;
+use std::sync::LazyLock;
+
+/// Global SIMD JSON parser instance for high-performance parsing
+static SIMD_PARSER: LazyLock<SimdJsonParser> = LazyLock::new(SimdJsonParser::new);
 
 /// Parse a JSON-RPC request into a typed Request.
 pub fn parse_request(request: JSONRPCRequest<Value>) -> Result<(RequestId, Request)> {
@@ -104,40 +109,113 @@ pub fn create_notification(notification: Notification) -> JSONRPCNotification<Va
 // Helper functions for parsing
 
 fn parse_client_request(method: &str, params: &Value) -> Result<ClientRequest> {
-    let request_json = serde_json::json!({
-        "method": method,
-        "params": params,
-    });
+    // For methods that don't accept params at all (like "ping"), we should not include
+    // the params field. For methods that accept optional params, we convert null to empty object.
+    let request_json = if method == "ping" {
+        // Ping doesn't accept params at all
+        serde_json::json!({
+            "method": method,
+        })
+    } else if params.is_null() {
+        // For methods with optional params, convert null to empty object
+        serde_json::json!({
+            "method": method,
+            "params": {},
+        })
+    } else {
+        // Include params as-is for methods that accept params
+        serde_json::json!({
+            "method": method,
+            "params": params,
+        })
+    };
 
     serde_json::from_value(request_json)
         .map_err(|e| Error::parse(format!("Invalid client request: {}", e)))
 }
 
 fn parse_server_request(method: &str, params: &Value) -> Result<ServerRequest> {
-    let request_json = serde_json::json!({
-        "method": method,
-        "params": params,
-    });
+    // For methods that don't accept params at all (like "roots/list"), we should not include
+    // the params field. For methods that accept optional params, we convert null to empty object.
+    let request_json = if method == "roots/list" {
+        // roots/list doesn't accept params at all
+        serde_json::json!({
+            "method": method,
+        })
+    } else if params.is_null() {
+        // For methods with optional params, convert null to empty object
+        serde_json::json!({
+            "method": method,
+            "params": {},
+        })
+    } else {
+        // Include params as-is for methods that accept params
+        serde_json::json!({
+            "method": method,
+            "params": params,
+        })
+    };
 
     serde_json::from_value(request_json)
         .map_err(|e| Error::parse(format!("Invalid server request: {}", e)))
 }
 
 fn parse_client_notification(method: &str, params: &Value) -> Result<ClientNotification> {
-    let notif_json = serde_json::json!({
-        "method": method,
-        "params": params,
-    });
+    // For notifications that don't accept params, we should not include
+    // the params field at all in the JSON object we construct for deserialization
+    let notif_json = if matches!(
+        method,
+        "notifications/initialized" | "notifications/roots/list_changed"
+    ) {
+        // Don't include params field for parameterless notifications
+        serde_json::json!({
+            "method": method,
+        })
+    } else if params.is_null() {
+        // For notifications with optional params, convert null to empty object
+        serde_json::json!({
+            "method": method,
+            "params": {},
+        })
+    } else {
+        // Include params field for notifications that accept params
+        serde_json::json!({
+            "method": method,
+            "params": params,
+        })
+    };
 
     serde_json::from_value(notif_json)
         .map_err(|e| Error::parse(format!("Invalid client notification: {}", e)))
 }
 
 fn parse_server_notification(method: &str, params: &Value) -> Result<ServerNotification> {
-    let notif_json = serde_json::json!({
-        "method": method,
-        "params": params,
-    });
+    // For notifications that don't accept params, we should not include
+    // the params field at all in the JSON object we construct for deserialization
+    let notif_json = if matches!(
+        method,
+        "notifications/tools/list_changed"
+            | "notifications/prompts/list_changed"
+            | "notifications/resources/list_changed"
+            | "notifications/roots/list_changed"
+    ) {
+        // Don't include params field for parameterless notifications
+        serde_json::json!({
+            "method": method,
+        })
+    } else if params.is_null() {
+        // For notifications with optional params, convert null to empty object
+        serde_json::json!({
+            "method": method,
+            "params": {},
+        })
+    } else {
+        // Include params field for notifications that accept params
+        serde_json::json!({
+            "method": method,
+            "params": params,
+        })
+    };
 
     serde_json::from_value(notif_json)
         .map_err(|e| Error::parse(format!("Invalid server notification: {}", e)))
@@ -243,6 +321,56 @@ fn server_notification_to_jsonrpc(notif: ServerNotification) -> (String, Option<
             Some(serde_json::to_value(params).unwrap()),
         ),
     }
+}
+
+/// SIMD-accelerated JSON-RPC parsing functions
+///
+/// These functions provide high-performance alternatives to standard parsing
+/// by leveraging SIMD optimizations when available on the target CPU.
+/// Parse a JSON-RPC request from raw bytes using SIMD optimization.
+pub fn parse_request_bytes(data: &[u8]) -> Result<(RequestId, Request)> {
+    let request = SIMD_PARSER
+        .parse_request(data)
+        .map_err(|e| Error::parse(format!("SIMD JSON parsing failed: {}", e)))?;
+    parse_request(request)
+}
+
+/// Parse a JSON-RPC response from raw bytes using SIMD optimization.
+pub fn parse_response_bytes(data: &[u8]) -> Result<crate::types::jsonrpc::JSONRPCResponse> {
+    SIMD_PARSER
+        .parse_response(data)
+        .map_err(|e| Error::parse(format!("SIMD JSON response parsing failed: {}", e)))
+}
+
+/// Parse a batch of JSON-RPC requests from raw bytes using SIMD optimization with parallel processing.
+pub fn parse_batch_requests_bytes(data: &[u8]) -> Result<Vec<(RequestId, Request)>> {
+    let requests = SIMD_PARSER
+        .parse_batch_requests(data)
+        .map_err(|e| Error::parse(format!("SIMD batch parsing failed: {}", e)))?;
+
+    requests
+        .into_iter()
+        .map(parse_request)
+        .collect::<Result<Vec<_>>>()
+}
+
+/// Parse a batch of JSON-RPC responses from raw bytes using SIMD optimization.
+pub fn parse_batch_responses_bytes(
+    data: &[u8],
+) -> Result<Vec<crate::types::jsonrpc::JSONRPCResponse>> {
+    SIMD_PARSER
+        .parse_batch_responses(data)
+        .map_err(|e| Error::parse(format!("SIMD batch response parsing failed: {}", e)))
+}
+
+/// Get SIMD parsing performance metrics.
+pub fn get_simd_parsing_metrics() -> crate::shared::simd_parsing::ParsingMetrics {
+    SIMD_PARSER.get_metrics()
+}
+
+/// Check if SIMD features are available on the current CPU.
+pub fn get_cpu_features() -> crate::shared::simd_parsing::CpuFeatures {
+    SIMD_PARSER.get_cpu_features()
 }
 
 #[cfg(test)]

@@ -4,7 +4,9 @@ use crate::error::Result;
 use crate::types::protocol::{CancelledNotification, Notification};
 use std::collections::HashMap;
 use std::sync::Arc;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::RwLock;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio_util::sync::CancellationToken;
 
 /// Manages cancellation tokens for requests.
@@ -120,6 +122,8 @@ pub struct RequestHandlerExtra {
     pub session_id: Option<String>,
     /// Authentication info
     pub auth_info: Option<crate::types::auth::AuthInfo>,
+    /// Validated authentication context (if auth is enabled)
+    pub auth_context: Option<crate::server::auth::AuthContext>,
 }
 
 impl RequestHandlerExtra {
@@ -130,6 +134,7 @@ impl RequestHandlerExtra {
             request_id,
             session_id: None,
             auth_info: None,
+            auth_context: None,
         }
     }
 
@@ -143,6 +148,20 @@ impl RequestHandlerExtra {
     pub fn with_auth_info(mut self, auth_info: Option<crate::types::auth::AuthInfo>) -> Self {
         self.auth_info = auth_info;
         self
+    }
+
+    /// Set the auth context.
+    pub fn with_auth_context(
+        mut self,
+        auth_context: Option<crate::server::auth::AuthContext>,
+    ) -> Self {
+        self.auth_context = auth_context;
+        self
+    }
+
+    /// Get the auth context if available.
+    pub fn auth_context(&self) -> Option<&crate::server::auth::AuthContext> {
+        self.auth_context.as_ref()
     }
 
     /// Check if the request has been cancelled.

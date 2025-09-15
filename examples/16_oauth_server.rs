@@ -1,9 +1,9 @@
 //! Example OAuth 2.0 server implementation using PMCP.
 
 use async_trait::async_trait;
+use pmcp::auth::middleware::{AuthMiddleware, BearerTokenMiddleware, ScopeMiddleware};
 use pmcp::server::auth::{
-    AuthMiddleware, BearerTokenMiddleware, GrantType, InMemoryOAuthProvider, OAuthClient,
-    OAuthProvider, ResponseType, ScopeMiddleware,
+    GrantType, InMemoryOAuthProvider, OAuthClient, OAuthProvider, ResponseType,
 };
 use pmcp::server::{Server, ToolHandler};
 use pmcp::types::capabilities::ServerCapabilities;
@@ -42,7 +42,7 @@ impl ToolHandler for ReadDataTool {
             .auth_middleware
             .authenticate(extra.auth_info.as_ref())
             .await?;
-        info!("Authenticated user {} for read_data", auth_ctx.user_id);
+        info!("Authenticated user {} for read_data", auth_ctx.subject);
 
         let key = args
             .get("key")
@@ -51,7 +51,7 @@ impl ToolHandler for ReadDataTool {
 
         Ok(json!({
             "key": key,
-            "value": format!("Data for key '{}' (user: {})", key, auth_ctx.user_id),
+            "value": format!("Data for key '{}' (user: {})", key, auth_ctx.subject),
             "scopes": auth_ctx.scopes
         }))
     }
@@ -70,7 +70,7 @@ impl ToolHandler for WriteDataTool {
             .auth_middleware
             .authenticate(extra.auth_info.as_ref())
             .await?;
-        info!("Authenticated user {} for write_data", auth_ctx.user_id);
+        info!("Authenticated user {} for write_data", auth_ctx.subject);
 
         let key = args
             .get("key")
@@ -83,7 +83,7 @@ impl ToolHandler for WriteDataTool {
             "success": true,
             "key": key,
             "value": value,
-            "written_by": auth_ctx.user_id,
+            "written_by": auth_ctx.subject,
             "scopes": auth_ctx.scopes
         }))
     }
@@ -104,7 +104,7 @@ impl ToolHandler for AdminOperationTool {
             .await?;
         info!(
             "Authenticated admin {} for admin_operation",
-            auth_ctx.user_id
+            auth_ctx.subject
         );
 
         let operation = args
@@ -115,7 +115,7 @@ impl ToolHandler for AdminOperationTool {
         Ok(json!({
             "success": true,
             "operation": operation,
-            "admin": auth_ctx.user_id,
+            "admin": auth_ctx.subject,
             "result": format!("Admin operation '{}' completed", operation)
         }))
     }

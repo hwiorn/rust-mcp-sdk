@@ -76,6 +76,7 @@
 
 pub mod client;
 pub mod error;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod server;
 pub mod shared;
 pub mod types;
@@ -87,21 +88,29 @@ pub mod simd;
 // Re-export commonly used types
 pub use client::{Client, ClientBuilder};
 pub use error::{Error, ErrorCode, Result};
+#[cfg(not(target_arch = "wasm32"))]
 pub use server::{
-    cancellation::RequestHandlerExtra, PromptHandler, ResourceHandler, SamplingHandler, Server,
-    ServerBuilder, ToolHandler,
+    auth, cancellation::RequestHandlerExtra, PromptHandler, ResourceHandler, SamplingHandler,
+    Server, ServerBuilder, ToolHandler,
 };
+#[cfg(not(target_arch = "wasm32"))]
+pub use shared::StdioTransport;
 pub use shared::{
     batch::{BatchRequest, BatchResponse},
     uri_template::UriTemplate,
-    AuthMiddleware, LoggingMiddleware, Middleware, MiddlewareChain, RetryMiddleware,
-    StdioTransport, Transport,
+    AuthMiddleware, LoggingMiddleware, Middleware, MiddlewareChain, RetryMiddleware, Transport,
 };
 
-#[cfg(feature = "websocket")]
+#[cfg(all(feature = "websocket", not(target_arch = "wasm32")))]
 pub use shared::{WebSocketConfig, WebSocketTransport};
 
-#[cfg(feature = "http")]
+#[cfg(all(feature = "websocket-wasm", target_arch = "wasm32"))]
+pub use shared::{WasmWebSocketConfig, WasmWebSocketTransport};
+
+#[cfg(target_arch = "wasm32")]
+pub use shared::{WasmHttpClient, WasmHttpConfig, WasmHttpTransport};
+
+#[cfg(all(feature = "http", not(target_arch = "wasm32")))]
 pub use shared::{HttpConfig, HttpTransport};
 pub use types::{
     AuthInfo, AuthScheme, CallToolRequest, CallToolResult, ClientCapabilities, ClientNotification,
@@ -113,6 +122,95 @@ pub use types::{
     SamplingCapabilities, SamplingMessage, ServerCapabilities, ServerNotification, ServerRequest,
     TokenUsage, ToolCapabilities, ToolInfo,
 };
+
+/// Type alias for [`CallToolResult`] - provides convenient access to tool execution results
+///
+/// This alias was added to resolve the common expectation that `ToolResult` should be
+/// importable directly from the crate root. It provides the same functionality as
+/// [`CallToolResult`] but with a more intuitive name for users implementing MCP tools.
+///
+/// # Examples
+///
+/// Basic usage:
+///
+/// ```rust
+/// use pmcp::{ToolResult, Content};
+///
+/// // Create a successful tool result
+/// let result = ToolResult {
+///     content: vec![Content::Text {
+///         text: "Operation completed successfully".to_string(),
+///     }],
+///     is_error: false,
+/// };
+///
+/// assert_eq!(result.content.len(), 1);
+/// assert!(!result.is_error);
+/// ```
+///
+/// Error handling:
+///
+/// ```rust
+/// use pmcp::{ToolResult, Content};
+///
+/// // Create an error result
+/// let error_result = ToolResult {
+///     content: vec![Content::Text {
+///         text: "Tool execution failed: Invalid input parameter".to_string(),
+///     }],
+///     is_error: true,
+/// };
+///
+/// assert!(error_result.is_error);
+/// ```
+///
+/// Using with different content types:
+///
+/// ```rust
+/// use pmcp::{ToolResult, Content};
+///
+/// // Tool result with resource content
+/// let resource_result = ToolResult {
+///     content: vec![Content::Resource {
+///         uri: "file:///tmp/output.txt".to_string(),
+///         text: Some("File contents here...".to_string()),
+///         mime_type: Some("text/plain".to_string()),
+///     }],
+///     is_error: false,
+/// };
+///
+/// match &resource_result.content[0] {
+///     Content::Resource { uri, mime_type, .. } => {
+///         assert_eq!(uri, "file:///tmp/output.txt");
+///         assert_eq!(mime_type, &Some("text/plain".to_string()));
+///     }
+///     _ => panic!("Expected resource content"),
+/// }
+/// ```
+///
+/// Serialization and JSON compatibility:
+///
+/// ```rust
+/// use pmcp::{ToolResult, Content};
+/// use serde_json;
+///
+/// let result = ToolResult {
+///     content: vec![Content::Text {
+///         text: "Hello, MCP!".to_string(),
+///     }],
+///     is_error: false,
+/// };
+///
+/// // Serialize to JSON
+/// let json_str = serde_json::to_string(&result).unwrap();
+/// println!("Serialized: {}", json_str);
+///
+/// // Deserialize back
+/// let deserialized: ToolResult = serde_json::from_str(&json_str).unwrap();
+/// assert_eq!(result.content.len(), deserialized.content.len());
+/// ```
+pub use types::CallToolResult as ToolResult;
+#[cfg(not(target_arch = "wasm32"))]
 pub use utils::{BatchingConfig, DebouncingConfig, MessageBatcher, MessageDebouncer};
 
 // Re-export async_trait for convenience

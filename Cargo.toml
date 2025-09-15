@@ -37,13 +37,15 @@ dashmap = "6.1"
 bytes = { version = "1.10", optional = true }
 futures = "0.3"
 futures-util = { version = "0.3", optional = true }
+futures-channel = { version = "0.3", optional = true }
+futures-locks = { version = "0.7", optional = true }
 pin-project = "1.1"
 http-body-util = "0.1"
 
 # OAuth dependencies
 sha2 = "0.10"
 base64 = "0.22"
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"], optional = false }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 tokio-tungstenite = { version = "0.27", features = ["native-tls"], optional = true }
 hyper = { version = "1.6", features = ["full"], optional = true }
 hyper-util = { version = "0.1", features = ["full"], optional = true }
@@ -54,16 +56,16 @@ glob-match = { version = "0.2", optional = true }
 # Platform-specific dependencies
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio = { version = "1.46", features = ["full"] }
-tokio-stream = { version = "0.1.15", optional = true }
+tokio-stream = { version = "0.1.15" }
 tokio-util = { version = "0.7", features = ["rt"] }
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
-web-sys = { version = "0.3", features = ["console", "Window", "Document", "WebSocket", "MessageEvent", "CloseEvent", "ErrorEvent", "BinaryType"] }
+web-sys = { version = "0.3", features = ["console", "Window", "Document", "WebSocket", "MessageEvent", "CloseEvent", "ErrorEvent", "BinaryType", "Headers", "Request", "RequestInit", "Response"] }
 js-sys = "0.3"
-getrandom = { version = "0.3", features = ["std"] }
+getrandom = { version = "0.2", features = ["js"] }
 
 # Transport dependencies
 tokio-tungstenite = { version = "0.27", optional = true }
@@ -101,15 +103,17 @@ dashmap = "6.1"  # Already in main deps but needed for examples
 
 [features]
 default = ["validation"]
-full = ["websocket", "http", "streamable-http", "validation", "resource-watcher", "rayon"]
+full = ["websocket", "http", "streamable-http", "sse", "validation", "resource-watcher", "rayon"]
+sse = ["dep:bytes"]
 websocket = ["dep:tokio-tungstenite"]
-http = ["dep:hyper", "dep:hyper-util"]
-streamable-http = ["dep:hyper", "dep:hyper-util", "dep:futures-util", "dep:bytes", "dep:axum", "dep:tokio-stream"]
+http = ["dep:hyper", "dep:hyper-util", "dep:bytes"]
+streamable-http = ["dep:hyper", "dep:hyper-util", "dep:futures-util", "dep:bytes", "dep:axum"]
 validation = ["dep:jsonschema", "dep:garde"]
 resource-watcher = ["dep:notify", "dep:glob-match"]
 # macros = ["dep:pmcp-macros", "dep:schemars"]
-wasm = ["getrandom/std", "websocket-wasm"]
+wasm = ["websocket-wasm", "uuid/js", "dep:futures-channel", "dep:futures-locks"]
 websocket-wasm = []
+wasm-tokio = []
 
 # Example features
 authentication_example = []
@@ -149,13 +153,11 @@ name = "simd_performance"
 harness = false
 
 [profile.release]
-lto = true
 codegen-units = 1
 opt-level = 3
 strip = true
 
 [profile.bench]
-lto = true
 codegen-units = 1
 opt-level = 3
 debug = true
@@ -265,8 +267,38 @@ name = "24_streamable_http_client"
 path = "examples/24_streamable_http_client.rs"
 required-features = ["streamable-http"]
 
+[[example]]
+name = "27_websocket_server_enhanced"
+path = "examples/27_websocket_server_enhanced.rs"
+required-features = ["websocket"]
+
+[[example]]
+name = "28_sse_optimized"
+path = "examples/28_sse_optimized.rs"
+required-features = ["sse"]
+
+[[example]]
+name = "29_connection_pool"
+path = "examples/29_connection_pool.rs"
+required-features = ["full"]
+
+[[example]]
+name = "30_enhanced_middleware"
+path = "examples/30_enhanced_middleware.rs"
+required-features = ["full"]
+
+[[example]]
+name = "31_advanced_error_recovery"
+path = "examples/31_advanced_error_recovery.rs"
+required-features = ["full"]
+
+
+
+[[bench]]
+name = "comprehensive_benchmarks"
+harness = false
 [workspace]
-members = ["pmcp-macros"]
+members = ["pmcp-macros", "examples/wasm-client", "examples/25-oauth-basic", "examples/test-basic", "examples/26-server-tester"]
 exclude = ["fuzz"]
 
 [package.metadata.docs.rs]

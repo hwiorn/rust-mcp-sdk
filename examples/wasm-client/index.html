@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP WASM Client Example - Rust SDK</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 20px;
+        }
+        .connection-section {
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            padding: 8px 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover:not(:disabled) {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.connecting {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .tools-section {
+            margin-top: 20px;
+        }
+        .tool-item {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .tool-name {
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+        .tool-description {
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .tool-actions {
+            margin-top: 10px;
+        }
+        .tool-input {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .output {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .example-servers {
+            background: #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .example-servers h4 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .example-server {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+        .example-server button {
+            font-size: 12px;
+            padding: 4px 8px;
+        }
+        .example-server code {
+            background: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MCP WASM Client Example</h1>
+        <div class="subtitle">Rust MCP SDK - Browser-based client supporting HTTP and WebSocket transports</div>
+        
+        <div class="connection-section">
+            <h3>Connection Setup</h3>
+            
+            <div class="example-servers">
+                <h4>Available Example Servers</h4>
+                <div style="background: #f0f8ff; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+                    <p style="margin: 5px 0;"><strong>To test the client:</strong></p>
+                    <ol style="margin: 5px 0; padding-left: 20px;">
+                        <li>Run one of the example servers below in a new terminal</li>
+                        <li>Click "Use" to select the server URL</li>
+                        <li>Click "Connect" to establish connection</li>
+                        <li>Once connected, test the available tools</li>
+                    </ol>
+                </div>
+                
+                <div class="example-server">
+                    <button onclick="useServer('http://localhost:8081')">Use</button>
+                    <code>http://localhost:8081</code>
+                    <span><strong>Stateless HTTP</strong> - Run: <code>cargo run --example 23_streamable_http_server_stateless --features streamable-http</code></span>
+                </div>
+                <div class="example-server">
+                    <button onclick="useServer('http://localhost:3000')">Use</button>
+                    <code>http://localhost:3000</code>
+                    <span><strong>Stateful HTTP</strong> - Run: <code>cargo run --example 22_streamable_http_server_stateful --features streamable-http</code></span>
+                </div>
+                <div class="example-server">
+                    <button onclick="useServer('ws://localhost:8080')">Use</button>
+                    <code>ws://localhost:8080</code>
+                    <span><strong>WebSocket</strong> - Run: <code>cargo run --example 13_websocket_transport --features websocket</code></span>
+                </div>
+                
+                <div style="margin-top: 15px; padding: 10px; background: #f9f9f9; border-radius: 4px;">
+                    <p style="margin: 5px 0; font-size: 14px; color: #666;">
+                        <strong>Custom Server:</strong> You can also connect to your own MCP server by entering its URL below.
+                        Make sure your server has CORS headers configured for browser access.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <input type="text" id="serverUrl" placeholder="Enter server URL (http://, https://, ws://, or wss://)" value="http://localhost:8081" />
+                <button id="connectBtn" onclick="connect()">Connect</button>
+                <button id="disconnectBtn" onclick="disconnect()" disabled>Disconnect</button>
+            </div>
+            
+            <div id="status" class="status disconnected">Not connected</div>
+            <div id="connectionInfo"></div>
+        </div>
+
+        <div class="tools-section" id="toolsSection" style="display: none;">
+            <h3>Available Tools</h3>
+            <button onclick="refreshTools()">Refresh Tools</button>
+            <div id="toolsList"></div>
+        </div>
+
+        <div class="container">
+            <h3>Output</h3>
+            <div id="output" class="output">Ready to connect...</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import init, { WasmClient, ConnectionType } from './pkg/mcp_wasm_client.js';
+
+        let client = null;
+        let isConnected = false;
+
+        async function initializeWasm() {
+            await init();
+            window.client = new WasmClient();
+            log('WASM module initialized');
+        }
+
+        window.useServer = function(url) {
+            document.getElementById('serverUrl').value = url;
+        }
+
+        window.connect = async function() {
+            const url = document.getElementById('serverUrl').value;
+            if (!url) {
+                showError('Please enter a server URL');
+                return;
+            }
+
+            setStatus('connecting', 'Connecting...');
+            document.getElementById('connectBtn').disabled = true;
+
+            try {
+                await window.client.connect(url);
+                isConnected = true;
+                
+                const connectionType = window.client.connection_type();
+                const sessionId = window.client.session_id();
+                
+                setStatus('connected', `Connected via ${connectionType === 0 ? 'WebSocket' : 'HTTP'}`);
+                
+                let info = `<strong>Connection Type:</strong> ${connectionType === 0 ? 'WebSocket' : 'HTTP'}<br>`;
+                if (sessionId) {
+                    info += `<strong>Session ID:</strong> ${sessionId}`;
+                }
+                document.getElementById('connectionInfo').innerHTML = info;
+                
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('disconnectBtn').disabled = false;
+                document.getElementById('toolsSection').style.display = 'block';
+                
+                log(`Connected to ${url}`);
+                
+                // Automatically load tools
+                await refreshTools();
+            } catch (error) {
+                setStatus('disconnected', 'Connection failed');
+                document.getElementById('connectBtn').disabled = false;
+                showError(`Connection failed: ${error.message || error}`);
+            }
+        }
+
+        window.disconnect = function() {
+            // Note: The current implementation doesn't have a disconnect method
+            // In a real implementation, you would close the connection
+            isConnected = false;
+            setStatus('disconnected', 'Disconnected');
+            document.getElementById('connectBtn').disabled = false;
+            document.getElementById('disconnectBtn').disabled = true;
+            document.getElementById('toolsSection').style.display = 'none';
+            document.getElementById('toolsList').innerHTML = '';
+            document.getElementById('connectionInfo').innerHTML = '';
+            log('Disconnected');
+        }
+
+        window.refreshTools = async function() {
+            if (!isConnected) {
+                showError('Not connected to server');
+                return;
+            }
+
+            try {
+                log('Fetching tools...');
+                const tools = await window.client.list_tools();
+                displayTools(tools);
+                log(`Loaded ${tools.length} tools`);
+            } catch (error) {
+                showError(`Failed to fetch tools: ${error.message || error}`);
+            }
+        }
+
+        function displayTools(tools) {
+            const toolsList = document.getElementById('toolsList');
+            
+            if (!tools || tools.length === 0) {
+                toolsList.innerHTML = '<p>No tools available</p>';
+                return;
+            }
+
+            toolsList.innerHTML = tools.map((tool, index) => `
+                <div class="tool-item">
+                    <div class="tool-name">${tool.name}</div>
+                    <div class="tool-description">${tool.description || 'No description'}</div>
+                    <div class="tool-actions">
+                        <textarea 
+                            id="toolInput${index}" 
+                            class="tool-input" 
+                            placeholder='Enter JSON arguments (e.g., {"param": "value"})'
+                            rows="2">{}</textarea>
+                        <button onclick="callTool('${tool.name}', ${index})">Call Tool</button>
+                    </div>
+                    <div id="toolOutput${index}"></div>
+                </div>
+            `).join('');
+        }
+
+        window.callTool = async function(toolName, index) {
+            if (!isConnected) {
+                showError('Not connected to server');
+                return;
+            }
+
+            const inputElement = document.getElementById(`toolInput${index}`);
+            const outputElement = document.getElementById(`toolOutput${index}`);
+            
+            try {
+                const args = JSON.parse(inputElement.value || '{}');
+                log(`Calling tool: ${toolName} with args:`, args);
+                
+                outputElement.innerHTML = '<div class="output">Calling tool...</div>';
+                
+                const result = await window.client.call_tool(toolName, args);
+                
+                outputElement.innerHTML = `<div class="output">Result:\n${JSON.stringify(result, null, 2)}</div>`;
+                log(`Tool ${toolName} returned:`, result);
+            } catch (error) {
+                outputElement.innerHTML = `<div class="error">Error: ${error.message || error}</div>`;
+                showError(`Tool call failed: ${error.message || error}`);
+            }
+        }
+
+        function setStatus(type, message) {
+            const statusElement = document.getElementById('status');
+            statusElement.className = `status ${type}`;
+            statusElement.textContent = message;
+        }
+
+        function log(message, data = null) {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            let logMessage = `[${timestamp}] ${message}`;
+            
+            if (data !== null) {
+                logMessage += '\n' + JSON.stringify(data, null, 2);
+            }
+            
+            output.textContent = logMessage + '\n' + output.textContent;
+            
+            // Keep only last 1000 lines
+            const lines = output.textContent.split('\n');
+            if (lines.length > 1000) {
+                output.textContent = lines.slice(0, 1000).join('\n');
+            }
+        }
+
+        function showError(message) {
+            log(`ERROR: ${message}`);
+            console.error(message);
+        }
+
+        // Initialize on page load
+        initializeWasm().catch(error => {
+            showError(`Failed to initialize WASM: ${error}`);
+        });
+    </script>
+</body>
+</html>

@@ -10,6 +10,7 @@ use parking_lot::RwLock;
 use reqwest::{Client, RequestBuilder, Response};
 use std::fmt::Debug;
 use std::sync::Arc;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::mpsc;
 use url::Url;
 
@@ -249,7 +250,10 @@ impl StreamableHttpTransport {
 
                 // Only process "message" events or no event type
                 if event.event.as_deref() == Some("message") || event.event.is_none() {
-                    if let Ok(msg) = serde_json::from_str::<TransportMessage>(&event.data) {
+                    // Use JSON-RPC compatibility layer
+                    if let Ok(msg) =
+                        crate::shared::StdioTransport::parse_message(event.data.as_bytes())
+                    {
                         let _ = sender.send(msg);
                     }
                 }
@@ -326,7 +330,9 @@ impl StreamableHttpTransport {
             return Ok(());
         }
 
-        let body = serde_json::to_string(&message)
+        // Use JSON-RPC compatibility layer for serialization
+        let body_bytes = crate::shared::StdioTransport::serialize_message(&message)?;
+        let body = String::from_utf8(body_bytes)
             .map_err(|e| Error::Transport(TransportError::Serialization(e.to_string())))?;
 
         let url = self.config.read().url.clone();
@@ -373,18 +379,21 @@ impl StreamableHttpTransport {
                 .await
                 .map_err(|e| Error::Transport(TransportError::Request(e.to_string())))?;
 
-            // Try to parse as array first (batch response)
-            if let Ok(batch) = serde_json::from_slice::<Vec<TransportMessage>>(&response_bytes) {
-                for msg in batch {
+            // Try to parse as array first (batch response - JSON-RPC 2.0)
+            if let Ok(batch) = serde_json::from_slice::<Vec<serde_json::Value>>(&response_bytes) {
+                for json_msg in batch {
+                    let json_str = serde_json::to_string(&json_msg).map_err(|e| {
+                        Error::Transport(TransportError::Deserialization(e.to_string()))
+                    })?;
+                    // Use JSON-RPC compatibility layer
+                    let msg = crate::shared::StdioTransport::parse_message(json_str.as_bytes())?;
                     self.sender
                         .send(msg)
                         .map_err(|e| Error::Transport(TransportError::Send(e.to_string())))?;
                 }
             } else {
-                // Single message
-                let message = serde_json::from_slice(&response_bytes).map_err(|e| {
-                    Error::Transport(TransportError::Deserialization(e.to_string()))
-                })?;
+                // Single message - use JSON-RPC compatibility layer
+                let message = crate::shared::StdioTransport::parse_message(&response_bytes)?;
                 self.sender
                     .send(message)
                     .map_err(|e| Error::Transport(TransportError::Send(e.to_string())))?;
@@ -412,7 +421,10 @@ impl StreamableHttpTransport {
 
                     // Only process "message" events
                     if event.event.as_deref() == Some("message") || event.event.is_none() {
-                        if let Ok(msg) = serde_json::from_str::<TransportMessage>(&event.data) {
+                        // Use JSON-RPC compatibility layer
+                        if let Ok(msg) =
+                            crate::shared::StdioTransport::parse_message(event.data.as_bytes())
+                        {
                             let _ = sender.send(msg);
                         }
                     }
