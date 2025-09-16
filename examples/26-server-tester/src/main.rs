@@ -2,7 +2,6 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use colored::*;
 use std::time::Duration;
-use tracing_subscriber;
 
 mod diagnostics;
 mod report;
@@ -121,15 +120,15 @@ enum Commands {
         /// Server URL
         url: String,
     },
-    
+
     /// Run test scenarios from file
     Scenario {
         /// Server URL
         url: String,
-        
+
         /// Path to scenario file (YAML or JSON)
         file: String,
-        
+
         /// Show detailed output for scenario execution
         #[arg(long)]
         detailed: bool,
@@ -258,8 +257,12 @@ async fn main() -> Result<()> {
             )
             .await
         },
-        
-        Commands::Scenario { url, file, detailed } => {
+
+        Commands::Scenario {
+            url,
+            file,
+            detailed,
+        } => {
             run_scenario(
                 &url,
                 &file,
@@ -509,7 +512,7 @@ async fn run_scenario(
 ) -> Result<TestReport> {
     use scenario::TestScenario;
     use scenario_executor::ScenarioExecutor;
-    
+
     let mut tester = ServerTester::new(
         url,
         Duration::from_secs(timeout),
@@ -517,26 +520,25 @@ async fn run_scenario(
         api_key,
         transport,
     )?;
-    
+
     // Initialize the server first
     println!("{}", "Initializing server connection...".green());
     let init_report = tester.run_quick_test().await?;
     if init_report.has_failures() {
         return Ok(init_report);
     }
-    
+
     // Load the scenario file
     println!("{}", format!("Loading scenario from: {}", file).cyan());
-    let scenario = TestScenario::from_file(file)
-        .context("Failed to load scenario file")?;
-    
+    let scenario = TestScenario::from_file(file).context("Failed to load scenario file")?;
+
     // Execute the scenario
     let mut executor = ScenarioExecutor::new(&mut tester, verbose);
     let scenario_result = executor.execute(scenario).await?;
-    
+
     // Convert scenario result to test report
     let mut report = TestReport::new();
-    
+
     for step_result in scenario_result.step_results {
         let test_result = crate::report::TestResult {
             name: step_result.step_name,
@@ -552,7 +554,7 @@ async fn run_scenario(
         };
         report.add_test(test_result);
     }
-    
+
     if let Some(error) = scenario_result.error {
         report.add_test(crate::report::TestResult {
             name: "Scenario Execution".to_string(),
@@ -563,6 +565,6 @@ async fn run_scenario(
             details: None,
         });
     }
-    
+
     Ok(report)
 }

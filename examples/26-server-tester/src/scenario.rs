@@ -11,29 +11,29 @@ use std::time::Duration;
 pub struct TestScenario {
     /// Name of the test scenario
     pub name: String,
-    
+
     /// Description of what the scenario tests
     pub description: Option<String>,
-    
+
     /// Timeout for the entire scenario (in seconds)
     #[serde(default = "default_timeout")]
     pub timeout: u64,
-    
+
     /// Whether to stop on first failure
     #[serde(default = "default_stop_on_failure")]
     pub stop_on_failure: bool,
-    
+
     /// Variables that can be used in the steps
     #[serde(default)]
     pub variables: HashMap<String, Value>,
-    
+
     /// Setup steps to run before the test
     #[serde(default)]
     pub setup: Vec<TestStep>,
-    
+
     /// The main test steps
     pub steps: Vec<TestStep>,
-    
+
     /// Cleanup steps to run after the test
     #[serde(default)]
     pub cleanup: Vec<TestStep>,
@@ -44,20 +44,20 @@ pub struct TestScenario {
 pub struct TestStep {
     /// Name/description of this step
     pub name: String,
-    
+
     /// The type of operation
     pub operation: Operation,
-    
+
     /// Optional timeout for this specific step (in seconds)
     pub timeout: Option<u64>,
-    
+
     /// Whether to continue if this step fails
     #[serde(default)]
     pub continue_on_failure: bool,
-    
+
     /// Store the result in a variable for later use
     pub store_result: Option<String>,
-    
+
     /// Assertions to validate the response
     #[serde(default)]
     pub assertions: Vec<Assertion>,
@@ -74,23 +74,23 @@ pub enum Operation {
         #[serde(default)]
         arguments: Value,
     },
-    
+
     /// List available tools
     #[serde(rename = "list_tools")]
     ListTools,
-    
+
     /// List available resources
     #[serde(rename = "list_resources")]
     ListResources,
-    
+
     /// Read a resource
     #[serde(rename = "read_resource")]
     ReadResource { uri: String },
-    
+
     /// List available prompts
     #[serde(rename = "list_prompts")]
     ListPrompts,
-    
+
     /// Get a prompt
     #[serde(rename = "get_prompt")]
     GetPrompt {
@@ -98,7 +98,7 @@ pub enum Operation {
         #[serde(default)]
         arguments: Value,
     },
-    
+
     /// Send a custom JSON-RPC request
     #[serde(rename = "custom")]
     Custom {
@@ -106,11 +106,11 @@ pub enum Operation {
         #[serde(default)]
         params: Value,
     },
-    
+
     /// Wait for a specified duration
     #[serde(rename = "wait")]
     Wait { seconds: f64 },
-    
+
     /// Set a variable
     #[serde(rename = "set_variable")]
     SetVariable { name: String, value: Value },
@@ -122,50 +122,50 @@ pub enum Operation {
 pub enum Assertion {
     /// Check if a field equals a specific value
     #[serde(rename = "equals")]
-    Equals { 
-        path: String, 
+    Equals {
+        path: String,
         value: Value,
         #[serde(default)]
         ignore_case: bool,
     },
-    
+
     /// Check if a field contains a substring
     #[serde(rename = "contains")]
-    Contains { 
-        path: String, 
+    Contains {
+        path: String,
         value: String,
         #[serde(default)]
         ignore_case: bool,
     },
-    
+
     /// Check if a field matches a regex pattern
     #[serde(rename = "matches")]
     Matches { path: String, pattern: String },
-    
+
     /// Check if a field exists (is not null/undefined)
     #[serde(rename = "exists")]
     Exists { path: String },
-    
+
     /// Check if a field does not exist (is null/undefined)
     #[serde(rename = "not_exists")]
     NotExists { path: String },
-    
+
     /// Check if response indicates success (no error field)
     #[serde(rename = "success")]
     Success,
-    
+
     /// Check if response indicates failure (has error field)
     #[serde(rename = "failure")]
     Failure,
-    
+
     /// Check array length
     #[serde(rename = "array_length")]
-    ArrayLength { 
-        path: String, 
+    ArrayLength {
+        path: String,
         #[serde(flatten)]
         comparison: Comparison,
     },
-    
+
     /// Check numeric value
     #[serde(rename = "numeric")]
     Numeric {
@@ -173,11 +173,11 @@ pub enum Assertion {
         #[serde(flatten)]
         comparison: Comparison,
     },
-    
+
     /// Custom JSONPath assertion
     #[serde(rename = "jsonpath")]
-    JsonPath { 
-        expression: String, 
+    JsonPath {
+        expression: String,
         expected: Option<Value>,
     },
 }
@@ -236,7 +236,7 @@ impl TestScenario {
         serde_yaml::from_str(&content)
             .with_context(|| format!("Failed to parse YAML scenario: {:?}", path.as_ref()))
     }
-    
+
     /// Load a test scenario from a JSON file
     pub fn from_json_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         let content = fs::read_to_string(path.as_ref())
@@ -244,7 +244,7 @@ impl TestScenario {
         serde_json::from_str(&content)
             .with_context(|| format!("Failed to parse JSON scenario: {:?}", path.as_ref()))
     }
-    
+
     /// Load a test scenario from a file (auto-detect format)
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         let path_ref = path.as_ref();
@@ -256,20 +256,20 @@ impl TestScenario {
                 Self::from_yaml_file(path_ref)
                     .or_else(|_| Self::from_json_file(path_ref))
                     .context("Failed to parse scenario file as YAML or JSON")
-            }
+            },
         }
     }
-    
+
     /// Validate the scenario structure
     pub fn validate(&self) -> Result<()> {
         if self.name.is_empty() {
             anyhow::bail!("Scenario name cannot be empty");
         }
-        
+
         if self.steps.is_empty() {
             anyhow::bail!("Scenario must have at least one step");
         }
-        
+
         // Validate variable references
         for step in &self.steps {
             if let Some(var_name) = &step.store_result {
@@ -278,7 +278,7 @@ impl TestScenario {
                 }
             }
         }
-        
+
         Ok(())
     }
 }
@@ -294,7 +294,7 @@ fn default_stop_on_failure() -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_parse_simple_scenario() {
         let yaml = r#"
@@ -321,13 +321,13 @@ steps:
         path: result
         value: "Hello, World!"
 "#;
-        
+
         let scenario: TestScenario = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(scenario.name, "Simple Tool Test");
         assert_eq!(scenario.steps.len(), 2);
         scenario.validate().unwrap();
     }
-    
+
     #[test]
     fn test_parse_complex_scenario() {
         let yaml = r#"
@@ -367,7 +367,7 @@ cleanup:
       arguments:
         id: "${test_id}"
 "#;
-        
+
         let scenario: TestScenario = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(scenario.name, "Complex Scenario");
         assert_eq!(scenario.timeout, 120);

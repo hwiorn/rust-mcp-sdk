@@ -31,26 +31,31 @@ impl<'a> ScenarioExecutor<'a> {
     /// Execute a test scenario
     pub async fn execute(&mut self, scenario: TestScenario) -> Result<ScenarioResult> {
         let start = Instant::now();
-        
+
         // Validate scenario first
         scenario.validate()?;
-        
+
         if self.verbose {
-            println!("\n{}", format!("Executing scenario: {}", scenario.name).cyan().bold());
+            println!(
+                "\n{}",
+                format!("Executing scenario: {}", scenario.name)
+                    .cyan()
+                    .bold()
+            );
             if let Some(desc) = &scenario.description {
                 println!("  {}", desc);
             }
             println!();
         }
-        
+
         // Initialize variables from scenario
         self.variables = scenario.variables.clone();
-        
+
         let mut step_results = Vec::new();
         let mut steps_completed = 0;
         let total_steps = scenario.setup.len() + scenario.steps.len() + scenario.cleanup.len();
         let mut scenario_error = None;
-        
+
         // Execute setup steps
         if !scenario.setup.is_empty() {
             if self.verbose {
@@ -61,33 +66,33 @@ impl<'a> ScenarioExecutor<'a> {
                 let success = result.success;
                 step_results.push(result);
                 steps_completed += 1;
-                
+
                 if !success && scenario.stop_on_failure && !step.continue_on_failure {
                     scenario_error = Some("Setup step failed".to_string());
                     break;
                 }
             }
         }
-        
+
         // Execute main steps if setup succeeded
         if scenario_error.is_none() {
             if self.verbose && !scenario.steps.is_empty() {
                 println!("\n{}", "Test Steps:".green());
             }
-            
+
             for step in &scenario.steps {
-                let result = self.execute_step(&step).await?;
+                let result = self.execute_step(step).await?;
                 let success = result.success;
                 step_results.push(result);
                 steps_completed += 1;
-                
+
                 if !success && scenario.stop_on_failure && !step.continue_on_failure {
                     scenario_error = Some(format!("Step '{}' failed", step.name));
                     break;
                 }
             }
         }
-        
+
         // Always run cleanup steps
         if !scenario.cleanup.is_empty() {
             if self.verbose {
@@ -102,14 +107,16 @@ impl<'a> ScenarioExecutor<'a> {
                 steps_completed += 1;
             }
         }
-        
-        let success = scenario_error.is_none() && 
-            step_results.iter().all(|r| r.success || 
-                step_results.iter()
-                    .zip(scenario.steps.iter())
-                    .any(|(res, step)| res.step_name == step.name && step.continue_on_failure)
-            );
-        
+
+        let success = scenario_error.is_none()
+            && step_results.iter().all(|r| {
+                r.success
+                    || step_results
+                        .iter()
+                        .zip(scenario.steps.iter())
+                        .any(|(res, step)| res.step_name == step.name && step.continue_on_failure)
+            });
+
         let result = ScenarioResult {
             scenario_name: scenario.name,
             success,
@@ -119,95 +126,100 @@ impl<'a> ScenarioExecutor<'a> {
             step_results,
             error: scenario_error,
         };
-        
+
         if self.verbose {
             self.print_summary(&result);
         }
-        
+
         Ok(result)
     }
-    
+
     /// Execute a single test step
     async fn execute_step(&mut self, step: &TestStep) -> Result<StepResult> {
         let start = Instant::now();
-        
+
         if self.verbose {
             print!("  {} {}... ", "→".cyan(), step.name);
         }
-        
+
         // Apply timeout if specified
         let timeout = Duration::from_secs(step.timeout.unwrap_or(30));
-        
+
         // Execute the operation
-        let response = match tokio::time::timeout(
-            timeout,
-            self.execute_operation(&step.operation)
-        ).await {
-            Ok(Ok(resp)) => Some(resp),
-            Ok(Err(e)) => {
-                let result = StepResult {
-                    step_name: step.name.clone(),
-                    success: false,
-                    duration: start.elapsed(),
-                    response: None,
-                    assertion_results: vec![],
-                    error: Some(e.to_string()),
-                };
-                
-                if self.verbose {
-                    println!("{} ({})", "FAILED".red(), e);
-                }
-                
-                return Ok(result);
-            },
-            Err(_) => {
-                let result = StepResult {
-                    step_name: step.name.clone(),
-                    success: false,
-                    duration: start.elapsed(),
-                    response: None,
-                    assertion_results: vec![],
-                    error: Some(format!("Timeout after {:?}", timeout)),
-                };
-                
-                if self.verbose {
-                    println!("{} (timeout)", "FAILED".red());
-                }
-                
-                return Ok(result);
-            }
-        };
-        
+        let response =
+            match tokio::time::timeout(timeout, self.execute_operation(&step.operation)).await {
+                Ok(Ok(resp)) => Some(resp),
+                Ok(Err(e)) => {
+                    let result = StepResult {
+                        step_name: step.name.clone(),
+                        success: false,
+                        duration: start.elapsed(),
+                        response: None,
+                        assertion_results: vec![],
+                        error: Some(e.to_string()),
+                    };
+
+                    if self.verbose {
+                        println!("{} ({})", "FAILED".red(), e);
+                    }
+
+                    return Ok(result);
+                },
+                Err(_) => {
+                    let result = StepResult {
+                        step_name: step.name.clone(),
+                        success: false,
+                        duration: start.elapsed(),
+                        response: None,
+                        assertion_results: vec![],
+                        error: Some(format!("Timeout after {:?}", timeout)),
+                    };
+
+                    if self.verbose {
+                        println!("{} (timeout)", "FAILED".red());
+                    }
+
+                    return Ok(result);
+                },
+            };
+
         // Store result if requested
         if let Some(var_name) = &step.store_result {
             if let Some(ref resp) = response {
                 self.variables.insert(var_name.clone(), resp.clone());
             }
         }
-        
+
         // Run assertions
         let assertion_results = if let Some(ref resp) = response {
             self.run_assertions(&step.assertions, resp).await
         } else {
             vec![]
         };
-        
+
         let success = assertion_results.iter().all(|a| a.passed);
-        
+
         if self.verbose {
             if success {
-                println!("{} ({:.2}s)", "PASSED".green(), start.elapsed().as_secs_f64());
+                println!(
+                    "{} ({:.2}s)",
+                    "PASSED".green(),
+                    start.elapsed().as_secs_f64()
+                );
             } else {
                 println!("{} ({:.2}s)", "FAILED".red(), start.elapsed().as_secs_f64());
                 for assertion in &assertion_results {
                     if !assertion.passed {
-                        println!("      {} Assertion failed: {}", "✗".red(), 
-                            assertion.message.as_ref().unwrap_or(&assertion.assertion));
+                        println!(
+                            "      {} Assertion failed: {}",
+                            "✗".red(),
+                            assertion.message.as_ref().unwrap_or(&assertion.assertion)
+                        );
                     }
                 }
             }
         }
-        
+
         Ok(StepResult {
             step_name: step.name.clone(),
             success,
@@ -217,12 +229,12 @@ impl<'a> ScenarioExecutor<'a> {
             error: None,
         })
     }
-    
+
     /// Execute an operation and return the response
     async fn execute_operation(&mut self, operation: &Operation) -> Result<Value> {
         // Substitute variables in the operation
         let operation = self.substitute_variables_in_operation(operation)?;
-        
+
         match operation {
             Operation::ToolCall { tool, arguments } => {
                 let result = self.tester.test_tool(&tool, arguments).await?;
@@ -232,35 +244,35 @@ impl<'a> ScenarioExecutor<'a> {
                     "error": result.error
                 }))
             },
-            
+
             Operation::ListTools => {
                 let tools = self.tester.list_tools().await?;
                 Ok(json!({
                     "tools": tools.tools
                 }))
             },
-            
+
             Operation::ListResources => {
                 let resources = self.tester.list_resources().await?;
                 Ok(json!({
                     "resources": resources.resources
                 }))
             },
-            
+
             Operation::ReadResource { uri } => {
                 let result = self.tester.read_resource(&uri).await?;
                 Ok(json!({
                     "contents": result.contents
                 }))
             },
-            
+
             Operation::ListPrompts => {
                 let prompts = self.tester.list_prompts().await?;
                 Ok(json!({
                     "prompts": prompts.prompts
                 }))
             },
-            
+
             Operation::GetPrompt { name, arguments } => {
                 let result = self.tester.get_prompt(&name, arguments).await?;
                 Ok(json!({
@@ -268,64 +280,54 @@ impl<'a> ScenarioExecutor<'a> {
                     "description": result.description
                 }))
             },
-            
+
             Operation::Custom { method, params } => {
                 self.tester.send_custom_request(&method, params).await
             },
-            
+
             Operation::Wait { seconds } => {
                 sleep(Duration::from_secs_f64(seconds)).await;
                 Ok(json!({ "waited": seconds }))
             },
-            
+
             Operation::SetVariable { name, value } => {
                 self.variables.insert(name.clone(), value.clone());
                 Ok(json!({ "variable_set": name }))
             },
         }
     }
-    
+
     /// Substitute variables in operation parameters
     fn substitute_variables_in_operation(&self, operation: &Operation) -> Result<Operation> {
         match operation {
-            Operation::ToolCall { tool, arguments } => {
-                Ok(Operation::ToolCall {
-                    tool: self.substitute_string(tool)?,
-                    arguments: self.substitute_value(arguments)?,
-                })
-            },
-            Operation::ReadResource { uri } => {
-                Ok(Operation::ReadResource {
-                    uri: self.substitute_string(uri)?,
-                })
-            },
-            Operation::GetPrompt { name, arguments } => {
-                Ok(Operation::GetPrompt {
-                    name: self.substitute_string(name)?,
-                    arguments: self.substitute_value(arguments)?,
-                })
-            },
-            Operation::Custom { method, params } => {
-                Ok(Operation::Custom {
-                    method: self.substitute_string(method)?,
-                    params: self.substitute_value(params)?,
-                })
-            },
-            Operation::SetVariable { name, value } => {
-                Ok(Operation::SetVariable {
-                    name: name.clone(),
-                    value: self.substitute_value(value)?,
-                })
-            },
+            Operation::ToolCall { tool, arguments } => Ok(Operation::ToolCall {
+                tool: self.substitute_string(tool)?,
+                arguments: self.substitute_value(arguments)?,
+            }),
+            Operation::ReadResource { uri } => Ok(Operation::ReadResource {
+                uri: self.substitute_string(uri)?,
+            }),
+            Operation::GetPrompt { name, arguments } => Ok(Operation::GetPrompt {
+                name: self.substitute_string(name)?,
+                arguments: self.substitute_value(arguments)?,
+            }),
+            Operation::Custom { method, params } => Ok(Operation::Custom {
+                method: self.substitute_string(method)?,
+                params: self.substitute_value(params)?,
+            }),
+            Operation::SetVariable { name, value } => Ok(Operation::SetVariable {
+                name: name.clone(),
+                value: self.substitute_value(value)?,
+            }),
             other => Ok(other.clone()),
         }
     }
-    
+
     /// Substitute variables in a string value
     fn substitute_string(&self, s: &str) -> Result<String> {
         let mut result = s.to_string();
         let var_regex = Regex::new(r"\$\{([^}]+)\}").unwrap();
-        
+
         for cap in var_regex.captures_iter(s) {
             let var_name = &cap[1];
             if let Some(value) = self.variables.get(var_name) {
@@ -336,10 +338,10 @@ impl<'a> ScenarioExecutor<'a> {
                 result = result.replace(&cap[0], &value_str);
             }
         }
-        
+
         Ok(result)
     }
-    
+
     /// Substitute variables in a JSON value
     fn substitute_value(&self, value: &Value) -> Result<Value> {
         match value {
@@ -361,23 +363,31 @@ impl<'a> ScenarioExecutor<'a> {
             other => Ok(other.clone()),
         }
     }
-    
+
     /// Run assertions against a response
-    async fn run_assertions(&self, assertions: &[Assertion], response: &Value) -> Vec<AssertionResult> {
+    async fn run_assertions(
+        &self,
+        assertions: &[Assertion],
+        response: &Value,
+    ) -> Vec<AssertionResult> {
         let mut results = Vec::new();
-        
+
         for assertion in assertions {
             let result = self.evaluate_assertion(assertion, response);
             results.push(result);
         }
-        
+
         results
     }
-    
+
     /// Evaluate a single assertion
     fn evaluate_assertion(&self, assertion: &Assertion, response: &Value) -> AssertionResult {
         match assertion {
-            Assertion::Equals { path, value, ignore_case } => {
+            Assertion::Equals {
+                path,
+                value,
+                ignore_case,
+            } => {
                 let actual = self.get_value_at_path(response, path);
                 let passed = if *ignore_case {
                     // Case-insensitive comparison for strings
@@ -390,7 +400,7 @@ impl<'a> ScenarioExecutor<'a> {
                 } else {
                     actual.as_ref() == Some(&value)
                 };
-                
+
                 AssertionResult {
                     assertion: format!("Equals: {} == {:?}", path, value),
                     passed,
@@ -403,8 +413,12 @@ impl<'a> ScenarioExecutor<'a> {
                     },
                 }
             },
-            
-            Assertion::Contains { path, value, ignore_case } => {
+
+            Assertion::Contains {
+                path,
+                value,
+                ignore_case,
+            } => {
                 let actual = self.get_value_at_path(response, path);
                 let passed = match actual {
                     Some(Value::String(s)) => {
@@ -414,22 +428,20 @@ impl<'a> ScenarioExecutor<'a> {
                             s.contains(value)
                         }
                     },
-                    Some(Value::Array(arr)) => {
-                        arr.iter().any(|v| {
-                            if let Value::String(s) = v {
-                                if *ignore_case {
-                                    s.to_lowercase() == value.to_lowercase()
-                                } else {
-                                    s == value
-                                }
+                    Some(Value::Array(arr)) => arr.iter().any(|v| {
+                        if let Value::String(s) = v {
+                            if *ignore_case {
+                                s.to_lowercase() == value.to_lowercase()
                             } else {
-                                false
+                                s == value
                             }
-                        })
-                    },
+                        } else {
+                            false
+                        }
+                    }),
                     _ => false,
                 };
-                
+
                 AssertionResult {
                     assertion: format!("Contains: {} contains '{}'", path, value),
                     passed,
@@ -442,7 +454,7 @@ impl<'a> ScenarioExecutor<'a> {
                     },
                 }
             },
-            
+
             Assertion::Matches { path, pattern } => {
                 let regex = match Regex::new(pattern) {
                     Ok(r) => r,
@@ -454,15 +466,15 @@ impl<'a> ScenarioExecutor<'a> {
                             expected_value: None,
                             message: Some(format!("Invalid regex pattern: {}", e)),
                         };
-                    }
+                    },
                 };
-                
+
                 let actual = self.get_value_at_path(response, path);
                 let passed = match actual {
-                    Some(Value::String(s)) => regex.is_match(&s),
+                    Some(Value::String(s)) => regex.is_match(s),
                     _ => false,
                 };
-                
+
                 AssertionResult {
                     assertion: format!("Matches: {} ~ /{}/", path, pattern),
                     passed,
@@ -475,11 +487,11 @@ impl<'a> ScenarioExecutor<'a> {
                     },
                 }
             },
-            
+
             Assertion::Exists { path } => {
                 let actual = self.get_value_at_path(response, path);
                 let passed = actual.is_some() && actual != Some(&Value::Null);
-                
+
                 AssertionResult {
                     assertion: format!("Exists: {}", path),
                     passed,
@@ -492,11 +504,11 @@ impl<'a> ScenarioExecutor<'a> {
                     },
                 }
             },
-            
+
             Assertion::NotExists { path } => {
                 let actual = self.get_value_at_path(response, path);
                 let passed = actual.is_none() || actual == Some(&Value::Null);
-                
+
                 AssertionResult {
                     assertion: format!("NotExists: {}", path),
                     passed,
@@ -509,7 +521,7 @@ impl<'a> ScenarioExecutor<'a> {
                     },
                 }
             },
-            
+
             Assertion::Success => {
                 let has_error = response.get("error").is_some();
                 AssertionResult {
@@ -524,7 +536,7 @@ impl<'a> ScenarioExecutor<'a> {
                     },
                 }
             },
-            
+
             Assertion::Failure => {
                 let has_error = response.get("error").is_some();
                 AssertionResult {
@@ -539,20 +551,20 @@ impl<'a> ScenarioExecutor<'a> {
                     },
                 }
             },
-            
+
             Assertion::ArrayLength { path, comparison } => {
                 let actual = self.get_value_at_path(response, path);
                 let length = match actual {
                     Some(Value::Array(arr)) => Some(arr.len() as f64),
                     _ => None,
                 };
-                
+
                 let passed = if let Some(len) = length {
                     self.evaluate_comparison(len, comparison)
                 } else {
                     false
                 };
-                
+
                 AssertionResult {
                     assertion: format!("ArrayLength: {} {:?}", path, comparison),
                     passed,
@@ -565,20 +577,20 @@ impl<'a> ScenarioExecutor<'a> {
                     },
                 }
             },
-            
+
             Assertion::Numeric { path, comparison } => {
                 let actual = self.get_value_at_path(response, path);
                 let number = match actual {
                     Some(Value::Number(n)) => n.as_f64(),
                     _ => None,
                 };
-                
+
                 let passed = if let Some(num) = number {
                     self.evaluate_comparison(num, comparison)
                 } else {
                     false
                 };
-                
+
                 AssertionResult {
                     assertion: format!("Numeric: {} {:?}", path, comparison),
                     passed,
@@ -591,8 +603,11 @@ impl<'a> ScenarioExecutor<'a> {
                     },
                 }
             },
-            
-            Assertion::JsonPath { expression, expected } => {
+
+            Assertion::JsonPath {
+                expression,
+                expected,
+            } => {
                 // Note: Full JSONPath support would require an external crate
                 // For now, we'll treat it as a simple path
                 let actual = self.get_value_at_path(response, expression);
@@ -600,7 +615,7 @@ impl<'a> ScenarioExecutor<'a> {
                     Some(exp) => actual.as_ref() == Some(&exp),
                     None => actual.is_some(),
                 };
-                
+
                 AssertionResult {
                     assertion: format!("JsonPath: {}", expression),
                     passed,
@@ -615,18 +630,18 @@ impl<'a> ScenarioExecutor<'a> {
             },
         }
     }
-    
+
     /// Get value at a path in the JSON response
     fn get_value_at_path<'b>(&self, value: &'b Value, path: &str) -> Option<&'b Value> {
         let parts: Vec<&str> = path.split('.').collect();
         let mut current = value;
-        
+
         for part in parts {
             // Handle array indices like "items[0]"
             if let Some(bracket_pos) = part.find('[') {
                 let field = &part[..bracket_pos];
                 let index_str = &part[bracket_pos + 1..part.len() - 1];
-                
+
                 current = current.get(field)?;
                 if let Ok(index) = index_str.parse::<usize>() {
                     current = current.get(index)?;
@@ -637,10 +652,10 @@ impl<'a> ScenarioExecutor<'a> {
                 current = current.get(part)?;
             }
         }
-        
+
         Some(current)
     }
-    
+
     /// Evaluate a numeric comparison
     fn evaluate_comparison(&self, value: f64, comparison: &Comparison) -> bool {
         match comparison {
@@ -653,24 +668,27 @@ impl<'a> ScenarioExecutor<'a> {
             Comparison::Between { min, max } => value >= *min && value <= *max,
         }
     }
-    
+
     /// Print a summary of the scenario execution
     fn print_summary(&self, result: &ScenarioResult) {
         println!("\n{}", "─".repeat(60));
         println!("{}", "Scenario Summary:".bold());
         println!("  Name: {}", result.scenario_name);
-        println!("  Status: {}", if result.success { 
-            "PASSED".green().bold() 
-        } else { 
-            "FAILED".red().bold() 
-        });
+        println!(
+            "  Status: {}",
+            if result.success {
+                "PASSED".green().bold()
+            } else {
+                "FAILED".red().bold()
+            }
+        );
         println!("  Duration: {:.2}s", result.duration.as_secs_f64());
         println!("  Steps: {}/{}", result.steps_completed, result.steps_total);
-        
+
         if let Some(error) = &result.error {
             println!("  Error: {}", error.red());
         }
-        
+
         println!("{}", "─".repeat(60));
     }
 }

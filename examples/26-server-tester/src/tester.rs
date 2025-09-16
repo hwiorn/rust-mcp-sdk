@@ -610,10 +610,11 @@ impl ServerTester {
                                         params: Some(json!({})),
                                         id: None, // Notifications don't have IDs
                                     };
-                                    
+
                                     // Send the notification but don't wait for response (it's a notification)
-                                    let _ = self.send_json_rpc_request(initialized_notification).await;
-                                    
+                                    let _ =
+                                        self.send_json_rpc_request(initialized_notification).await;
+
                                     Ok(init_result)
                                 },
                                 Err(e) => Err(pmcp::Error::Internal(format!(
@@ -756,7 +757,9 @@ impl ServerTester {
                         category: TestCategory::Tools,
                         status: TestStatus::Failed,
                         duration: start.elapsed(),
-                        error: Some("Client not initialized - please run initialize test first".to_string()),
+                        error: Some(
+                            "Client not initialized - please run initialize test first".to_string(),
+                        ),
                         details: None,
                     };
                 }
@@ -851,7 +854,9 @@ impl ServerTester {
                         category: TestCategory::Tools,
                         status: TestStatus::Failed,
                         duration: start.elapsed(),
-                        error: Some("Client not initialized - please run initialize test first".to_string()),
+                        error: Some(
+                            "Client not initialized - please run initialize test first".to_string(),
+                        ),
                         details: None,
                     });
                 }
@@ -1410,21 +1415,21 @@ impl ServerTester {
             json!({})
         }
     }
-    
+
     // Public methods for scenario executor
-    
+
     pub async fn list_tools(&mut self) -> Result<pmcp::types::ListToolsResult> {
         // Ensure we have tools loaded
         if self.tools.is_none() {
             let _ = self.test_tools_list().await;
         }
-        
+
         Ok(pmcp::types::ListToolsResult {
             tools: self.tools.clone().unwrap_or_default(),
             next_cursor: None,
         })
     }
-    
+
     pub async fn list_resources(&mut self) -> Result<pmcp::types::ListResourcesResult> {
         // For now, return empty resources
         // This would need to be implemented based on the transport type
@@ -1433,15 +1438,13 @@ impl ServerTester {
             next_cursor: None,
         })
     }
-    
+
     pub async fn read_resource(&mut self, _uri: &str) -> Result<pmcp::types::ReadResourceResult> {
         // For now, return empty resource
         // This would need to be implemented based on the transport type
-        Ok(pmcp::types::ReadResourceResult {
-            contents: vec![],
-        })
+        Ok(pmcp::types::ReadResourceResult { contents: vec![] })
     }
-    
+
     pub async fn list_prompts(&mut self) -> Result<pmcp::types::ListPromptsResult> {
         // For now, return empty prompts
         // This would need to be implemented based on the transport type
@@ -1450,8 +1453,12 @@ impl ServerTester {
             next_cursor: None,
         })
     }
-    
-    pub async fn get_prompt(&mut self, _name: &str, _arguments: Value) -> Result<pmcp::types::GetPromptResult> {
+
+    pub async fn get_prompt(
+        &mut self,
+        _name: &str,
+        _arguments: Value,
+    ) -> Result<pmcp::types::GetPromptResult> {
         // For now, return empty prompt
         // This would need to be implemented based on the transport type
         Ok(pmcp::types::GetPromptResult {
@@ -1459,7 +1466,7 @@ impl ServerTester {
             description: None,
         })
     }
-    
+
     pub async fn send_custom_request(&mut self, method: &str, params: Value) -> Result<Value> {
         match self.transport_type {
             TransportType::JsonRpcHttp => {
@@ -1469,7 +1476,7 @@ impl ServerTester {
                     params: Some(params),
                     id: Some(json!(rand::random::<u64>())),
                 };
-                
+
                 match self.send_json_rpc_request(request).await {
                     Ok(response) => {
                         if let Some(error) = response.error {
@@ -1486,7 +1493,7 @@ impl ServerTester {
             _ => {
                 // For other transport types, would need to implement
                 Ok(json!({ "error": "Custom requests not supported for this transport" }))
-            }
+            },
         }
     }
 }
