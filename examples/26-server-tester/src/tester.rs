@@ -52,6 +52,9 @@ pub struct ServerTester {
     force_transport: Option<String>,
     server_info: Option<InitializeResult>,
     tools: Option<Vec<ToolInfo>>,
+    // Store the initialized pmcp client for reuse across tests
+    pmcp_client: Option<pmcp::Client<StreamableHttpTransport>>,
+    stdio_client: Option<pmcp::Client<StdioTransport>>,
 }
 
 impl ServerTester {
@@ -149,6 +152,8 @@ impl ServerTester {
             force_transport: force_transport.map(|s| s.to_string()),
             server_info: None,
             tools: None,
+            pmcp_client: None,
+            stdio_client: None,
         })
     }
 
@@ -544,6 +549,8 @@ impl ServerTester {
                     // Set protocol version if successful
                     if let Ok(ref result) = init_result {
                         transport.set_protocol_version(Some(result.protocol_version.0.clone()));
+                        // Store the initialized client for reuse
+                        self.pmcp_client = Some(client);
                     }
                     init_result
                 } else {
@@ -560,7 +567,12 @@ impl ServerTester {
             TransportType::Stdio => {
                 let transport = StdioTransport::new();
                 let mut client = pmcp::Client::new(transport);
-                client.initialize(capabilities).await
+                let init_result = client.initialize(capabilities).await;
+                // Store the initialized client for reuse
+                if init_result.is_ok() {
+                    self.stdio_client = Some(client);
+                }
+                init_result
             },
             TransportType::JsonRpcHttp => {
                 // Send direct JSON-RPC request
@@ -589,8 +601,22 @@ impl ServerTester {
                             )))
                         } else if let Some(result) = response.result {
                             // Parse the initialize result
-                            match serde_json::from_value::<InitializeResult>(result) {
-                                Ok(init_result) => Ok(init_result),
+                            match serde_json::from_value::<InitializeResult>(result.clone()) {
+                                Ok(init_result) => {
+                                    // Send initialized notification as per MCP spec
+                                    let initialized_notification = JsonRpcRequest {
+                                        jsonrpc: "2.0".to_string(),
+                                        method: "notifications/initialized".to_string(),
+                                        params: Some(json!({})),
+                                        id: None, // Notifications don't have IDs
+                                    };
+
+                                    // Send the notification but don't wait for response (it's a notification)
+                                    let _ =
+                                        self.send_json_rpc_request(initialized_notification).await;
+
+                                    Ok(init_result)
+                                },
                                 Err(e) => Err(pmcp::Error::Internal(format!(
                                     "Failed to parse initialize result: {}",
                                     e
@@ -718,23 +744,22 @@ impl ServerTester {
         let start = Instant::now();
         let name = "List Tools".to_string();
 
-        // Need to create a new client for each operation
+        // Use the stored initialized client
         let result = match self.transport_type {
             TransportType::Http => {
-                if let Some(config) = &self.http_config {
-                    let transport = StreamableHttpTransport::new(config.clone());
-                    if let Some(ref info) = self.server_info {
-                        transport.set_protocol_version(Some(info.protocol_version.0.clone()));
-                    }
-                    let client = pmcp::Client::new(transport);
+                if let Some(ref client) = self.pmcp_client {
+                    // Use the already initialized client
                     client.list_tools(None).await
                 } else {
+                    // If no client stored, it means initialize wasn't called or failed
                     return TestResult {
                         name,
                         category: TestCategory::Tools,
                         status: TestStatus::Failed,
                         duration: start.elapsed(),
-                        error: Some("HTTP config not available".to_string()),
+                        error: Some(
+                            "Client not initialized - please run initialize test first".to_string(),
+                        ),
                         details: None,
                     };
                 }
@@ -820,12 +845,8 @@ impl ServerTester {
 
         let result = match self.transport_type {
             TransportType::Http => {
-                if let Some(config) = &self.http_config {
-                    let transport = StreamableHttpTransport::new(config.clone());
-                    if let Some(ref info) = self.server_info {
-                        transport.set_protocol_version(Some(info.protocol_version.0.clone()));
-                    }
-                    let client = pmcp::Client::new(transport);
+                if let Some(ref client) = self.pmcp_client {
+                    // Use the already initialized client
                     client.call_tool(tool_name.to_string(), args).await
                 } else {
                     return Ok(TestResult {
@@ -833,7 +854,9 @@ impl ServerTester {
                         category: TestCategory::Tools,
                         status: TestStatus::Failed,
                         duration: start.elapsed(),
-                        error: Some("HTTP config not available".to_string()),
+                        error: Some(
+                            "Client not initialized - please run initialize test first".to_string(),
+                        ),
                         details: None,
                     });
                 }
@@ -1083,16 +1106,12 @@ impl ServerTester {
         // Try to list tools (should work even if empty)
         let tools_result = match self.transport_type {
             TransportType::Http => {
-                if let Some(config) = &self.http_config {
-                    let transport = StreamableHttpTransport::new(config.clone());
-                    if let Some(ref info) = self.server_info {
-                        transport.set_protocol_version(Some(info.protocol_version.0.clone()));
-                    }
-                    let client = pmcp::Client::new(transport);
+                if let Some(ref client) = self.pmcp_client {
+                    // Use the already initialized client
                     client.list_tools(None).await
                 } else {
                     Err(pmcp::Error::Internal(
-                        "HTTP config not available".to_string(),
+                        "Client not initialized - please run initialize test first".to_string(),
                     ))
                 }
             },
@@ -1394,6 +1413,87 @@ impl ServerTester {
             args
         } else {
             json!({})
+        }
+    }
+
+    // Public methods for scenario executor
+
+    pub async fn list_tools(&mut self) -> Result<pmcp::types::ListToolsResult> {
+        // Ensure we have tools loaded
+        if self.tools.is_none() {
+            let _ = self.test_tools_list().await;
+        }
+
+        Ok(pmcp::types::ListToolsResult {
+            tools: self.tools.clone().unwrap_or_default(),
+            next_cursor: None,
+        })
+    }
+
+    pub async fn list_resources(&mut self) -> Result<pmcp::types::ListResourcesResult> {
+        // For now, return empty resources
+        // This would need to be implemented based on the transport type
+        Ok(pmcp::types::ListResourcesResult {
+            resources: vec![],
+            next_cursor: None,
+        })
+    }
+
+    pub async fn read_resource(&mut self, _uri: &str) -> Result<pmcp::types::ReadResourceResult> {
+        // For now, return empty resource
+        // This would need to be implemented based on the transport type
+        Ok(pmcp::types::ReadResourceResult { contents: vec![] })
+    }
+
+    pub async fn list_prompts(&mut self) -> Result<pmcp::types::ListPromptsResult> {
+        // For now, return empty prompts
+        // This would need to be implemented based on the transport type
+        Ok(pmcp::types::ListPromptsResult {
+            prompts: vec![],
+            next_cursor: None,
+        })
+    }
+
+    pub async fn get_prompt(
+        &mut self,
+        _name: &str,
+        _arguments: Value,
+    ) -> Result<pmcp::types::GetPromptResult> {
+        // For now, return empty prompt
+        // This would need to be implemented based on the transport type
+        Ok(pmcp::types::GetPromptResult {
+            messages: vec![],
+            description: None,
+        })
+    }
+
+    pub async fn send_custom_request(&mut self, method: &str, params: Value) -> Result<Value> {
+        match self.transport_type {
+            TransportType::JsonRpcHttp => {
+                let request = JsonRpcRequest {
+                    jsonrpc: "2.0".to_string(),
+                    method: method.to_string(),
+                    params: Some(params),
+                    id: Some(json!(rand::random::<u64>())),
+                };
+
+                match self.send_json_rpc_request(request).await {
+                    Ok(response) => {
+                        if let Some(error) = response.error {
+                            Ok(json!({ "error": error }))
+                        } else if let Some(result) = response.result {
+                            Ok(result)
+                        } else {
+                            Ok(json!({ "error": "No result in response" }))
+                        }
+                    },
+                    Err(e) => Ok(json!({ "error": e.to_string() })),
+                }
+            },
+            _ => {
+                // For other transport types, would need to implement
+                Ok(json!({ "error": "Custom requests not supported for this transport" }))
+            },
         }
     }
 }

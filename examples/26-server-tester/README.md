@@ -9,6 +9,8 @@ A comprehensive testing tool for Model Context Protocol (MCP) servers, providing
 - **Comprehensive Diagnostics**: Layer-by-layer connection troubleshooting
 - **Server Comparison**: Compare capabilities and performance between servers
 - **Tool Testing**: Discover and test individual tools with custom arguments
+- **Scenario Testing**: Define and run complex test scenarios from YAML/JSON files
+- **Assertion Framework**: Validate server responses with powerful assertions
 - **Multiple Output Formats**: Pretty, JSON, minimal, and verbose outputs
 - **CI/CD Ready**: JSON output for automated testing pipelines
 
@@ -98,6 +100,27 @@ Options:
 mcp-tester health <URL>
 ```
 
+#### `scenario` - Run Test Scenarios
+
+```bash
+mcp-tester scenario <URL> <SCENARIO_FILE> [OPTIONS]
+
+Options:
+  --detailed       Show detailed step-by-step output
+
+Examples:
+# Run a basic test scenario
+mcp-tester scenario http://localhost:8080 scenarios/basic-test.yaml
+
+# Run with detailed output
+mcp-tester scenario http://localhost:8080 scenarios/complex-workflow.json --detailed
+
+# Run performance tests
+mcp-tester scenario http://localhost:8080 scenarios/performance-test.yaml
+```
+
+Test scenarios allow you to define complex test sequences with variables, assertions, and workflows. See [SCENARIO_FORMAT.md](SCENARIO_FORMAT.md) for detailed documentation on creating test scenarios.
+
 ## Examples
 
 ### Testing an OAuth-enabled Server
@@ -144,6 +167,41 @@ mcp-tester diagnose http://localhost:8080 --network
 # - TLS/SSL certificates (for HTTPS)
 # - HTTP response
 # - MCP protocol handshake
+```
+
+### Running Test Scenarios
+
+```bash
+# Run a basic test scenario
+mcp-tester scenario http://localhost:8080 scenarios/basic-test.yaml
+
+# Create a custom scenario for your server
+cat > my-test.yaml << EOF
+name: My Server Test
+steps:
+  - name: List available tools
+    operation:
+      type: list_tools
+    assertions:
+      - type: success
+      - type: array_length
+        path: tools
+        greater_than: 0
+        
+  - name: Test my custom tool
+    operation:
+      type: tool_call
+      tool: my_tool
+      arguments:
+        param: "test"
+    assertions:
+      - type: success
+      - type: exists
+        path: result
+EOF
+
+# Run the custom scenario
+mcp-tester scenario http://localhost:8080 my-test.yaml --verbose
 ```
 
 ### Comparing Server Implementations
