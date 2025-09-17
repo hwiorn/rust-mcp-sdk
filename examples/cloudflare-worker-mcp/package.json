@@ -1,0 +1,26 @@
+{
+  "name": "cloudflare-worker-mcp",
+  "version": "1.0.0",
+  "description": "MCP Server deployed to Cloudflare Workers",
+  "main": "build/worker/shim.mjs",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "build": "worker-build --release",
+    "test": "cargo test",
+    "test-client": "cargo run --bin test-client"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "cloudflare-workers",
+    "rust",
+    "wasm",
+    "edge-computing"
+  ],
+  "author": "MCP SDK Contributors",
+  "license": "MIT"
+}

@@ -1,288 +1,228 @@
-# TypeScript MCP SDK JSON-RPC Message Handling Investigation
+# Rust MCP SDK Architecture Investigation Report
 
-## Overview
+## Executive Summary
 
-This investigation analyzes how the TypeScript MCP SDK handles JSON-RPC messages, particularly focusing on the `tools/list` method routing, request/response flow, and error handling mechanisms.
+This investigation analyzes the current architecture of the Rust MCP SDK at `/Users/guy/Development/mcp/sdk/rust-mcp-sdk` to understand the server implementation structure, transport coupling, and barriers to WASM/WASI deployment. The analysis reveals a sophisticated but tightly coupled architecture that would benefit from significant refactoring to enable WASM deployment.
 
-## Key Findings
+## Current Architecture Overview
 
-### 1. JSON-RPC Message Structure
+### 1. Server Implementation Structure
 
-The TypeScript SDK follows JSON-RPC 2.0 specification with the following message types:
+**Primary Server Component**: `/src/server/mod.rs` (2168 lines)
+- Monolithic `Server` struct with embedded transport handling
+- Comprehensive trait-based handler system (`ToolHandler`, `PromptHandler`, `ResourceHandler`, `SamplingHandler`)  
+- Built-in authentication, authorization, cancellation, and subscription management
+- Direct integration with transport layer through `Arc<RwLock<Transport>>`
 
-#### Request Message Format
-```typescript
-{
-  "jsonrpc": "2.0",
-  "id": number | string,  // Unique request ID
-  "method": string,       // Method name like "tools/list"
-  "params": {             // Optional parameters
-    "_meta": {            // Optional metadata
-      "progressToken": number | string
-    },
-    // ... method-specific parameters
-  }
+**Key architectural patterns**:
+- Builder pattern for server configuration (`ServerBuilder`)
+- Handler trait abstraction for extensibility
+- Async-first design with tokio integration
+- Comprehensive middleware support
+
+### 2. Transport and Protocol Coupling Analysis
+
+#### Current Transport Architecture
+
+**Transport Trait** (`/src/shared/transport.rs`):
+```rust
+#[cfg(not(target_arch = "wasm32"))]
+#[async_trait]
+pub trait Transport: Send + Sync + Debug {
+    async fn send(&mut self, message: TransportMessage) -> Result<()>;
+    async fn receive(&mut self) -> Result<TransportMessage>;
+    async fn close(&mut self) -> Result<()>;
+    fn is_connected(&self) -> bool;
+    fn transport_type(&self) -> &'static str;
 }
 ```
 
-#### Response Message Format
-```typescript
-// Success response
-{
-  "jsonrpc": "2.0",
-  "id": number | string,  // Matching request ID
-  "result": {             // Method-specific result
-    // ... response data
-  }
-}
+**Protocol Handler** (`/src/shared/protocol.rs`):
+- State machine for JSON-RPC communication
+- Request/response correlation with `pending_requests`
+- Transport ID-based request routing
+- Cross-platform runtime abstraction
 
-// Error response
-{
-  "jsonrpc": "2.0",
-  "id": number | string,  // Matching request ID
-  "error": {
-    "code": number,       // Error code (e.g., -32601 for Method Not Found)
-    "message": string,    // Error description
-    "data": any           // Optional additional error data
-  }
-}
+#### Coupling Issues Identified
+
+1. **Tight Transport-Server Coupling**:
+   - Server directly manages transport lifecycle (`Arc<RwLock<Transport>>`)
+   - Protocol handling embedded in server implementation
+   - No clear separation between transport and business logic
+
+2. **Architecture Constraints**:
+   - `run()` method couples server lifecycle to transport
+   - Request handling directly calls transport methods
+   - No abstraction layer for protocol-independent operations
+
+### 3. Current Abstractions and Traits
+
+#### Handler Traits (`/src/server/traits.rs`)
+```rust
+#[async_trait]
+pub trait RequestHandler: ToolHandler + PromptHandler + ResourceHandler + SamplingHandler + Send + Sync {}
 ```
 
-### 2. Message Routing Architecture
+**Strengths**:
+- Clean separation of concerns for different MCP operations
+- Async-trait based for proper async support
+- Composable design with default implementations
 
-The message routing follows this flow:
+**Limitations**:
+- Tightly coupled to server infrastructure
+- No transport-agnostic execution model
+- Limited reusability across different deployment targets
 
-```
-Transport → Protocol._onmessage → Protocol._onrequest → Handler
-```
+#### Authentication and Authorization
+- Sophisticated auth system with `AuthProvider` and `ToolAuthorizer` traits
+- OAuth2 integration with proxy support
+- Scope-based authorization model
 
-#### Core Routing Components
+### 4. Transport Implementations
 
-1. **Protocol Class** (`src/shared/protocol.ts`):
-   - Base class that handles JSON-RPC message routing
-   - Maintains `_requestHandlers: Map<string, handler>` for method routing
-   - Message type detection using type guards:
-     - `isJSONRPCRequest()`
-     - `isJSONRPCResponse()`
-     - `isJSONRPCNotification()`
+#### Available Transports
+1. **StdioTransport**: Standard input/output communication
+2. **WebSocketTransport**: WebSocket-based communication  
+3. **HttpTransport**: HTTP-based stateless communication
+4. **WasmHttpTransport**: Browser-based HTTP transport using Fetch API
 
-2. **Server Class** (`src/server/index.ts`):
-   - Extends Protocol class
-   - Handles MCP-specific capability validation
-   - Manages server lifecycle and initialization
+#### Transport-specific Features
+- WebSocket: Enhanced server with client management
+- HTTP: Streamable HTTP server support
+- WASM: Browser-compatible transport with session management
 
-3. **McpServer Class** (`src/server/mcp.ts`):
-   - High-level abstraction over Server class
-   - Auto-registers standard MCP handlers including `tools/list`
+### 5. WASM/WASI Deployment Barriers
 
-#### Request Handler Registration
+#### Current WASM Support Assessment
 
-```typescript
-// Method handlers are registered using schemas
-this.server.setRequestHandler(
-  ListToolsRequestSchema,  // Schema defines method: "tools/list"
-  (request): ListToolsResult => {
-    // Handler implementation
-    return { tools: [...] };
-  }
-);
-```
+**Existing WASM Infrastructure**:
+- Cross-platform runtime abstraction (`/src/shared/runtime.rs`)
+- WASM-specific transport (`WasmHttpTransport`)
+- Browser compatibility layer
+- Basic WASI server attempt (`/examples/33_wasi_server/`)
 
-### 3. Tools/List Method Implementation
+#### Critical Barriers Identified
 
-#### Schema Definition
-```typescript
-// In types.ts
-export const ListToolsRequestSchema = PaginatedRequestSchema.extend({
-  method: z.literal("tools/list"),
+1. **Server Architecture Incompatibility**:
+   - Server excluded from WASM builds: `#[cfg(not(target_arch = "wasm32"))]`
+   - Relies on tokio threading model incompatible with WASM
+   - Direct transport management prevents stateless execution
+
+2. **WASI Implementation Issues**:
+   - **Feature Mismatch**: Code references non-existent `wasi` feature (should be `wasm`)
+   - **Compilation Errors**: Missing proper feature configuration in Cargo.toml
+   - **wit-bindgen Integration**: Incomplete WASI HTTP interface integration
+
+3. **Runtime Dependencies**:
+   - Heavy reliance on tokio-specific primitives
+   - Threading assumptions incompatible with WASM single-threaded model
+   - Complex async spawning patterns not suitable for WASM
+
+#### wit-bindgen Integration Attempts
+
+**Current State** (`/examples/33_wasi_server/mcp-wasi-server/src/lib.rs`):
+```rust
+wit_bindgen::generate!({
+    world: "wasi:http/proxy@0.2.0",
 });
-
-export const ListToolsResultSchema = PaginatedResultSchema.extend({
-  tools: z.array(ToolSchema),
-});
 ```
 
-#### Handler Implementation (from `src/server/mcp.ts`)
-```typescript
-this.server.setRequestHandler(
-  ListToolsRequestSchema,
-  (): ListToolsResult => ({
-    tools: Object.entries(this._registeredTools)
-      .filter(([, tool]) => tool.enabled)
-      .map(([name, tool]): Tool => ({
-        name,
-        title: tool.title,
-        description: tool.description,
-        inputSchema: tool.inputSchema 
-          ? zodToJsonSchema(tool.inputSchema) 
-          : EMPTY_OBJECT_JSON_SCHEMA,
-        annotations: tool.annotations,
-        _meta: tool._meta,
-      })),
-  })
-);
-```
+**Issues**:
+- Incomplete implementation of WASI HTTP interface
+- Handler traits don't implement async properly for WASI context
+- Missing proper request/response mapping
+- Compilation fails due to feature configuration errors
 
-#### Tool Schema Structure
-```typescript
-export const ToolSchema = BaseMetadataSchema.extend({
-  description: z.optional(z.string()),
-  inputSchema: z.object({
-    type: z.literal("object"),
-    properties: z.optional(z.object({}).passthrough()),
-    required: z.optional(z.array(z.string())),
-  }).passthrough(),
-  outputSchema: z.optional(z.object({}).passthrough()),
-});
+### 6. Architectural Strengths
 
-// BaseMetadataSchema provides:
-export const BaseMetadataSchema = z.object({
-  name: z.string(),          // Tool identifier
-  title: z.optional(z.string()), // Display name
-}).passthrough();
-```
+1. **Comprehensive Protocol Support**: Full MCP specification implementation
+2. **Type Safety**: Extensive use of Rust's type system for protocol correctness
+3. **Performance**: Zero-copy parsing and efficient serialization
+4. **Extensibility**: Well-designed trait system for customization
+5. **Testing**: Comprehensive test coverage with property-based testing
+6. **Documentation**: Extensive inline documentation and examples
 
-### 4. Error Handling for Unknown Methods
+### 7. Key Refactoring Opportunities
 
-When a method is not found, the Protocol class handles it in `_onrequest()`:
+#### Transport/Protocol Separation
 
-```typescript
-private _onrequest(request: JSONRPCRequest, extra?: MessageExtraInfo): void {
-  const handler = this._requestHandlers.get(request.method) ?? this.fallbackRequestHandler;
+**Recommended Architecture**:
+```rust
+// Protocol-agnostic request handler
+trait ProtocolHandler {
+    async fn handle_request(&self, request: Request) -> Result<Response>;
+}
 
-  if (handler === undefined) {
-    capturedTransport?.send({
-      jsonrpc: "2.0",
-      id: request.id,
-      error: {
-        code: ErrorCode.MethodNotFound,  // -32601
-        message: "Method not found",
-      },
-    });
-    return;
-  }
-  // ... continue with handler execution
+// Transport-independent server core
+struct ServerCore {
+    handlers: HashMap<String, Arc<dyn RequestHandler>>,
+    // No transport coupling
+}
+
+// Transport adapter layer
+trait TransportAdapter {
+    async fn bind_server(&self, server: Arc<ServerCore>) -> Result<()>;
 }
 ```
 
-#### Error Codes
-```typescript
-export enum ErrorCode {
-  // SDK error codes
-  ConnectionClosed = -32000,
-  RequestTimeout = -32001,
-  
-  // Standard JSON-RPC error codes
-  ParseError = -32700,
-  InvalidRequest = -32600,
-  MethodNotFound = -32601,    // Used for unknown methods
-  InvalidParams = -32602,
-  InternalError = -32603,
-}
-```
+#### WASM/WASI Deployment Strategy
 
-### 5. Message Flow Example
+1. **Extract Core Logic**: Create transport-agnostic server core
+2. **Implement WASI Adapter**: Proper wit-bindgen integration
+3. **Stateless Handler Model**: Remove server state dependencies
+4. **Runtime Abstraction**: Complete WASM runtime compatibility
 
-For a `tools/list` request:
+## Recommendations
 
-1. **Client sends request**:
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "tools/list",
-  "params": {}
-}
-```
+### Short-term (Immediate Fixes)
 
-2. **Server processes**:
-   - Transport receives raw message
-   - Protocol._onmessage identifies as JSONRPCRequest
-   - Protocol._onrequest looks up "tools/list" handler
-   - Handler executes and returns ListToolsResult
-   - Protocol sends response
+1. **Fix WASI Feature Configuration**:
+   - Correct feature name from `wasi` to `wasm` in examples
+   - Fix Cargo.toml dependencies
+   - Ensure proper wit-bindgen integration
 
-3. **Server responds**:
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "result": {
-    "tools": [
-      {
-        "name": "summarize",
-        "description": "Summarize any text using an LLM",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "text": {
-              "type": "string",
-              "description": "Text to summarize"
-            }
-          },
-          "required": ["text"]
-        }
-      }
-    ]
-  }
-}
-```
+2. **Complete WASI Example**:
+   - Implement proper request/response mapping
+   - Fix handler trait implementations
+   - Add proper error handling
 
-4. **Unknown method error example**:
-```json
-// Request
-{
-  "jsonrpc": "2.0",
-  "id": 2,
-  "method": "unknown/method"
-}
+### Medium-term (Architectural Improvements)
 
-// Response
-{
-  "jsonrpc": "2.0",
-  "id": 2,
-  "error": {
-    "code": -32601,
-    "message": "Method not found"
-  }
-}
-```
+1. **Protocol/Transport Decoupling**:
+   - Extract server core logic from transport management
+   - Create transport adapter pattern
+   - Implement stateless request handling model
 
-### 6. Key Implementation Details
+2. **WASM Runtime Compatibility**:
+   - Complete runtime abstraction layer
+   - Remove tokio dependencies from core logic
+   - Implement proper WASM-compatible async patterns
 
-#### Handler Registration Process
-- Handlers are registered using Zod schemas that define both method name and parameter structure
-- The `setRequestHandler()` method extracts the method name from the schema
-- Capability validation ensures the server declares support for the method
-- Input validation occurs automatically using the schema
+### Long-term (Complete Refactoring)
 
-#### Request Processing Pipeline
-1. **Message Type Detection**: Uses type guards to identify request vs response vs notification
-2. **Method Routing**: Maps method string to registered handler function
-3. **Parameter Validation**: Zod schema validates request parameters
-4. **Handler Execution**: Calls registered handler with validated parameters
-5. **Response Formatting**: Wraps result in JSON-RPC response structure
-6. **Error Handling**: Catches exceptions and formats as JSON-RPC errors
+1. **Modular Architecture**:
+   - Separate concerns into distinct crates
+   - Create pluggable transport system
+   - Implement deployment-specific optimizations
 
-#### Capability Management
-- Server declares capabilities during initialization
-- Client capabilities are stored after handshake
-- Methods validate required capabilities before execution
-- Tools capability enables both `tools/list` and `tools/call` methods
+2. **Multi-target Deployment**:
+   - Native servers (current functionality)
+   - WASI servers (serverless/edge deployment)
+   - Browser clients (full WASM support)
 
-## Comparison Points for Rust Implementation
+## Conclusion
 
-1. **Method Registration**: TypeScript uses Zod schemas for both validation and method identification
-2. **Error Handling**: Standardized JSON-RPC error codes with structured error responses  
-3. **Handler Signature**: Handlers receive parsed/validated parameters and execution context
-4. **Capability Validation**: Both client and server capabilities are checked before method execution
-5. **Response Structure**: Strict adherence to JSON-RPC 2.0 specification
-6. **Type Safety**: Zod provides runtime type validation matching TypeScript types
+The Rust MCP SDK represents a high-quality implementation with comprehensive MCP protocol support. However, the current architecture's tight coupling between server logic and transport management creates significant barriers to WASM/WASI deployment. 
 
-## Files Analyzed
+**Key Insights**:
+- The existing WASI attempts failed due to feature configuration errors and incomplete wit-bindgen integration
+- The server architecture fundamentally conflicts with WASM's stateless execution model
+- Transport decoupling is essential for enabling multi-target deployment
 
-- `/Users/guy/Development/mcp/sdk/typescript-sdk/src/shared/protocol.ts` - Core JSON-RPC protocol implementation
-- `/Users/guy/Development/mcp/sdk/typescript-sdk/src/server/index.ts` - MCP Server base class
-- `/Users/guy/Development/mcp/sdk/typescript-sdk/src/server/mcp.ts` - High-level MCP server with auto-registration
-- `/Users/guy/Development/mcp/sdk/typescript-sdk/src/types.ts` - Message schemas and type definitions
-- `/Users/guy/Development/mcp/sdk/typescript-sdk/src/examples/server/toolWithSampleServer.ts` - Example server implementation
+**Critical Success Factors** for WASM enablement:
+1. Architectural refactoring to separate protocol handling from transport management
+2. Complete runtime abstraction for WASM compatibility
+3. Proper wit-bindgen integration for WASI HTTP interfaces
+4. Stateless handler model compatible with serverless execution
+
+The refactoring effort would enable the SDK to support both traditional server deployments and modern serverless/edge computing scenarios while maintaining the current high-quality standards and comprehensive feature set.

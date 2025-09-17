@@ -76,6 +76,7 @@
 
 pub mod client;
 pub mod error;
+pub mod runtime;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod server;
 pub mod shared;

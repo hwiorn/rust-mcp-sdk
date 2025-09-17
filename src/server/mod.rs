@@ -21,9 +21,12 @@ use futures_channel::mpsc;
 #[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::{mpsc, RwLock};
 
+pub mod adapters;
 pub mod auth;
 pub mod batch;
+pub mod builder;
 pub mod cancellation;
+pub mod core;
 pub mod dynamic;
 pub mod elicitation;
 pub mod notification_debouncer;
@@ -34,6 +37,13 @@ pub mod roots;
 pub mod streamable_http_server;
 pub mod subscriptions;
 pub mod transport;
+#[cfg(target_arch = "wasm32")]
+pub mod wasi_adapter;
+
+#[cfg(test)]
+mod adapter_tests;
+#[cfg(test)]
+mod core_tests;
 
 /// Handler for tool execution.
 #[async_trait]
