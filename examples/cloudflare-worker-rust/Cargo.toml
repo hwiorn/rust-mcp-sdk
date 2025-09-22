@@ -1,0 +1,26 @@
+[package]
+name = "mcp-cloudflare-worker"
+version = "0.1.0"
+edition = "2021"
+
+[package.metadata.wasm-pack]
+wasm-opt = false
+
+[dependencies]
+worker = "0.4"
+pmcp = { path = "../..", default-features = false, features = ["wasm"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+console_error_panic_hook = "0.1"
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+lto = true
+strip = true
+codegen-units = 1
+opt-level = "z"
+
+# Exclude from parent workspace
+[workspace]

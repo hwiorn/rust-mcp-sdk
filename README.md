@@ -132,6 +132,28 @@ pmcp = "1.4"
 
 > **⚠️ Important for Claude Code users**: Version 1.4.0+ is required for Claude Code compatibility. Earlier versions use a different message format that is incompatible with standard MCP clients. See the [Migration Guide](MIGRATION_GUIDE.md) if upgrading from < 1.4.0.
 
+## 🌐 WebAssembly Support
+
+The SDK fully supports WebAssembly compilation for deployment to:
+- **Cloudflare Workers** (wasm32-unknown-unknown)
+- **WASI Runtimes** (wasm32-wasi)
+- **Browser Environments** via wasm-bindgen
+
+### WASM Quick Start
+
+```bash
+# Build for Cloudflare Workers
+cargo build --target wasm32-unknown-unknown --no-default-features --features wasm
+
+# Deploy SDK-based Worker
+make cloudflare-sdk-deploy
+```
+
+### WASM Documentation
+- [**WASM Target Guide**](docs/WASM_TARGETS.md) - Detailed guide for different WASM targets
+- [**Cloudflare Worker Example**](examples/cloudflare-worker-mcp/README_SDK.md) - Deploy MCP servers to edge
+- [**WASM API Reference**](https://docs.rs/pmcp/latest/pmcp/server/wasm_core/) - WasmServerCore documentation
+
 ## 📚 Documentation
 
 ### Complete PMCP Guide

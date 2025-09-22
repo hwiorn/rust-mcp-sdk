@@ -1,32 +1,33 @@
 [package]
-name = "cloudflare-worker-mcp"
-version = "0.1.0"
+name = "cloudflare-worker-mcp-sdk"
+version = "0.2.0"
 edition = "2021"
 authors = ["MCP SDK Contributors"]
-description = "MCP server deployed as a Cloudflare Worker"
+description = "MCP server using pmcp SDK deployed as a Cloudflare Worker"
 
 [dependencies]
-# Note: We're NOT using pmcp here to demonstrate the architecture concept
-# In production, we would fix pmcp to be WASM-compatible
+# Use the pmcp SDK with WASM features
+pmcp = { path = "../..", default-features = false, features = ["wasm"] }
 worker = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 console_error_panic_hook = "0.1"
 wasm-bindgen = "0.2"
 
+# Test client dependencies (native only)
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+reqwest = { version = "0.12", features = ["json"] }
+tokio = { version = "1", features = ["full"] }
+
 [[bin]]
 name = "test-client"
-required-features = ["test-client"]
+required-features = ["native-test"]
+
+[features]
+native-test = []
 
 [lib]
 crate-type = ["cdylib"]
-
-[features]
-test-client = ["reqwest", "tokio"]
-
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-reqwest = { version = "0.12", optional = true, features = ["json"] }
-tokio = { version = "1", optional = true, features = ["full"] }
 
 [profile.release]
 opt-level = "z"     # Optimize for size

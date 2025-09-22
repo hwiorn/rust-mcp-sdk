@@ -1,0 +1,30 @@
+[package]
+name = "mcp-fermyon-spin"
+version = "0.1.0"
+edition = "2021"
+
+# Exclude from parent workspace
+[workspace]
+
+[dependencies]
+# Spin SDK for HTTP components
+spin-sdk = { version = "3.0" }
+
+# MCP SDK with WASM support
+pmcp = { path = "../..", default-features = false, features = ["wasm"] }
+
+# Core dependencies
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+futures = "0.3"
+
+[lib]
+crate-type = ["cdylib"]
+
+# WASI target optimization
+[profile.release]
+lto = true
+strip = true
+codegen-units = 1
+opt-level = "z"

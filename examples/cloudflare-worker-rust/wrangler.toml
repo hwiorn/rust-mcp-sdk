@@ -1,0 +1,11 @@
+name = "mcp-sdk-worker"
+main = "worker.js"
+compatibility_date = "2024-11-05"
+
+[dev]
+port = 8787
+
+# For the Rust/WASM version (when fixed), use:
+# main = "build/worker/shim.mjs"
+# [build]
+# command = "cargo install worker-build && worker-build --release"

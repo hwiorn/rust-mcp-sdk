@@ -7,7 +7,7 @@
 #[cfg(target_arch = "wasm32")]
 use crate::error::Result;
 #[cfg(target_arch = "wasm32")]
-use crate::server::core::ProtocolHandler;
+use crate::server::ProtocolHandler;
 #[cfg(target_arch = "wasm32")]
 use crate::shared::TransportMessage;
 #[cfg(target_arch = "wasm32")]
@@ -110,7 +110,7 @@ impl WasiHttpAdapter {
             _ => {
                 // WASI HTTP adapter only accepts requests and notifications
                 Err(crate::error::Error::protocol(
-                    crate::error::ErrorCode::InvalidRequest,
+                    crate::error::ErrorCode::INVALID_REQUEST,
                     "WASI HTTP adapter only accepts requests and notifications",
                 ))
             },

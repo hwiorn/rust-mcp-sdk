@@ -21,9 +21,13 @@ use std::sync::Arc;
 
 use crate::runtime::RwLock;
 
+#[cfg(not(target_arch = "wasm32"))]
 use super::auth::{AuthProvider, ToolAuthorizer};
+#[cfg(not(target_arch = "wasm32"))]
 use super::cancellation::{CancellationManager, RequestHandlerExtra};
+#[cfg(not(target_arch = "wasm32"))]
 use super::roots::RootsManager;
+#[cfg(not(target_arch = "wasm32"))]
 use super::subscriptions::SubscriptionManager;
 use super::{PromptHandler, ResourceHandler, SamplingHandler, ToolHandler};
 
@@ -167,7 +171,7 @@ impl ServerCore {
         *self.initialized.write().await = true;
 
         Ok(InitializeResult {
-            protocol_version: ProtocolVersion("2024-11-05".to_string()),
+            protocol_version: ProtocolVersion(crate::DEFAULT_PROTOCOL_VERSION.to_string()),
             capabilities: self.capabilities.clone(),
             server_info: self.info.clone(),
             instructions: None,
@@ -485,7 +489,7 @@ mod tests {
         assert!(!server.is_initialized().await);
 
         let init_req = Request::Client(Box::new(ClientRequest::Initialize(InitializeParams {
-            protocol_version: "2024-11-05".to_string(),
+            protocol_version: crate::DEFAULT_PROTOCOL_VERSION.to_string(),
             capabilities: ClientCapabilities::default(),
             client_info: Implementation {
                 name: "test-client".to_string(),
@@ -527,7 +531,7 @@ mod tests {
 
         // Initialize first
         let init_req = Request::Client(Box::new(ClientRequest::Initialize(InitializeParams {
-            protocol_version: "2024-11-05".to_string(),
+            protocol_version: crate::DEFAULT_PROTOCOL_VERSION.to_string(),
             capabilities: ClientCapabilities::default(),
             client_info: Implementation {
                 name: "test-client".to_string(),

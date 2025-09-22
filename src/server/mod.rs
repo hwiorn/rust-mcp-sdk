@@ -1,7 +1,10 @@
 //! MCP server implementation.
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::error::{Error, Result};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::shared::{Protocol, ProtocolOptions, TransportMessage};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::types::{
     CallToolRequest, CallToolResult, ClientCapabilities, ClientRequest, GetPromptRequest,
     Implementation, InitializeResult, JSONRPCResponse, ListPromptsRequest, ListPromptsResult,
@@ -9,36 +12,93 @@ use crate::types::{
     ListResourcesResult, ListToolsRequest, ListToolsResult, Notification, ProtocolVersion,
     ReadResourceRequest, Request, RequestId, ServerCapabilities, ServerNotification,
 };
+#[cfg(not(target_arch = "wasm32"))]
 use async_trait::async_trait;
+#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
+#[cfg(not(target_arch = "wasm32"))]
 use std::collections::HashMap;
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::Arc;
 
-#[cfg(target_arch = "wasm32")]
-use futures::lock::RwLock;
-#[cfg(target_arch = "wasm32")]
-use futures_channel::mpsc;
 #[cfg(not(target_arch = "wasm32"))]
-use tokio::sync::{mpsc, RwLock};
+use crate::runtime::RwLock;
+#[cfg(not(target_arch = "wasm32"))]
+use tokio::sync::mpsc;
 
-pub mod adapters;
-pub mod auth;
-pub mod batch;
-pub mod builder;
-pub mod cancellation;
+// Core modules (currently native-only due to dependencies)
+#[cfg(not(target_arch = "wasm32"))]
 pub mod core;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod adapters;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod builder;
+
+// Native-only modules (require tokio, threading, etc.)
+#[cfg(not(target_arch = "wasm32"))]
+pub mod auth;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod batch;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod cancellation;
+
+// For WASM, provide a simple stub for RequestHandlerExtra
+#[cfg(target_arch = "wasm32")]
+pub mod cancellation {
+    /// Stub for WASM - no cancellation support
+    #[derive(Debug, Clone, Default)]
+    pub struct RequestHandlerExtra;
+}
+#[cfg(not(target_arch = "wasm32"))]
 pub mod dynamic;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod elicitation;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod notification_debouncer;
-#[cfg(feature = "resource-watcher")]
+#[cfg(all(not(target_arch = "wasm32"), feature = "resource-watcher"))]
 pub mod resource_watcher;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod roots;
-#[cfg(feature = "streamable-http")]
+#[cfg(all(not(target_arch = "wasm32"), feature = "streamable-http"))]
 pub mod streamable_http_server;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod subscriptions;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod transport;
+
+// WASM-specific modules and types
 #[cfg(target_arch = "wasm32")]
 pub mod wasi_adapter;
+#[cfg(target_arch = "wasm32")]
+pub mod wasm_core;
+#[cfg(target_arch = "wasm32")]
+pub mod wasm_server;
+#[cfg(test)]
+mod wasm_server_tests;
+
+// WASM-compatible protocol handler trait
+#[cfg(target_arch = "wasm32")]
+pub use wasi_protocol::ProtocolHandler;
+
+#[cfg(target_arch = "wasm32")]
+mod wasi_protocol {
+    use crate::error::Result;
+    use crate::types::{JSONRPCResponse, Notification, Request, RequestId};
+    use async_trait::async_trait;
+    
+    /// Protocol-agnostic request handler trait for WASM.
+    ///
+    /// This is a simplified version of the ProtocolHandler trait that
+    /// doesn't depend on native-only types like handlers and managers.
+    #[async_trait(?Send)]
+    pub trait ProtocolHandler {
+        /// Handle a single request and return a response.
+        async fn handle_request(&self, id: RequestId, request: Request) -> JSONRPCResponse;
+        
+        /// Handle a notification (no response expected).
+        async fn handle_notification(&self, notification: Notification) -> Result<()>;
+    }
+}
 
 #[cfg(test)]
 mod adapter_tests;
@@ -46,6 +106,7 @@ mod adapter_tests;
 mod core_tests;
 
 /// Handler for tool execution.
+#[cfg(not(target_arch = "wasm32"))]
 #[async_trait]
 pub trait ToolHandler: Send + Sync {
     /// Handle a tool call with the given arguments.
@@ -53,6 +114,7 @@ pub trait ToolHandler: Send + Sync {
 }
 
 /// Handler for prompt generation.
+#[cfg(not(target_arch = "wasm32"))]
 #[async_trait]
 pub trait PromptHandler: Send + Sync {
     /// Generate a prompt with the given arguments.
@@ -64,6 +126,7 @@ pub trait PromptHandler: Send + Sync {
 }
 
 /// Handler for resource access.
+#[cfg(not(target_arch = "wasm32"))]
 #[async_trait]
 pub trait ResourceHandler: Send + Sync {
     /// Read a resource at the given URI.
@@ -82,6 +145,7 @@ pub trait ResourceHandler: Send + Sync {
 }
 
 /// Handler for message sampling (LLM operations).
+#[cfg(not(target_arch = "wasm32"))]
 #[async_trait]
 pub trait SamplingHandler: Send + Sync {
     /// Create a message using the language model.
@@ -121,6 +185,7 @@ pub trait SamplingHandler: Send + Sync {
 /// # Ok(())
 /// # }
 /// ```
+#[cfg(not(target_arch = "wasm32"))]
 #[allow(dead_code)]
 pub struct Server {
     info: Implementation,
@@ -147,6 +212,7 @@ pub struct Server {
     tool_authorizer: Option<Arc<dyn auth::ToolAuthorizer>>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl std::fmt::Debug for Server {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Server")
@@ -161,6 +227,7 @@ impl std::fmt::Debug for Server {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Server {
     /// Check if a tool exists
     pub fn has_tool(&self, name: &str) -> bool {
@@ -1061,6 +1128,7 @@ impl Server {
 }
 
 /// Builder for creating servers.
+#[cfg(not(target_arch = "wasm32"))]
 pub struct ServerBuilder {
     name: Option<String>,
     version: Option<String>,
@@ -1081,6 +1149,7 @@ pub struct ServerBuilder {
     tool_protections: HashMap<String, Vec<String>>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl std::fmt::Debug for ServerBuilder {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ServerBuilder")
@@ -1095,6 +1164,7 @@ impl std::fmt::Debug for ServerBuilder {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl ServerBuilder {
     /// Create a new server builder.
     ///
@@ -1590,6 +1660,7 @@ impl ServerBuilder {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Default for ServerBuilder {
     fn default() -> Self {
         Self::new()

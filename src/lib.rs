@@ -77,7 +77,6 @@
 pub mod client;
 pub mod error;
 pub mod runtime;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod server;
 pub mod shared;
 pub mod types;
@@ -91,8 +90,7 @@ pub use client::{Client, ClientBuilder};
 pub use error::{Error, ErrorCode, Result};
 #[cfg(not(target_arch = "wasm32"))]
 pub use server::{
-    auth, cancellation::RequestHandlerExtra, PromptHandler, ResourceHandler, SamplingHandler,
-    Server, ServerBuilder, ToolHandler,
+    PromptHandler, ResourceHandler, SamplingHandler, Server, ServerBuilder, ToolHandler,
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use shared::StdioTransport;

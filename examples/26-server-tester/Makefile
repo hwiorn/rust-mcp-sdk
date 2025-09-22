@@ -43,6 +43,54 @@ test-oauth:
 	@cargo run -- test http://localhost:8080 --with-tools
 	@pkill -f "oauth-basic" || true
 
+# Test OAuth-protected server with access token
+test-oauth-server:
+	@if [ -z "$(TOKEN)" ]; then \
+		echo "Error: ACCESS_TOKEN is required"; \
+		echo ""; \
+		echo "Usage: make test-oauth-server TOKEN=YOUR_ACCESS_TOKEN"; \
+		echo ""; \
+		echo "To get an access token:"; \
+		echo "1. Open MCP Inspector"; \
+		echo "2. Connect to the OAuth-protected MCP server"; \
+		echo "3. Complete the OAuth login flow"; \
+		echo "4. Copy the access token from the inspector"; \
+		echo ""; \
+		exit 1; \
+	fi
+	@echo "Testing OAuth-protected server with token..."
+	@cargo run -- test $(SERVER_URL) --api-key "$(TOKEN)"
+
+# Test AI-evals server with OAuth
+test-ai-evals:
+	@if [ -z "$(TOKEN)" ]; then \
+		echo "Error: TOKEN is required"; \
+		echo "Usage: make test-ai-evals TOKEN=YOUR_ACCESS_TOKEN"; \
+		exit 1; \
+	fi
+	@echo "Testing AI-evals MCP server..."
+	@cargo run -- test https://9nq2m33mi0.execute-api.us-west-2.amazonaws.com/mcp --api-key "$(TOKEN)"
+
+# Test AI-evals with tools
+test-ai-evals-tools:
+	@if [ -z "$(TOKEN)" ]; then \
+		echo "Error: TOKEN is required"; \
+		echo "Usage: make test-ai-evals-tools TOKEN=YOUR_ACCESS_TOKEN"; \
+		exit 1; \
+	fi
+	@echo "Testing AI-evals MCP server with tools..."
+	@cargo run -- test https://9nq2m33mi0.execute-api.us-west-2.amazonaws.com/mcp --api-key "$(TOKEN)" --with-tools
+
+# Diagnose OAuth server connection
+diagnose-oauth:
+	@if [ -z "$(TOKEN)" ]; then \
+		echo "Error: TOKEN is required"; \
+		echo "Usage: make diagnose-oauth TOKEN=YOUR_ACCESS_TOKEN SERVER_URL=https://..."; \
+		exit 1; \
+	fi
+	@echo "Diagnosing OAuth server connection..."
+	@cargo run -- diagnose $(SERVER_URL) --api-key "$(TOKEN)" --network
+
 # Test with JSON output
 test-json:
 	@cargo run -- test http://localhost:8080 --format json
@@ -117,6 +165,16 @@ help:
 	@echo "  make test-all       - Test all examples"
 	@echo "  make compare        - Compare two servers"
 	@echo ""
+	@echo "OAuth Testing:"
+	@echo "  make test-oauth-server TOKEN=... SERVER_URL=..."
+	@echo "                      - Test OAuth-protected server"
+	@echo "  make test-ai-evals TOKEN=..."
+	@echo "                      - Test AI-evals MCP server"
+	@echo "  make test-ai-evals-tools TOKEN=..."
+	@echo "                      - Test AI-evals with tools"
+	@echo "  make diagnose-oauth TOKEN=... SERVER_URL=..."
+	@echo "                      - Diagnose OAuth server"
+	@echo ""
 	@echo "Development:"
 	@echo "  make dev            - Run with verbose output"
 	@echo "  make run ARGS=...   - Run with custom arguments"
@@ -129,4 +187,5 @@ help:
 	@echo "Examples:"
 	@echo "  make run ARGS='test http://localhost:8080'"
 	@echo "  make run ARGS='tools http://localhost:8080 --test-all'"
-	@echo "  make run ARGS='diagnose https://api.example.com --network'"
+	@echo "  make test-ai-evals TOKEN=your_access_token"
+	@echo "  make diagnose-oauth TOKEN=your_token SERVER_URL=https://api.example.com/mcp"

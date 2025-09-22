@@ -48,6 +48,53 @@ setup-pre-commit:
 setup-full: setup setup-pre-commit
 	@echo "$(GREEN)🏭 Toyota Way development environment fully configured$(NC)"
 
+# WASM build targets
+.PHONY: wasm-build
+wasm-build:
+	@echo "$(BLUE)Building for WASM target (wasm32-unknown-unknown)...$(NC)"
+	$(CARGO) build --target wasm32-unknown-unknown --no-default-features --features wasm
+	@echo "$(GREEN)✓ WASM build complete$(NC)"
+
+.PHONY: wasm-release
+wasm-release:
+	@echo "$(BLUE)Building optimized WASM release...$(NC)"
+	$(CARGO) build --target wasm32-unknown-unknown --release --no-default-features --features wasm
+	@echo "$(GREEN)✓ WASM release build complete$(NC)"
+
+# Cloudflare Worker SDK example targets
+.PHONY: cloudflare-sdk-setup
+cloudflare-sdk-setup:
+	@echo "$(BLUE)Setting up Cloudflare Worker with SDK...$(NC)"
+	@echo "$(GREEN)✓ SDK configuration already in place$(NC)"
+
+.PHONY: cloudflare-sdk-build
+cloudflare-sdk-build: cloudflare-sdk-setup
+	@echo "$(BLUE)Building Cloudflare Worker with SDK...$(NC)"
+	cd examples/cloudflare-worker-mcp && \
+		cargo build --target wasm32-unknown-unknown --release --lib
+	@echo "$(GREEN)✓ Cloudflare Worker SDK build complete$(NC)"
+
+.PHONY: cloudflare-sdk-deploy
+cloudflare-sdk-deploy: cloudflare-sdk-build
+	@echo "$(BLUE)Deploying Cloudflare Worker with SDK...$(NC)"
+	cd examples/cloudflare-worker-mcp && \
+		wrangler deploy --name mcp-worker-sdk
+	@echo "$(GREEN)✓ Cloudflare Worker SDK deployed$(NC)"
+
+.PHONY: cloudflare-sdk-dev
+cloudflare-sdk-dev: cloudflare-sdk-setup
+	@echo "$(BLUE)Starting Cloudflare Worker dev server with SDK...$(NC)"
+	cd examples/cloudflare-worker-mcp && \
+		wrangler dev --local
+
+.PHONY: cloudflare-sdk-test
+cloudflare-sdk-test:
+	@echo "$(BLUE)Testing Cloudflare Worker SDK endpoint...$(NC)"
+	@curl -X POST http://localhost:8787/mcp \
+		-H "Content-Type: application/json" \
+		-d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}' \
+		| jq . || echo "$(YELLOW)⚠ Make sure 'cloudflare-sdk-dev' is running$(NC)"
+
 # Build targets
 .PHONY: build
 build:

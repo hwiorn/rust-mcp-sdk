@@ -40,6 +40,26 @@ mcp-tester test stdio
 
 # Quick connectivity check
 mcp-tester quick http://localhost:8080
+
+# Test OAuth-protected server with access token
+mcp-tester test https://api.example.com/mcp --api-key YOUR_ACCESS_TOKEN
+```
+
+### Testing OAuth-Protected MCP Servers
+
+For servers that require OAuth authentication:
+
+1. **Obtain an access token** from the MCP Inspector or your OAuth provider
+2. **Use the `--api-key` parameter** to pass the token:
+   ```bash
+   mcp-tester test https://your-oauth-server.com/mcp --api-key "YOUR_ACCESS_TOKEN"
+   ```
+3. The tester will automatically add the `Authorization: Bearer YOUR_ACCESS_TOKEN` header to all requests
+
+**Note**: You can also set the token via environment variable:
+```bash
+export MCP_API_KEY="YOUR_ACCESS_TOKEN"
+mcp-tester test https://your-oauth-server.com/mcp
 ```
 
 ### Commands
@@ -137,6 +157,16 @@ mcp-tester test http://localhost:8080 --with-tools
 mcp-tester test http://localhost:8080 \
   --tool admin_action \
   --args '{"action": "test"}'
+
+# Test AI-evals MCP server with OAuth token
+# First, get the access token from MCP Inspector after OAuth login
+mcp-tester test https://9nq2m33mi0.execute-api.us-west-2.amazonaws.com/mcp \
+  --api-key "YOUR_ACCESS_TOKEN_FROM_MCP_INSPECTOR"
+
+# Test with tools
+mcp-tester test https://9nq2m33mi0.execute-api.us-west-2.amazonaws.com/mcp \
+  --api-key "YOUR_ACCESS_TOKEN" \
+  --with-tools
 ```
 
 ### CI/CD Integration
