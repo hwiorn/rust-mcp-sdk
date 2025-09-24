@@ -213,8 +213,8 @@ impl ServerCore {
             .get(&req.name)
             .ok_or_else(|| Error::internal(format!("Tool '{}' not found", req.name)))?;
 
-        // TODO: Check authorization if authorizer is configured
-        // This requires auth context which needs to be passed from transport layer
+        // Authorization check would occur here when auth context is available from transport layer
+        // Currently, tool_authorizer is stored but awaits transport layer integration
 
         // Create request handler extra data
         let request_id = format!("tool_{}", req.name);
