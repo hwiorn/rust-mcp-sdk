@@ -1,6 +1,7 @@
-//! Comprehensive unit tests for the ServerCore implementation.
+//! Comprehensive unit tests for the `ServerCore` implementation.
 
 #[cfg(test)]
+#[allow(clippy::match_wildcard_for_single_variants)]
 mod tests {
     use crate::error::{Error, Result};
     use crate::server::builder::ServerCoreBuilder;

@@ -1,7 +1,7 @@
 //! Transport adapter patterns for connecting protocol handlers to various transports.
 //!
 //! This module provides the adapter interface and implementations that bridge
-//! the transport-independent ServerCore with specific transport mechanisms.
+//! the transport-independent `ServerCore` with specific transport mechanisms.
 
 use crate::error::Result;
 use crate::shared::{Transport as TransportTrait, TransportMessage};
@@ -20,7 +20,7 @@ use super::core::ProtocolHandler;
 
 /// Transport adapter trait for binding protocol handlers to specific transports.
 ///
-/// This trait defines how a protocol handler (like ServerCore) can be connected
+/// This trait defines how a protocol handler (like `ServerCore`) can be connected
 /// to different transport mechanisms (stdio, HTTP, WebSocket, WASI HTTP, etc.).
 #[cfg(not(target_arch = "wasm32"))]
 #[async_trait]
@@ -75,15 +75,14 @@ impl<T: TransportTrait> GenericTransportAdapter<T> {
                 if !t.is_connected() {
                     break;
                 }
-                match t.receive().await {
-                    Ok(msg) => msg,
-                    Err(_) => {
-                        // Connection likely closed, check and break if so
-                        if !t.is_connected() {
-                            break;
-                        }
-                        return Err(crate::error::Error::internal("Transport receive failed"));
-                    },
+                if let Ok(msg) = t.receive().await {
+                    msg
+                } else {
+                    // Connection likely closed, check and break if so
+                    if !t.is_connected() {
+                        break;
+                    }
+                    return Err(crate::error::Error::internal("Transport receive failed"));
                 }
             };
 
@@ -208,7 +207,7 @@ impl HttpAdapter {
                 handler.handle_notification(notification).await?;
                 Ok("".to_string()) // No response for notifications
             },
-            _ => Err(crate::error::Error::protocol(
+            TransportMessage::Response(_) => Err(crate::error::Error::protocol(
                 crate::error::ErrorCode::INVALID_REQUEST,
                 "HTTP adapter only accepts requests and notifications",
             )),

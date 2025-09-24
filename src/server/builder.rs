@@ -1,4 +1,4 @@
-//! Builder pattern for constructing ServerCore instances.
+//! Builder pattern for constructing `ServerCore` instances.
 
 use crate::error::{Error, Result};
 use crate::server::auth::{AuthProvider, ToolAuthorizer};
@@ -8,10 +8,10 @@ use crate::types::{Implementation, ServerCapabilities};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-/// Builder for constructing a ServerCore instance.
+/// Builder for constructing a `ServerCore` instance.
 ///
 /// This builder provides a fluent API for configuring all aspects of the server
-/// before creating the final ServerCore instance.
+/// before creating the final `ServerCore` instance.
 ///
 /// # Examples
 ///
@@ -258,7 +258,7 @@ impl ServerCoreBuilder {
         self
     }
 
-    /// Build the ServerCore instance.
+    /// Build the `ServerCore` instance.
     ///
     /// Returns an error if required fields (name, version) are not set.
     pub fn build(self) -> Result<ServerCore> {

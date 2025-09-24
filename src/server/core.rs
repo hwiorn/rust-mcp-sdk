@@ -127,7 +127,7 @@ pub struct ServerCore {
 }
 
 impl ServerCore {
-    /// Create a new ServerCore with the given configuration.
+    /// Create a new `ServerCore` with the given configuration.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         info: Implementation,
@@ -441,7 +441,9 @@ impl ProtocolHandler for ServerCore {
                     _ => Self::error_response(id, -32601, "Method not supported".to_string()),
                 }
             },
-            _ => Self::error_response(id, -32601, "Method not supported".to_string()),
+            Request::Server(_) => {
+                Self::error_response(id, -32601, "Method not supported".to_string())
+            },
         }
     }
 

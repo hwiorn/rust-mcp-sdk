@@ -1,6 +1,8 @@
-//! Comprehensive unit tests for TransportAdapter implementations.
+//! Comprehensive unit tests for `TransportAdapter` implementations.
 
 #[cfg(test)]
+#[allow(clippy::match_wildcard_for_single_variants)]
+#[allow(clippy::significant_drop_in_scrutinee)]
 mod tests {
     use crate::error::Result;
     use crate::server::adapters::{GenericTransportAdapter, TransportAdapter};
