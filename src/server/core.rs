@@ -172,8 +172,15 @@ impl ServerCore {
         *self.client_capabilities.write().await = Some(init_req.capabilities.clone());
         *self.initialized.write().await = true;
 
+        // Negotiate protocol version
+        let negotiated_version = if crate::SUPPORTED_PROTOCOL_VERSIONS.contains(&init_req.protocol_version.as_str()) {
+            init_req.protocol_version.clone()
+        } else {
+            crate::DEFAULT_PROTOCOL_VERSION.to_string()
+        };
+
         Ok(InitializeResult {
-            protocol_version: ProtocolVersion(crate::DEFAULT_PROTOCOL_VERSION.to_string()),
+            protocol_version: ProtocolVersion(negotiated_version),
             capabilities: self.capabilities.clone(),
             server_info: self.info.clone(),
             instructions: None,
