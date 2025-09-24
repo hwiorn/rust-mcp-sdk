@@ -271,9 +271,17 @@ impl<T: TransportTrait + 'static> TransportAdapter for WebSocketAdapter<T> {
 
 /// Mock transport adapter for testing.
 #[cfg(test)]
+#[derive(Debug)]
 pub struct MockAdapter {
     requests: Arc<RwLock<Vec<(RequestId, Request)>>>,
     responses: Arc<RwLock<Vec<JSONRPCResponse>>>,
+}
+
+#[cfg(test)]
+impl Default for MockAdapter {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[cfg(test)]

@@ -127,6 +127,7 @@ pub struct ServerCore {
 
 impl ServerCore {
     /// Create a new ServerCore with the given configuration.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         info: Implementation,
         capabilities: ServerCapabilities,

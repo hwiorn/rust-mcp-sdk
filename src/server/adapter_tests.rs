@@ -53,6 +53,7 @@ mod tests {
             *self.close_called.lock().await
         }
 
+        #[allow(dead_code)]
         async fn disconnect(&self) {
             *self.is_connected.lock().await = false;
         }
