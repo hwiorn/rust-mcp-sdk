@@ -302,7 +302,10 @@ mod tests {
         for (i, message) in sent_messages.iter().enumerate() {
             match message {
                 TransportMessage::Response(response) => {
-                    assert_eq!(response.id, RequestId::from((i + 1) as i64));
+                    assert_eq!(
+                        response.id,
+                        RequestId::from(i64::try_from(i + 1).expect("index fits in i64"))
+                    );
                 },
                 _ => panic!("Expected response message"),
             }
@@ -432,6 +435,7 @@ mod tests {
     // Mock adapter tests are already in the adapters.rs file
     // but we can add more comprehensive ones here
 
+    #[allow(clippy::fallible_impl_from)]
     impl From<TransportMessage> for Request {
         fn from(msg: TransportMessage) -> Self {
             match msg {
@@ -475,7 +479,10 @@ mod tests {
 
             // Verify all responses have correct IDs
             for (i, response) in responses.iter().enumerate() {
-                assert_eq!(response.id, RequestId::from((i + 1) as i64));
+                assert_eq!(
+                    response.id,
+                    RequestId::from(i64::try_from(i + 1).expect("index fits in i64"))
+                );
             }
         }
 
