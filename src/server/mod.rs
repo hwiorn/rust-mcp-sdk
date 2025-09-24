@@ -28,11 +28,11 @@ use tokio::sync::mpsc;
 
 // Core modules (currently native-only due to dependencies)
 #[cfg(not(target_arch = "wasm32"))]
-pub mod core;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod adapters;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod builder;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod core;
 
 // Native-only modules (require tokio, threading, etc.)
 #[cfg(not(target_arch = "wasm32"))]
@@ -73,7 +73,7 @@ pub mod wasi_adapter;
 pub mod wasm_core;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_server;
-#[cfg(test)]
+#[cfg(all(test, target_arch = "wasm32"))]
 mod wasm_server_tests;
 
 // WASM-compatible protocol handler trait
@@ -85,7 +85,7 @@ mod wasi_protocol {
     use crate::error::Result;
     use crate::types::{JSONRPCResponse, Notification, Request, RequestId};
     use async_trait::async_trait;
-    
+
     /// Protocol-agnostic request handler trait for WASM.
     ///
     /// This is a simplified version of the ProtocolHandler trait that
@@ -94,7 +94,7 @@ mod wasi_protocol {
     pub trait ProtocolHandler {
         /// Handle a single request and return a response.
         async fn handle_request(&self, id: RequestId, request: Request) -> JSONRPCResponse;
-        
+
         /// Handle a notification (no response expected).
         async fn handle_notification(&self, notification: Notification) -> Result<()>;
     }

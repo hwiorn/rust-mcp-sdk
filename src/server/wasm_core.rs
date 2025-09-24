@@ -5,13 +5,11 @@
 
 use crate::error::{ErrorCode, Result};
 use crate::server::ProtocolHandler;
-use crate::types::{
-    JSONRPCError, JSONRPCResponse, Notification, Request, RequestId,
-};
+use crate::types::{JSONRPCError, JSONRPCResponse, Notification, Request, RequestId};
 use async_trait::async_trait;
 use serde_json::{json, Value};
-use std::collections::HashMap;
 use std::cell::RefCell;
+use std::collections::HashMap;
 
 /// Tool handler function type for WASM.
 type ToolHandler = Box<dyn Fn(Value) -> Result<Value>>;
@@ -30,14 +28,14 @@ pub struct WasmServerCore {
 impl WasmServerCore {
     /// Create a new WASM server core.
     pub fn new(name: String, version: String) -> Self {
-        Self { 
-            name, 
+        Self {
+            name,
             version,
             tools: HashMap::new(),
             initialized: RefCell::new(false),
         }
     }
-    
+
     /// Add a tool to the server.
     pub fn add_tool<F>(&mut self, name: String, description: String, handler: F)
     where
@@ -71,51 +69,59 @@ impl ProtocolHandler for WasmServerCore {
                                             "tools": {}
                                         }
                                     }))
-                                }
+                                },
                                 "tools/list" => {
                                     // For stateless environments, allow listing without initialization
                                     {
-                                        let tools: Vec<_> = self.tools.iter().map(|(name, (desc, _))| {
-                                            json!({
-                                                "name": name,
-                                                "description": desc,
+                                        let tools: Vec<_> = self
+                                            .tools
+                                            .iter()
+                                            .map(|(name, (desc, _))| {
+                                                json!({
+                                                    "name": name,
+                                                    "description": desc,
+                                                })
                                             })
-                                        }).collect();
+                                            .collect();
                                         Ok(json!({
                                             "tools": tools
                                         }))
                                     }
-                                }
+                                },
                                 "tools/call" => {
                                     // For stateless environments, allow tool calls without initialization
                                     if let Some(params) = req_value.get("params") {
-                                        if let Some(tool_name) = params.get("name").and_then(|n| n.as_str()) {
+                                        if let Some(tool_name) =
+                                            params.get("name").and_then(|n| n.as_str())
+                                        {
                                             if let Some((_, handler)) = self.tools.get(tool_name) {
-                                                let args = params.get("arguments").unwrap_or(&Value::Null).clone();
+                                                let args = params
+                                                    .get("arguments")
+                                                    .unwrap_or(&Value::Null)
+                                                    .clone();
                                                 match handler(args) {
-                                                    Ok(result) => {
-                                                        Ok(json!({
-                                                            "content": [{
-                                                                "type": "text",
-                                                                "text": serde_json::to_string(&result).unwrap_or_else(|_| "{}".to_string())
-                                                            }],
-                                                            "isError": false
-                                                        }))
-                                                    }
-                                                    Err(e) => {
-                                                        Ok(json!({
-                                                            "content": [{
-                                                                "type": "text",
-                                                                "text": format!("Error: {}", e)
-                                                            }],
-                                                            "isError": true
-                                                        }))
-                                                    }
+                                                    Ok(result) => Ok(json!({
+                                                        "content": [{
+                                                            "type": "text",
+                                                            "text": serde_json::to_string(&result).unwrap_or_else(|_| "{}".to_string())
+                                                        }],
+                                                        "isError": false
+                                                    })),
+                                                    Err(e) => Ok(json!({
+                                                        "content": [{
+                                                            "type": "text",
+                                                            "text": format!("Error: {}", e)
+                                                        }],
+                                                        "isError": true
+                                                    })),
                                                 }
                                             } else {
                                                 Err(JSONRPCError {
                                                     code: ErrorCode::METHOD_NOT_FOUND.0,
-                                                    message: format!("Tool '{}' not found", tool_name),
+                                                    message: format!(
+                                                        "Tool '{}' not found",
+                                                        tool_name
+                                                    ),
                                                     data: None,
                                                 })
                                             }
@@ -129,18 +135,17 @@ impl ProtocolHandler for WasmServerCore {
                                     } else {
                                         Err(JSONRPCError {
                                             code: ErrorCode::INVALID_PARAMS.0,
-                                            message: "Parameters required for tools/call".to_string(),
+                                            message: "Parameters required for tools/call"
+                                                .to_string(),
                                             data: None,
                                         })
                                     }
-                                }
-                                _ => {
-                                    Err(JSONRPCError {
-                                        code: ErrorCode::METHOD_NOT_FOUND.0,
-                                        message: format!("Method '{}' not supported in WASM", method),
-                                        data: None,
-                                    })
-                                }
+                                },
+                                _ => Err(JSONRPCError {
+                                    code: ErrorCode::METHOD_NOT_FOUND.0,
+                                    message: format!("Method '{}' not supported in WASM", method),
+                                    data: None,
+                                }),
                             }
                         } else {
                             Err(JSONRPCError {
@@ -149,23 +154,19 @@ impl ProtocolHandler for WasmServerCore {
                                 data: None,
                             })
                         }
-                    }
-                    Err(_) => {
-                        Err(JSONRPCError {
-                            code: ErrorCode::PARSE_ERROR.0,
-                            message: "Failed to parse request".to_string(),
-                            data: None,
-                        })
-                    }
+                    },
+                    Err(_) => Err(JSONRPCError {
+                        code: ErrorCode::PARSE_ERROR.0,
+                        message: "Failed to parse request".to_string(),
+                        data: None,
+                    }),
                 }
-            }
-            Request::Server(_) => {
-                Err(JSONRPCError {
-                    code: ErrorCode::INVALID_REQUEST.0,
-                    message: "Server requests not supported in WASM".to_string(),
-                    data: None,
-                })
-            }
+            },
+            Request::Server(_) => Err(JSONRPCError {
+                code: ErrorCode::INVALID_REQUEST.0,
+                message: "Server requests not supported in WASM".to_string(),
+                data: None,
+            }),
         };
 
         // Create response with proper structure
@@ -189,8 +190,6 @@ impl ProtocolHandler for WasmServerCore {
     }
 }
 
-#[cfg(test)]
-mod tests;
 #[cfg(test)]
 #[path = "wasm_core_tests.rs"]
 mod wasm_core_tests;

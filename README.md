@@ -151,7 +151,7 @@ make cloudflare-sdk-deploy
 
 ### WASM Documentation
 - [**WASM Target Guide**](docs/WASM_TARGETS.md) - Detailed guide for different WASM targets
-- [**Cloudflare Worker Example**](examples/cloudflare-worker-mcp/README_SDK.md) - Deploy MCP servers to edge
+- [**WASM MCP Server Example**](examples/wasm-mcp-server/README.md) - Write once, deploy everywhere (Cloudflare & Fermyon)
 - [**WASM API Reference**](https://docs.rs/pmcp/latest/pmcp/server/wasm_core/) - WasmServerCore documentation
 
 ## 📚 Documentation

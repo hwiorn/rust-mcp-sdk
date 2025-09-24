@@ -474,6 +474,7 @@ impl Default for DynamicConfigBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::server::cancellation::RequestHandlerExtra;
     use crate::server::ServerBuilder;
     use crate::types::GetPromptResult;
     use async_trait::async_trait;
@@ -486,7 +487,7 @@ mod tests {
         async fn handle(
             &self,
             _args: serde_json::Value,
-            _extra: crate::RequestHandlerExtra,
+            _extra: RequestHandlerExtra,
         ) -> Result<serde_json::Value> {
             Ok(json!({"result": "test"}))
         }
@@ -499,7 +500,7 @@ mod tests {
         async fn handle(
             &self,
             _args: HashMap<String, String>,
-            _extra: crate::RequestHandlerExtra,
+            _extra: RequestHandlerExtra,
         ) -> Result<GetPromptResult> {
             Ok(GetPromptResult {
                 description: Some("Test prompt".to_string()),

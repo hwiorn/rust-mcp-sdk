@@ -12,8 +12,8 @@ pub use tokio_runtime::*;
 pub use wasm_runtime::*;
 
 /// Platform-independent spawn function
-/// On native: uses tokio::spawn
-/// On WASM: uses wasm_bindgen_futures::spawn_local (single-threaded)
+/// On native: uses `tokio::spawn`
+/// On WASM: uses `wasm_bindgen_futures::spawn_local` (single-threaded)
 #[cfg(not(target_arch = "wasm32"))]
 pub fn spawn<F>(future: F)
 where
@@ -38,7 +38,7 @@ where
 pub async fn sleep(duration: std::time::Duration) {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        tokio::time::sleep(duration).await
+        tokio::time::sleep(duration).await;
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -68,7 +68,7 @@ pub type Mutex<T> = tokio::sync::Mutex<T>;
 #[cfg(target_arch = "wasm32")]
 pub type Mutex<T> = futures::lock::Mutex<T>;
 
-/// Platform-independent RwLock
+/// Platform-independent `RwLock`
 #[cfg(not(target_arch = "wasm32"))]
 pub use tokio_runtime::RwLock;
 
@@ -92,12 +92,12 @@ pub use futures::channel::mpsc;
 // Native runtime implementation
 #[cfg(not(target_arch = "wasm32"))]
 mod tokio_runtime {
-    use super::*;
+    use super::Future;
 
-    /// Re-export tokio's RwLock directly
+    /// Re-export tokio's `RwLock` directly
     pub use tokio::sync::RwLock;
 
-    /// JoinHandle for native platforms
+    /// `JoinHandle` for native platforms
     pub type JoinHandle<T> = tokio::task::JoinHandle<T>;
 
     /// Block on a future (only available on native)
@@ -111,7 +111,7 @@ mod tokio_runtime {
 // WASM runtime implementation
 #[cfg(target_arch = "wasm32")]
 mod wasm_runtime {
-    use super::*;
+    use super::Future;
     use futures::lock::{Mutex, MutexGuard};
     use std::ops::{Deref, DerefMut};
     use std::pin::Pin;
