@@ -1,5 +1,10 @@
 //! Connection pooling and load balancing for MCP transports.
 //!
+//! Note: Connection pooling is not available in WASM environments
+//! as they are single-threaded and typically use stateless connections.
+
+#![cfg(not(target_arch = "wasm32"))]
+//!
 //! PMCP-4003: Advanced connection management with:
 //! - Connection pooling for multiple transport types
 //! - Load balancing strategies (round-robin, least connections, weighted)

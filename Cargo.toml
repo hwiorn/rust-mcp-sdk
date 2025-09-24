@@ -1,6 +1,6 @@
 [package]
 name = "pmcp"
-version = "1.4.2"
+version = "1.5.0"
 edition = "2021"
 authors = ["PAIML Team"]
 description = "High-quality Rust SDK for Model Context Protocol (MCP) with full TypeScript SDK compatibility"
@@ -26,7 +26,7 @@ tracing = "0.1"
 
 # Utility dependencies (needed on all platforms)
 url = "2.5"
-uuid = { version = "1.17", features = ["v4", "serde"] }
+uuid = { version = "1.17", features = ["v4", "serde", "js"] }
 chrono = { version = "0.4", features = ["serde"] }
 regex = "1.11"
 lazy_static = "1.5"
@@ -45,26 +45,28 @@ http-body-util = "0.1"
 # OAuth dependencies
 sha2 = "0.10"
 base64 = "0.22"
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 tokio-tungstenite = { version = "0.27", features = ["native-tls"], optional = true }
 hyper = { version = "1.6", features = ["full"], optional = true }
 hyper-util = { version = "0.1", features = ["full"], optional = true }
 axum = { version = "0.7.5", optional = true }
 notify = { version = "8.2", optional = true }
 glob-match = { version = "0.2", optional = true }
+tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 
 # Platform-specific dependencies
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio = { version = "1.46", features = ["full"] }
 tokio-stream = { version = "0.1.15" }
 tokio-util = { version = "0.7", features = ["rt"] }
-tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 web-sys = { version = "0.3", features = ["console", "Window", "Document", "WebSocket", "MessageEvent", "CloseEvent", "ErrorEvent", "BinaryType", "Headers", "Request", "RequestInit", "Response"] }
 js-sys = "0.3"
+futures-channel = "0.3"
+futures-locks = "0.7"
 getrandom = { version = "0.2", features = ["js"] }
 
 # Transport dependencies
@@ -299,7 +301,7 @@ name = "comprehensive_benchmarks"
 harness = false
 [workspace]
 members = ["pmcp-macros", "examples/wasm-client", "examples/25-oauth-basic", "examples/test-basic", "examples/26-server-tester"]
-exclude = ["fuzz"]
+exclude = ["fuzz", "examples/cloudflare-worker-mcp"]
 
 [package.metadata.docs.rs]
 all-features = true

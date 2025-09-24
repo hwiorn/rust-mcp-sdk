@@ -1,0 +1,15 @@
+name = "mcp-sdk-worker"
+main = "worker-rust.js"  # WASM version using wasm-pack
+compatibility_date = "2024-11-05"
+
+[dev]
+port = 8787
+
+# Alternative entry points:
+# main = "worker.js"  # JavaScript fallback (working)
+# main = "build/worker/shim.mjs"  # worker-build version (has runtime issues)
+
+# Build commands for different approaches:
+# [build]
+# command = "worker-build --release"  # For worker-build approach
+# command = "make build"  # For wasm-pack approach

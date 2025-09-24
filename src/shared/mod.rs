@@ -16,6 +16,7 @@ pub mod sse_parser;
 #[cfg(feature = "sse")]
 pub mod sse_optimized;
 
+#[cfg(not(target_arch = "wasm32"))]
 pub mod connection_pool;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod stdio;
@@ -89,6 +90,7 @@ pub use streamable_http::{StreamableHttpTransport, StreamableHttpTransportConfig
 #[cfg(feature = "sse")]
 pub use sse_optimized::{OptimizedSseConfig, OptimizedSseTransport};
 
+#[cfg(not(target_arch = "wasm32"))]
 pub use connection_pool::{
     ConnectionId, ConnectionPool, ConnectionPoolConfig, HealthStatus, LoadBalanceStrategy,
     PoolStats, PooledTransport,

@@ -9,17 +9,13 @@
 //! - Deadline-aware recovery with timeout management
 
 use crate::error::{Error, ErrorCode, Result};
-use crate::shared::runtime;
+use crate::runtime::{self, RwLock};
 use async_trait::async_trait;
-#[cfg(target_arch = "wasm32")]
-use futures_locks::RwLock;
 use std::collections::HashMap;
 use std::future::Future;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-#[cfg(not(target_arch = "wasm32"))]
-use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
 
 /// Recovery operation result for bulk operations.
@@ -479,8 +475,16 @@ impl RecoveryPolicy {
 }
 
 /// Error recovery handler trait.
+#[cfg(not(target_arch = "wasm32"))]
 #[async_trait]
 pub trait RecoveryHandler: Send + Sync {
+    /// Handle error recovery.
+    async fn recover(&self, error_msg: &str) -> Result<serde_json::Value>;
+}
+
+#[cfg(target_arch = "wasm32")]
+#[async_trait(?Send)]
+pub trait RecoveryHandler {
     /// Handle error recovery.
     async fn recover(&self, error_msg: &str) -> Result<serde_json::Value>;
 }
@@ -489,7 +493,16 @@ pub trait RecoveryHandler: Send + Sync {
 #[derive(Debug)]
 pub struct DefaultRecoveryHandler;
 
+#[cfg(not(target_arch = "wasm32"))]
 #[async_trait]
+impl RecoveryHandler for DefaultRecoveryHandler {
+    async fn recover(&self, error_msg: &str) -> Result<serde_json::Value> {
+        Err(Error::internal(error_msg))
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+#[async_trait(?Send)]
 impl RecoveryHandler for DefaultRecoveryHandler {
     async fn recover(&self, error_msg: &str) -> Result<serde_json::Value> {
         Err(Error::internal(error_msg))
@@ -516,11 +529,24 @@ impl<F> FallbackHandler<F> {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[async_trait]
 impl<F, Fut> RecoveryHandler for FallbackHandler<F>
 where
     F: Fn() -> Fut + Send + Sync,
     Fut: Future<Output = Result<serde_json::Value>> + Send,
+{
+    async fn recover(&self, _error_msg: &str) -> Result<serde_json::Value> {
+        (self.fallback)().await
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+#[async_trait(?Send)]
+impl<F, Fut> RecoveryHandler for FallbackHandler<F>
+where
+    F: Fn() -> Fut,
+    Fut: Future<Output = Result<serde_json::Value>>,
 {
     async fn recover(&self, _error_msg: &str) -> Result<serde_json::Value> {
         (self.fallback)().await
@@ -711,6 +737,7 @@ impl CircuitBreaker {
 }
 
 /// Health monitor trait for component health checking.
+#[cfg(not(target_arch = "wasm32"))]
 #[async_trait]
 pub trait HealthMonitor: Send + Sync {
     /// Check the health of a component.
@@ -725,8 +752,27 @@ pub trait HealthMonitor: Send + Sync {
     ) -> Result<Box<dyn Future<Output = RecoveryEvent> + Send + Unpin>>;
 }
 
+#[cfg(target_arch = "wasm32")]
+#[async_trait(?Send)]
+pub trait HealthMonitor {
+    /// Check the health of a component.
+    async fn check_health(&self, component: &str) -> HealthCheckResult;
+
+    /// Get the current health status of a component.
+    async fn get_health_status(&self, component: &str) -> HealthStatus;
+
+    /// Subscribe to health change events.
+    async fn subscribe_health_changes(
+        &self,
+    ) -> Result<Box<dyn Future<Output = RecoveryEvent> + Unpin>>;
+}
+
 /// Type alias for event handlers to reduce complexity.
+#[cfg(not(target_arch = "wasm32"))]
 type EventHandlers = Arc<RwLock<Vec<Arc<dyn Fn(RecoveryEvent) + Send + Sync>>>>;
+
+#[cfg(target_arch = "wasm32")]
+type EventHandlers = Arc<RwLock<Vec<Arc<dyn Fn(RecoveryEvent)>>>>;
 
 /// Advanced recovery coordinator for managing complex recovery scenarios.
 pub struct RecoveryCoordinator {
@@ -777,7 +823,13 @@ impl RecoveryCoordinator {
     }
 
     /// Add event handler for recovery coordination.
+    #[cfg(not(target_arch = "wasm32"))]
     pub async fn add_event_handler(&self, handler: Arc<dyn Fn(RecoveryEvent) + Send + Sync>) {
+        self.event_handlers.write().await.push(handler);
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub async fn add_event_handler(&self, handler: Arc<dyn Fn(RecoveryEvent)>) {
         self.event_handlers.write().await.push(handler);
     }
 
@@ -1095,8 +1147,20 @@ impl AdvancedRecoveryExecutor {
 
         let start_time = Instant::now();
 
-        // Use tokio timeout to enforce the deadline
+        // Use runtime timeout to enforce the deadline
+        #[cfg(not(target_arch = "wasm32"))]
         let timeout_result = tokio::time::timeout(deadline.remaining, operation()).await;
+
+        #[cfg(target_arch = "wasm32")]
+        let timeout_result: std::result::Result<Result<serde_json::Value>, ()> = {
+            // In WASM, we don't have tokio::time::timeout, so we use a simpler approach
+            // This is a simplified version - in production, you'd want more sophisticated timeout handling
+            let res: Result<serde_json::Value> = operation().await;
+            match res {
+                Ok(value) => Ok(Ok(value)),
+                Err(e) => Ok(Err(e)),
+            }
+        };
 
         let result = match timeout_result {
             Ok(Ok(value)) => Ok(value),

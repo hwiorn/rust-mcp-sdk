@@ -3,15 +3,12 @@
 //! This module provides the core protocol state machine and request handling.
 
 use crate::error::Result;
-use crate::shared::runtime::{self, Mutex};
+use crate::runtime::oneshot;
+use crate::runtime::{self, Mutex};
 use crate::types::{JSONRPCResponse, RequestId};
-#[cfg(target_arch = "wasm32")]
-use futures_channel::oneshot;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
-#[cfg(not(target_arch = "wasm32"))]
-use tokio::sync::oneshot;
 
 /// Progress callback type.
 pub type ProgressCallback = Box<dyn Fn(u64, Option<u64>) + Send + Sync>;
@@ -193,10 +190,7 @@ impl Protocol {
                 // Use async runtime to send response
                 let sender = context.sender;
                 runtime::spawn(async move {
-                    #[cfg(not(target_arch = "wasm32"))]
                     let tx_option = sender.lock().await.take();
-                    #[cfg(target_arch = "wasm32")]
-                    let tx_option = sender.lock().unwrap().take();
                     if let Some(tx) = tx_option {
                         let _ = tx.send(response);
                     }
@@ -263,10 +257,7 @@ impl Protocol {
                 if let Some(context) = self.pending_requests.remove(id) {
                     let sender = context.sender;
                     runtime::spawn(async move {
-                        #[cfg(not(target_arch = "wasm32"))]
                         let tx_option = sender.lock().await.take();
-                        #[cfg(target_arch = "wasm32")]
-                        let tx_option = sender.lock().unwrap().take();
                         if let Some(tx) = tx_option {
                             let _ = tx.send(response);
                         }

@@ -8,7 +8,6 @@
 use crate::error::{Error, Result};
 use crate::shared::transport::{Transport, TransportMessage};
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Headers, Request, RequestInit, Response};
