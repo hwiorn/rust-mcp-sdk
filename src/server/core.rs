@@ -84,6 +84,7 @@ pub trait ProtocolHandler {
 /// any coupling to specific transport mechanisms. It can be used with
 /// various transport adapters to deploy to different environments.
 #[allow(dead_code)]
+#[allow(missing_debug_implementations)]
 pub struct ServerCore {
     /// Server metadata
     info: Implementation,

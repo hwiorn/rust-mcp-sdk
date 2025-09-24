@@ -173,6 +173,7 @@ impl TransportAdapter for StdioAdapter {
 /// This adapter is designed for serverless environments where each HTTP request
 /// contains a complete MCP request and expects a complete response.
 #[cfg(feature = "http")]
+#[derive(Debug)]
 pub struct HttpAdapter {
     // HTTP-specific configuration could go here
 }
@@ -243,6 +244,7 @@ impl TransportAdapter for HttpAdapter {
 /// This adapter connects a protocol handler to WebSocket connections,
 /// enabling real-time bidirectional communication.
 #[cfg(feature = "websocket")]
+#[derive(Debug)]
 pub struct WebSocketAdapter<T: TransportTrait> {
     inner: GenericTransportAdapter<T>,
 }

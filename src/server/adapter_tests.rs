@@ -430,6 +430,15 @@ mod tests {
     // Mock adapter tests are already in the adapters.rs file
     // but we can add more comprehensive ones here
 
+    impl From<TransportMessage> for Request {
+        fn from(msg: TransportMessage) -> Self {
+            match msg {
+                TransportMessage::Request { request, .. } => request,
+                _ => panic!("Cannot convert non-request TransportMessage to Request"),
+            }
+        }
+    }
+
     #[cfg(test)]
     mod mock_adapter_tests {
         use super::*;
@@ -499,15 +508,6 @@ mod tests {
             // Verify order is preserved (excluding init)
             for (i, expected_id) in ids.iter().enumerate() {
                 assert_eq!(responses[i + 1].id, RequestId::from(*expected_id));
-            }
-        }
-    }
-
-    impl From<TransportMessage> for Request {
-        fn from(msg: TransportMessage) -> Self {
-            match msg {
-                TransportMessage::Request { request, .. } => request,
-                _ => panic!("Cannot convert non-request TransportMessage to Request"),
             }
         }
     }

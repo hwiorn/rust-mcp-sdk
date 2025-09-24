@@ -41,6 +41,7 @@ use std::sync::Arc;
 /// # Ok(())
 /// # }
 /// ```
+#[allow(missing_debug_implementations)]
 pub struct ServerCoreBuilder {
     name: Option<String>,
     version: Option<String>,
