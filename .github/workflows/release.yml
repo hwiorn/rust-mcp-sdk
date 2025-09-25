@@ -39,10 +39,15 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        gh release create "${{ steps.get_version.outputs.VERSION }}" \
-          --title "${{ steps.get_version.outputs.VERSION }}" \
-          --notes "${{ steps.changelog.outputs.CHANGELOG }}" \
-          --verify-tag
+        # Check if release already exists
+        if gh release view "${{ steps.get_version.outputs.VERSION }}" &>/dev/null; then
+          echo "Release ${{ steps.get_version.outputs.VERSION }} already exists, skipping creation"
+        else
+          gh release create "${{ steps.get_version.outputs.VERSION }}" \
+            --title "${{ steps.get_version.outputs.VERSION }}" \
+            --notes "${{ steps.changelog.outputs.CHANGELOG }}" \
+            --verify-tag
+        fi
 
   publish-crate:
     name: Publish to crates.io

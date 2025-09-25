@@ -46,12 +46,11 @@ jobs:
           cd target/${{ matrix.target }}/release
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             mv mcp-tester.exe ${{ matrix.asset_name }}
-            # Convert Unix path to Windows path for gh command on Windows
-            WIN_PATH=$(cygpath -w "$(pwd)/${{ matrix.asset_name }}")
-            echo "ASSET_PATH=$WIN_PATH" >> $GITHUB_ENV
+            # Use relative path from repo root for Windows
+            echo "ASSET_PATH=target/${{ matrix.target }}/release/${{ matrix.asset_name }}" >> $GITHUB_ENV
           else
             mv mcp-tester ${{ matrix.asset_name }}
-            echo "ASSET_PATH=$(pwd)/${{ matrix.asset_name }}" >> $GITHUB_ENV
+            echo "ASSET_PATH=target/${{ matrix.target }}/release/${{ matrix.asset_name }}" >> $GITHUB_ENV
           fi
 
       - name: Get release tag
