@@ -42,11 +42,13 @@ jobs:
         # Check if release already exists
         if gh release view "${{ steps.get_version.outputs.VERSION }}" &>/dev/null; then
           echo "Release ${{ steps.get_version.outputs.VERSION }} already exists, skipping creation"
+          echo "RELEASE_EXISTS=true" >> $GITHUB_OUTPUT
         else
           gh release create "${{ steps.get_version.outputs.VERSION }}" \
             --title "${{ steps.get_version.outputs.VERSION }}" \
             --notes "${{ steps.changelog.outputs.CHANGELOG }}" \
             --verify-tag
+          echo "RELEASE_EXISTS=false" >> $GITHUB_OUTPUT
         fi
 
   publish-crate:
