@@ -291,6 +291,7 @@ impl SessionManager {
 }
 
 /// Session cleanup task that runs periodically.
+#[cfg(not(target_arch = "wasm32"))]
 pub async fn session_cleanup_task(manager: Arc<SessionManager>, interval: Duration) {
     let mut interval = tokio::time::interval(
         interval

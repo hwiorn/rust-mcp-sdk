@@ -118,12 +118,24 @@ where
 
     // Process all requests
     // Process requests in parallel while maintaining order
+    #[cfg(not(target_arch = "wasm32"))]
     let responses = if requests.len() > 1 {
         // Use parallel processing for multiple requests
         let config = crate::utils::parallel_batch::ParallelBatchConfig::default();
         crate::utils::parallel_batch::process_batch_parallel(requests, handler, config).await?
     } else {
         // For single request, process directly
+        let mut responses = Vec::with_capacity(requests.len());
+        for request in requests {
+            let response = handler(request).await;
+            responses.push(response);
+        }
+        responses
+    };
+
+    // For WASM, always process sequentially
+    #[cfg(target_arch = "wasm32")]
+    let responses = {
         let mut responses = Vec::with_capacity(requests.len());
         for request in requests {
             let response = handler(request).await;

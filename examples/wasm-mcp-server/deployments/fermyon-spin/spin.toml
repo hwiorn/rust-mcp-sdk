@@ -1,0 +1,18 @@
+spin_manifest_version = 2
+
+[application]
+name = "mcp-fermyon-spin"
+version = "0.1.0"
+authors = ["MCP SDK Team"]
+description = "MCP server running on Fermyon Spin"
+
+[[trigger.http]]
+route = "/..."
+component = "mcp-server"
+
+[component.mcp-server]
+source = "target/wasm32-wasip1/release/mcp_fermyon_spin.wasm"
+allowed_outbound_hosts = []
+
+[component.mcp-server.build]
+command = "cargo build --target wasm32-wasip1 --release"

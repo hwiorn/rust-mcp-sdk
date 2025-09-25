@@ -2,43 +2,11 @@
 
 use crate::error::{Error, ErrorCode, Result};
 use crate::server::auth::oauth2::OAuthProvider;
+use crate::server::auth::traits::AuthContext;
 use crate::types::auth::{AuthInfo, AuthScheme};
 use async_trait::async_trait;
-use serde_json::Value;
+use std::collections::HashMap;
 use std::sync::Arc;
-
-/// Authentication context passed to handlers.
-#[derive(Debug, Clone)]
-pub struct AuthContext {
-    /// Authenticated client ID.
-    pub client_id: String,
-
-    /// Authenticated user ID.
-    pub user_id: String,
-
-    /// Granted scopes.
-    pub scopes: Vec<String>,
-
-    /// Additional context data.
-    pub metadata: serde_json::Map<String, Value>,
-}
-
-impl AuthContext {
-    /// Check if a scope is granted.
-    pub fn has_scope(&self, scope: &str) -> bool {
-        self.scopes.iter().any(|s| s == scope)
-    }
-
-    /// Check if all required scopes are granted.
-    pub fn has_all_scopes(&self, scopes: &[&str]) -> bool {
-        scopes.iter().all(|scope| self.has_scope(scope))
-    }
-
-    /// Check if any of the required scopes are granted.
-    pub fn has_any_scope(&self, scopes: &[&str]) -> bool {
-        scopes.iter().any(|scope| self.has_scope(scope))
-    }
-}
 
 /// Authentication middleware trait.
 #[async_trait]
@@ -99,10 +67,12 @@ impl AuthMiddleware for BearerTokenMiddleware {
             } else {
                 // Return anonymous context
                 return Ok(AuthContext {
-                    client_id: "anonymous".to_string(),
-                    user_id: "anonymous".to_string(),
+                    subject: "anonymous".to_string(),
                     scopes: vec![],
-                    metadata: serde_json::Map::new(),
+                    claims: HashMap::new(),
+                    token: None,
+                    client_id: Some("anonymous".to_string()),
+                    expires_at: None,
                 });
             }
         };
@@ -129,10 +99,12 @@ impl AuthMiddleware for BearerTokenMiddleware {
 
         // Create auth context
         Ok(AuthContext {
-            client_id: token_info.client_id,
-            user_id: token_info.user_id,
+            subject: token_info.user_id,
             scopes: token_info.scopes,
-            metadata: serde_json::Map::new(),
+            claims: HashMap::new(),
+            token: Some(token.to_string()),
+            client_id: Some(token_info.client_id),
+            expires_at: Some(token_info.expires_at),
         })
     }
 
@@ -205,10 +177,12 @@ impl AuthMiddleware for ClientCredentialsMiddleware {
 
         // Create auth context (client-only, no user)
         Ok(AuthContext {
-            client_id: client.client_id.clone(),
-            user_id: client.client_id, // Use client ID as user ID for client credentials
+            subject: client.client_id.clone(), // Use client ID as subject for client credentials
             scopes: client.scopes,
-            metadata: serde_json::Map::new(),
+            claims: HashMap::new(),
+            token: None,
+            client_id: Some(client.client_id),
+            expires_at: None,
         })
     }
 }
@@ -342,10 +316,12 @@ impl AuthMiddleware for CompositeMiddleware {
         } else {
             // Return anonymous context if none required
             Ok(AuthContext {
-                client_id: "anonymous".to_string(),
-                user_id: "anonymous".to_string(),
+                subject: "anonymous".to_string(),
                 scopes: vec![],
-                metadata: serde_json::Map::new(),
+                claims: HashMap::new(),
+                token: None,
+                client_id: Some("anonymous".to_string()),
+                expires_at: None,
             })
         }
     }
@@ -387,8 +363,8 @@ mod tests {
         // Test valid token
         let auth = AuthInfo::bearer(&token.access_token);
         let context = middleware.authenticate(Some(&auth)).await.unwrap();
-        assert_eq!(context.client_id, "client-123");
-        assert_eq!(context.user_id, "user-456");
+        assert_eq!(context.client_id, Some("client-123".to_string()));
+        assert_eq!(context.subject, "user-456");
         assert!(context.has_scope("read"));
         assert!(context.has_scope("write"));
     }

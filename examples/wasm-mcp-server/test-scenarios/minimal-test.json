@@ -1,0 +1,13 @@
+{
+  "name": "Minimal Test",
+  "description": "Just list tools",
+  "timeout": 10,
+  "steps": [
+    {
+      "name": "List tools",
+      "operation": {
+        "type": "list_tools"
+      }
+    }
+  ]
+}

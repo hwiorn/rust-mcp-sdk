@@ -1,265 +1,136 @@
-# PMCP Examples
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./docs/static/image/logo-dark.png">
+    <img alt="spin logo" src="./docs/static/image/logo.png" width="300" height="128">
+  </picture>
+  <p>Spin is a framework for building, deploying, and running fast, secure, and composable cloud microservices with WebAssembly.</p>
+      <a href="https://github.com/spinframework/spin/actions/workflows/build.yml"><img src="https://github.com/spinframework/spin/actions/workflows/build.yml/badge.svg" alt="build status" /></a>
+      <a href="https://cloud-native.slack.com/archives/C089NJ9G1V0"><img alt="Slack" src="https://img.shields.io/badge/slack-spin-green.svg?logo=slack"></a>
+      <a href="https://www.bestpractices.dev/projects/10373"><img src="https://www.bestpractices.dev/projects/10373/badge"></a>
+</div>
 
-This directory contains comprehensive examples demonstrating all major features of the PMCP (Pragmatic Model Context Protocol) Rust SDK.
+## What is Spin?
 
-## Running Examples
+Spin is an open source framework for building and running fast, secure, and
+composable cloud microservices with WebAssembly. It aims to be the easiest way
+to get started with WebAssembly microservices, and takes advantage of the latest
+developments in the
+[WebAssembly component model](https://github.com/WebAssembly/component-model)
+and [Wasmtime](https://wasmtime.dev/) runtime.
 
-All examples can be run using `cargo run --example <example_name>`. For example:
+Spin offers a simple CLI that helps you create, distribute, and execute
+applications, and in the next sections we will learn more about Spin
+applications and how to get started.
 
+## Getting started
+
+See the [Install Spin](https://spinframework.dev/install) page of the [Spin documentation](https://spinframework.dev) for a detailed
+guide on installing and configuring Spin, but in short run the following commands:
 ```bash
-cargo run --example 01_client_initialize
+curl -fsSL https://spinframework.dev/downloads/install.sh | bash
+sudo mv ./spin /usr/local/bin/spin
 ```
 
-## Examples Overview
+Alternatively, you could [build Spin from source](https://spinframework.dev/contributing-spin).
 
-### 01. Client Initialization
+To get started writing apps, follow the [quickstart guide](https://spinframework.dev/quickstart/),
+and then follow the
+[Rust](https://spinframework.dev/rust-components/), [JavaScript](https://spinframework.dev/javascript-components), [Python](https://spinframework.dev/python-components), or [Go](https://spinframework.dev/go-components/)
+language guides, and the [guide on writing Spin applications](https://spinframework.dev/writing-apps/).
+
+## Language support
+
+WebAssembly is a language-agnostic runtime: you can build WebAssembly components from a variety of source languages. Spin SDKs are available for several languages, including:
+
+* JavaScript: https://github.com/spinframework/spin-js-sdk
+* Rust: https://crates.io/crates/spin-sdk
+* Go: https://pkg.go.dev/github.com/fermyon/spin/sdk/go/v2
+* Python: https://github.com/spinframework/spin-python-sdk
+* Zig: https://github.com/dasimmet/zig-spin (third party)
+* Moonbit: https://github.com/gmlewis/spin-moonbit-sdk (third party)
+
+> The Spin framework team supports the JavaScript, Rust, Go, and Python SDKs. Other language integrations are supported by their authors, and we're grateful to them for their work!
+
+## Usage
+
+Below is an example of using the `spin` CLI to create a new Spin application.  To run the example you will need to install the `wasm32-wasip1` target for Rust.
+
 ```bash
-cargo run --example 01_client_initialize
-```
-Demonstrates:
-- Creating a client with stdio transport
-- Capability negotiation
-- Server information retrieval
-- Connection lifecycle
-
-### 02. Basic Server
-```bash
-cargo run --example 02_server_basic
-```
-Demonstrates:
-- Creating a server with tools
-- Implementing tool handlers
-- Calculator and string manipulation tools
-- Server lifecycle management
-
-### 03. Client Tools Usage
-```bash
-cargo run --example 03_client_tools
-```
-Demonstrates:
-- Listing available tools from a server
-- Calling tools with arguments
-- Handling tool responses
-- Error handling for tool calls
-
-### 04. Server with Resources
-```bash
-cargo run --example 04_server_resources
-```
-Demonstrates:
-- Creating a server that provides resources
-- Implementing resource handlers
-- Resource listing and reading
-- URI template support
-
-### 05. Client Resource Access
-```bash
-cargo run --example 05_client_resources
-```
-Demonstrates:
-- Listing available resources
-- Reading resource contents
-- Handling different content types
-- Resource pagination
-
-### 06. Server with Prompts
-```bash
-cargo run --example 06_server_prompts
-```
-Demonstrates:
-- Creating a server that provides prompts
-- Implementing prompt handlers
-- Dynamic prompt generation with arguments
-- Prompt templates and formatting
-
-### 07. Client Prompts Usage
-```bash
-cargo run --example 07_client_prompts
-```
-Demonstrates:
-- Listing available prompts from a server
-- Getting prompt details with arguments
-- Executing prompts with parameters
-- Handling prompt responses
-
-### 08. Logging
-```bash
-cargo run --example 08_logging
-```
-Demonstrates:
-- Server logging with different levels
-- Client log message handling
-- Structured logging with metadata
-- Log filtering and processing
-
-### 09. Authentication
-```bash
-cargo run --example 09_authentication
-```
-Demonstrates:
-- OAuth 2.0 authentication flow
-- Bearer token authentication
-- Custom authentication handlers
-- Token refresh and expiration
-
-### 10. Progress Notifications
-```bash
-cargo run --example 10_progress_notifications
-```
-Demonstrates:
-- Sending progress updates from tools
-- Handling progress notifications in clients
-- Progress tokens and tracking
-- Cancellable operations with progress
-
-### 11. Request Cancellation
-```bash
-cargo run --example 11_request_cancellation
-```
-Demonstrates:
-- Cancelling in-flight requests
-- Handling cancellation in tools
-- Graceful shutdown on cancellation
-- Cancellation tokens and propagation
-
-### 12. Error Handling
-```bash
-cargo run --example 12_error_handling
-```
-Demonstrates:
-- Different error types and codes
-- Error recovery strategies
-- Retry logic with backoff
-- Custom error handling patterns
-
-## Example Patterns
-
-### Client-Server Communication
-
-Most examples follow a client-server pattern. To test them properly:
-
-1. Start the server in one terminal:
-```bash
-cargo run --example 02_server_basic
+$ rustup target add wasm32-wasip1
 ```
 
-2. Run the client in another terminal:
+First, run the `spin new` command to create a Spin application from a template.
 ```bash
-cargo run --example 03_client_tools
+# Create a new Spin application named 'hello-rust' based on the Rust http template, accepting all defaults
+$ spin new --accept-defaults -t http-rust hello-rust
+```
+Running the `spin new` command created a `hello-rust` directory with all the necessary files for your application. Change to the `hello-rust` directory and build the application with `spin build`, then run it locally with `spin up`:
+
+```bash
+# Compile to Wasm by executing the `build` command.
+$ spin build
+Executing the build command for component hello-rust: cargo build --target wasm32-wasip1 --release
+    Finished release [optimized] target(s) in 0.03s
+Successfully ran the build command for the Spin components.
+
+# Run the application locally.
+$ spin up
+Logging component stdio to ".spin/logs/"
+
+Serving http://127.0.0.1:3000
+Available Routes:
+  hello-rust: http://127.0.0.1:3000 (wildcard)
 ```
 
-### Standalone Examples
+That's it! Now that the application is running, use your browser or cURL in another shell to try it out:
 
-Some examples (like error handling and authentication) demonstrate concepts without requiring a separate server process.
-
-### Common Features
-
-All examples include:
-- Proper error handling
-- Logging setup with `tracing`
-- Clear output formatting
-- Inline documentation
-
-## Building Your Own MCP Application
-
-Use these examples as templates for your own MCP applications:
-
-1. **Simple Tool Server**: Start with example 02
-2. **Resource Provider**: Build on example 04
-3. **AI Assistant**: Combine examples 06 (prompts) and 03 (tools)
-4. **Robust Client**: Use examples 11 (cancellation) and 12 (error handling)
-
-## Advanced Topics
-
-For production applications, consider:
-
-- **Authentication**: See example 09 for OAuth and token handling
-- **Progress Tracking**: Example 10 for long-running operations
-- **Error Recovery**: Example 12 for resilient error handling
-- **Cancellation**: Example 11 for responsive applications
-
-### 20. OIDC Discovery and OAuth 2.0
 ```bash
-cargo run --example 20_oidc_discovery
-```
-Demonstrates:
-- OpenID Connect discovery from well-known endpoints
-- Automatic retry on CORS/network errors
-- OAuth 2.0 token exchange (authorization code flow)
-- Token refresh flow
-- Transport isolation with unique IDs
-- Concurrent transport operations
+# Send a request to the application.
+$ curl -i 127.0.0.1:3000
+HTTP/1.1 200 OK
+content-type: text/plain
+transfer-encoding: chunked
+date: Sun, 02 Mar 2025 20:09:11 GMT
 
-### 21. Macro-based Tool Generation
-```bash
-cargo run --example 21_macro_tools
-```
-Demonstrates:
-- Using procedural macros for tool generation
-- Automatic schema derivation from Rust types
-- Simplified tool implementation
-
-### 22. Stateful Streamable HTTP Server
-```bash
-cargo run --example 22_streamable_http_server_stateful --features streamable-http
-```
-Demonstrates:
-- Running MCP server over HTTP with session management
-- Session ID generation and tracking
-- Multiple concurrent client support with isolated sessions
-- Session validation and re-initialization prevention
-- Best for long-running connections and complex workflows
-
-### 23. Stateless Streamable HTTP Server
-```bash
-cargo run --example 23_streamable_http_server_stateless --features streamable-http
-```
-Demonstrates:
-- Running MCP server over HTTP without session management
-- Simplified stateless operation
-- No session overhead - each request is independent
-- Perfect for serverless deployments (AWS Lambda, Azure Functions)
-- Horizontal scaling friendly
-
-### 24. Streamable HTTP Client
-```bash
-# Connect to stateful server (port 8080)
-cargo run --example 24_streamable_http_client --features streamable-http
-
-# Connect to stateless server (port 8081)
-cargo run --example 24_streamable_http_client --features streamable-http -- stateless
-```
-Demonstrates:
-- Connecting to MCP servers over HTTP transport
-- Working with both stateful and stateless servers
-- Session handling for stateful connections
-- Tool discovery and invocation over HTTP
-- Error handling and retry logic
-
-### Running the Streamable HTTP Demo
-```bash
-# Run comparison demo (both servers)
-./examples/streamable_http_demo.sh
-
-# Run specific server type
-./examples/streamable_http_demo.sh stateful
-./examples/streamable_http_demo.sh stateless
-
-# Interactive mode (keeps servers running)
-./examples/streamable_http_demo.sh interactive
+Hello World!
 ```
 
-The demo script showcases the differences between stateful and stateless operation modes,
-helping you choose the right approach for your use case.
+You can make the app do more by editting the `src/lib.rs` file in the `hello-rust` directory using your favorite editor or IDE. To learn more about writing Spin applications see [Writing Applications](https://spinframework.dev/writing-apps) in the Spin documentation.  To learn how to publish and distribute your application see the [Publishing and Distribution](https://spinframework.dev/distributing-apps) guide in the Spin documentation.
 
-## Dependencies
+## Language Support for Spin Features
 
-All examples use the same dependencies as the main PMCP library. Some examples may demonstrate optional features like WebSocket or HTTP transports (when implemented).
+The table below summarizes the [feature support](https://spinframework.dev/language-support-overview) in each of the language SDKs.
 
-## Contributing
+| Feature | Rust SDK Supported? | TypeScript SDK Supported? | Python SDK Supported? | Tiny Go SDK Supported? | C# SDK Supported? |
+|-----|-----|-----|-----|-----|-----|
+| **Triggers** |
+| [HTTP](https://spinframework.dev/http-trigger) | Supported | Supported | Supported | Supported | Supported |
+| [Redis](https://spinframework.dev/redis-trigger) | Supported | Supported | Supported | Supported | Not Supported |
+| **APIs** |
+| [Outbound HTTP](https://spinframework.dev/rust-components.md#sending-outbound-http-requests) | Supported | Supported | Supported | Supported | Supported |
+| [Configuration Variables](https://spinframework.dev/variables) | Supported | Supported | Supported | Supported | Supported |
+| [Key Value Storage](https://spinframework.dev/kv-store-api-guide) | Supported | Supported | Supported | Supported | Not Supported |
+| [SQLite Storage](https://spinframework.dev/sqlite-api-guide) | Supported | Supported | Supported | Supported | Not Supported |
+| [MySQL](https://spinframework.dev/rdbms-storage#using-mysql-and-postgresql-from-applications) | Supported | Supported | Not Supported | Supported | Not Supported |
+| [PostgreSQL](https://spinframework.dev/rdbms-storage#using-mysql-and-postgresql-from-applications) | Supported | Supported | Not Supported | Supported | Supported |
+| [Outbound Redis](https://spinframework.dev/rust-components.md#storing-data-in-redis-from-rust-components) | Supported | Supported | Supported | Supported | Supported |
+| [Serverless AI](https://spinframework.dev/serverless-ai-api-guide) | Supported | Supported | Supported | Supported | Not Supported |
+| **Extensibility** |
+| [Authoring Custom Triggers](https://spinframework.dev/extending-and-embedding) | Supported | Not Supported | Not Supported | Not Supported | Not Supported |
 
-When adding new examples:
-1. Follow the numbered naming convention
-2. Include comprehensive inline documentation
-3. Demonstrate both success and error cases
-4. Update this README with the example description
+## Getting Involved and Contributing
+
+We are delighted that you are interested in making Spin better! Thank you!
+
+Each Monday at 2:30om UTC and 9:00pm UTC (alternating), we meet to discuss Spin issues, roadmap, and ideas in our Spin Project Meetings. Subscribe to this [Google Calendar](https://calendar.google.com/calendar/u/1?cid=c3Bpbi5tYWludGFpbmVyc0BnbWFpbC5jb20) for meeting dates.
+
+The [Spin Project Meeting agenda](https://docs.google.com/document/d/1EG392gb8Eg-1ZEPDy18pgFZvMMrdAEybpCSufFXoe00/edit?usp=sharing) is a public document. The document contains a rolling agenda with the date and time of each meeting, the Zoom link, and topics of discussion for the day. You will also find the meeting minutes for each meeting and the link to the recording. If you have something you would like to demo or discuss at the project meeting, we encourage you to add it to the agenda.
+
+You can find the contributing guide [here](https://spinframework.dev/contributing-spin).
+
+## Stay in Touch
+
+Follow us on Twitter: [@spinframework](https://twitter.com/spinframework)
+
+You can join the Spin community in the [Spin CNCF Slack channel](https://cloud-native.slack.com/archives/C089NJ9G1V0) where you can ask questions, get help, and show off the cool things you are doing with Spin!
+

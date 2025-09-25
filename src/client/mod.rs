@@ -14,74 +14,21 @@ use crate::types::{
 };
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{mpsc, oneshot, RwLock};
 use uuid::Uuid;
 
+#[cfg(not(target_arch = "wasm32"))]
+use tokio::sync::{mpsc, oneshot, RwLock};
+
+#[cfg(target_arch = "wasm32")]
+use futures_channel::{mpsc, oneshot};
+#[cfg(target_arch = "wasm32")]
+use futures_locks::RwLock;
+
+#[cfg(not(target_arch = "wasm32"))]
 pub mod auth;
 pub mod transport;
 
 /// MCP client for connecting to servers.
-///
-/// The client provides a high-level interface for interacting with MCP servers,
-/// handling initialization, capabilities negotiation, and tool/resource operations.
-///
-/// # Examples
-///
-/// ## Basic Client Setup
-///
-/// ```rust,no_run
-/// use pmcp::{Client, StdioTransport, ClientCapabilities};
-///
-/// # async fn example() -> pmcp::Result<()> {
-/// let transport = StdioTransport::new();
-/// let mut client = Client::new(transport);
-///
-/// // Initialize connection
-/// let server_info = client.initialize(ClientCapabilities::default()).await?;
-/// println!("Connected to: {}", server_info.server_info.name);
-/// # Ok(())
-/// # }
-/// ```
-///
-/// ## Custom Client Info
-///
-/// ```rust,no_run
-/// use pmcp::{Client, StdioTransport, Implementation};
-///
-/// # async fn example() -> pmcp::Result<()> {
-/// let transport = StdioTransport::new();
-/// let client_info = Implementation {
-///     name: "my-mcp-client".to_string(),
-///     version: "1.0.0".to_string(),
-/// };
-/// let mut client = Client::with_info(transport, client_info);
-/// # Ok(())
-/// # }
-/// ```
-///
-/// ## Working with Tools
-///
-/// ```rust,no_run
-/// use pmcp::{Client, StdioTransport, ClientCapabilities};
-/// use serde_json::json;
-///
-/// # async fn example() -> pmcp::Result<()> {
-/// let transport = StdioTransport::new();
-/// let mut client = Client::new(transport);
-/// client.initialize(ClientCapabilities::default()).await?;
-///
-/// // List available tools
-/// let tools = client.list_tools(None).await?;
-/// println!("Available tools: {}", tools.tools.len());
-///
-/// // Call a tool
-/// let result = client.call_tool(
-///     "calculator".to_string(),
-///     json!({"operation": "add", "a": 5, "b": 3})
-/// ).await?;
-/// # Ok(())
-/// # }
-/// ```
 pub struct Client<T: Transport> {
     transport: Arc<RwLock<T>>,
     protocol: Arc<RwLock<Protocol>>,
@@ -91,9 +38,7 @@ pub struct Client<T: Transport> {
     instructions: Option<String>,
     initialized: bool,
     info: Implementation,
-    /// Channel for handling incoming notifications
     notification_tx: Option<mpsc::Sender<Notification>>,
-    /// Active request tracking for cancellation
     active_requests: Arc<RwLock<HashMap<RequestId, oneshot::Sender<()>>>>,
 }
 

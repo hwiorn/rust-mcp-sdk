@@ -8,8 +8,11 @@ use crate::types::RequestId;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{field, span, Level, Span};
+#[cfg(not(target_arch = "wasm32"))]
 use tracing_subscriber::layer::SubscriberExt;
+#[cfg(not(target_arch = "wasm32"))]
 use tracing_subscriber::util::SubscriberInitExt;
+#[cfg(not(target_arch = "wasm32"))]
 use tracing_subscriber::{EnvFilter, Layer};
 
 /// Logging configuration.
@@ -141,6 +144,7 @@ impl Default for LogConfig {
 }
 
 /// Initialize logging with configuration.
+#[cfg(not(target_arch = "wasm32"))]
 ///
 /// # Examples
 ///
@@ -192,10 +196,12 @@ pub fn init_logging(config: LogConfig) -> Result<(), Box<dyn std::error::Error>>
 }
 
 /// Correlation layer for adding context to spans.
+#[cfg(not(target_arch = "wasm32"))]
 pub struct CorrelationLayer {
     config: LogConfig,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl std::fmt::Debug for CorrelationLayer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CorrelationLayer")
@@ -204,6 +210,7 @@ impl std::fmt::Debug for CorrelationLayer {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl CorrelationLayer {
     /// Create a new correlation layer.
     ///
@@ -220,6 +227,7 @@ impl CorrelationLayer {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl<S> Layer<S> for CorrelationLayer
 where
     S: tracing::Subscriber + for<'lookup> tracing_subscriber::registry::LookupSpan<'lookup>,

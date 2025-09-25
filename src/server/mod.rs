@@ -1,7 +1,10 @@
 //! MCP server implementation.
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::error::{Error, Result};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::shared::{Protocol, ProtocolOptions, TransportMessage};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::types::{
     CallToolRequest, CallToolResult, ClientCapabilities, ClientRequest, GetPromptRequest,
     Implementation, InitializeResult, JSONRPCResponse, ListPromptsRequest, ListPromptsResult,
@@ -9,27 +12,101 @@ use crate::types::{
     ListResourcesResult, ListToolsRequest, ListToolsResult, Notification, ProtocolVersion,
     ReadResourceRequest, Request, RequestId, ServerCapabilities, ServerNotification,
 };
+#[cfg(not(target_arch = "wasm32"))]
 use async_trait::async_trait;
+#[cfg(not(target_arch = "wasm32"))]
 use serde_json::Value;
+#[cfg(not(target_arch = "wasm32"))]
 use std::collections::HashMap;
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::Arc;
-use tokio::sync::{mpsc, RwLock};
 
+#[cfg(not(target_arch = "wasm32"))]
+use crate::runtime::RwLock;
+#[cfg(not(target_arch = "wasm32"))]
+use tokio::sync::mpsc;
+
+// Core modules (currently native-only due to dependencies)
+#[cfg(not(target_arch = "wasm32"))]
+pub mod adapters;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod builder;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod core;
+
+// Native-only modules (require tokio, threading, etc.)
+#[cfg(not(target_arch = "wasm32"))]
 pub mod auth;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod batch;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod cancellation;
+
+// For WASM, provide a simple stub for RequestHandlerExtra
+#[cfg(target_arch = "wasm32")]
+pub mod cancellation {
+    /// Stub for WASM - no cancellation support
+    #[derive(Debug, Clone, Default)]
+    pub struct RequestHandlerExtra;
+}
+#[cfg(not(target_arch = "wasm32"))]
 pub mod dynamic;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod elicitation;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod notification_debouncer;
-#[cfg(feature = "resource-watcher")]
+#[cfg(all(not(target_arch = "wasm32"), feature = "resource-watcher"))]
 pub mod resource_watcher;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod roots;
-#[cfg(feature = "streamable-http")]
+#[cfg(all(not(target_arch = "wasm32"), feature = "streamable-http"))]
 pub mod streamable_http_server;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod subscriptions;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod transport;
 
+// WASM-specific modules and types
+#[cfg(target_arch = "wasm32")]
+pub mod wasi_adapter;
+#[cfg(target_arch = "wasm32")]
+pub mod wasm_core;
+#[cfg(target_arch = "wasm32")]
+pub mod wasm_server;
+#[cfg(all(test, target_arch = "wasm32"))]
+mod wasm_server_tests;
+
+// WASM-compatible protocol handler trait
+#[cfg(target_arch = "wasm32")]
+pub use wasi_protocol::ProtocolHandler;
+
+#[cfg(target_arch = "wasm32")]
+mod wasi_protocol {
+    use crate::error::Result;
+    use crate::types::{JSONRPCResponse, Notification, Request, RequestId};
+    use async_trait::async_trait;
+
+    /// Protocol-agnostic request handler trait for WASM.
+    ///
+    /// This is a simplified version of the ProtocolHandler trait that
+    /// doesn't depend on native-only types like handlers and managers.
+    #[async_trait(?Send)]
+    pub trait ProtocolHandler {
+        /// Handle a single request and return a response.
+        async fn handle_request(&self, id: RequestId, request: Request) -> JSONRPCResponse;
+
+        /// Handle a notification (no response expected).
+        async fn handle_notification(&self, notification: Notification) -> Result<()>;
+    }
+}
+
+#[cfg(test)]
+mod adapter_tests;
+#[cfg(test)]
+mod core_tests;
+
 /// Handler for tool execution.
+#[cfg(not(target_arch = "wasm32"))]
 #[async_trait]
 pub trait ToolHandler: Send + Sync {
     /// Handle a tool call with the given arguments.
@@ -37,6 +114,7 @@ pub trait ToolHandler: Send + Sync {
 }
 
 /// Handler for prompt generation.
+#[cfg(not(target_arch = "wasm32"))]
 #[async_trait]
 pub trait PromptHandler: Send + Sync {
     /// Generate a prompt with the given arguments.
@@ -48,6 +126,7 @@ pub trait PromptHandler: Send + Sync {
 }
 
 /// Handler for resource access.
+#[cfg(not(target_arch = "wasm32"))]
 #[async_trait]
 pub trait ResourceHandler: Send + Sync {
     /// Read a resource at the given URI.
@@ -66,6 +145,7 @@ pub trait ResourceHandler: Send + Sync {
 }
 
 /// Handler for message sampling (LLM operations).
+#[cfg(not(target_arch = "wasm32"))]
 #[async_trait]
 pub trait SamplingHandler: Send + Sync {
     /// Create a message using the language model.
@@ -105,6 +185,7 @@ pub trait SamplingHandler: Send + Sync {
 /// # Ok(())
 /// # }
 /// ```
+#[cfg(not(target_arch = "wasm32"))]
 #[allow(dead_code)]
 pub struct Server {
     info: Implementation,
@@ -125,8 +206,13 @@ pub struct Server {
     subscription_manager: Arc<RwLock<subscriptions::SubscriptionManager>>,
     /// Elicitation manager for user input requests
     elicitation_manager: Option<Arc<elicitation::ElicitationManager>>,
+    /// Authentication provider for validating requests
+    auth_provider: Option<Arc<dyn auth::AuthProvider>>,
+    /// Tool authorizer for fine-grained access control
+    tool_authorizer: Option<Arc<dyn auth::ToolAuthorizer>>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl std::fmt::Debug for Server {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Server")
@@ -141,6 +227,7 @@ impl std::fmt::Debug for Server {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Server {
     /// Check if a tool exists
     pub fn has_tool(&self, name: &str) -> bool {
@@ -622,7 +709,10 @@ impl Server {
             .map(|name| crate::types::ToolInfo {
                 name: name.clone(),
                 description: None,
-                input_schema: serde_json::json!({}),
+                input_schema: serde_json::json!({
+                    "type": "object",
+                    "properties": {}
+                }),
             })
             .collect::<Vec<_>>();
 
@@ -643,10 +733,33 @@ impl Server {
             .get_token(&request_id.to_string())
             .await
             .unwrap_or_else(tokio_util::sync::CancellationToken::new);
+
+        // Validate authentication if auth provider is configured
+        let auth_context = if let Some(auth_provider) = &self.auth_provider {
+            // For now, we don't have access to HTTP headers in this context
+            // In a real implementation, this would come from the transport layer
+            // For the OAuth example, we'll use NoOpAuthProvider which validates without headers
+            auth_provider.validate_request(None).await?
+        } else {
+            None
+        };
+
+        // Check tool authorization if tool authorizer is configured
+        if let (Some(auth_ctx), Some(authorizer)) = (&auth_context, &self.tool_authorizer) {
+            if !authorizer.can_access_tool(auth_ctx, &req.name).await? {
+                return Err(Error::protocol(
+                    crate::error::ErrorCode::AUTHENTICATION_REQUIRED,
+                    format!("Access denied for tool '{}'", req.name),
+                ));
+            }
+        }
+
         let extra = crate::server::cancellation::RequestHandlerExtra::new(
             request_id.to_string(),
             cancellation_token,
-        );
+        )
+        .with_auth_context(auth_context);
+
         let result = handler.handle(req.arguments, extra).await?;
         Ok(serde_json::to_value(CallToolResult {
             content: vec![crate::types::Content::Text {
@@ -1015,6 +1128,7 @@ impl Server {
 }
 
 /// Builder for creating servers.
+#[cfg(not(target_arch = "wasm32"))]
 pub struct ServerBuilder {
     name: Option<String>,
     version: Option<String>,
@@ -1027,8 +1141,15 @@ pub struct ServerBuilder {
     cancellation_manager: cancellation::CancellationManager,
     /// Roots manager for directory/URI registration
     roots_manager: roots::RootsManager,
+    /// Authentication provider for validating requests
+    auth_provider: Option<Arc<dyn auth::AuthProvider>>,
+    /// Tool authorizer for fine-grained access control
+    tool_authorizer: Option<Arc<dyn auth::ToolAuthorizer>>,
+    /// Tool protection requirements to be applied at build time
+    tool_protections: HashMap<String, Vec<String>>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl std::fmt::Debug for ServerBuilder {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ServerBuilder")
@@ -1043,6 +1164,7 @@ impl std::fmt::Debug for ServerBuilder {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl ServerBuilder {
     /// Create a new server builder.
     ///
@@ -1075,6 +1197,9 @@ impl ServerBuilder {
             sampling: None,
             cancellation_manager: cancellation::CancellationManager::new(),
             roots_manager: roots::RootsManager::new(),
+            auth_provider: None,
+            tool_authorizer: None,
+            tool_protections: HashMap::new(),
         }
     }
 
@@ -1386,6 +1511,100 @@ impl ServerBuilder {
     /// // server.run_stdio().await?;
     /// # Ok::<(), pmcp::Error>(())
     /// ```
+    /// Set the authentication provider.
+    ///
+    /// Configures an authentication provider that will validate incoming requests.
+    /// When set, the server will use this provider to authenticate requests before
+    /// processing them.
+    ///
+    /// # Arguments
+    ///
+    /// * `provider` - The authentication provider implementation
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use pmcp::{Server, auth::ProxyProvider};
+    ///
+    /// let auth_provider = ProxyProvider::with_upstream("https://oauth.example.com");
+    ///
+    /// let server = Server::builder()
+    ///     .name("secure-server")
+    ///     .version("1.0.0")
+    ///     .auth_provider(auth_provider)
+    ///     .build()?;
+    /// # Ok::<(), pmcp::Error>(())
+    /// ```
+    pub fn auth_provider(mut self, provider: impl auth::AuthProvider + 'static) -> Self {
+        self.auth_provider = Some(Arc::new(provider));
+        self
+    }
+
+    /// Set the tool authorizer.
+    ///
+    /// Configures a tool authorizer for fine-grained access control.
+    /// The authorizer determines which tools authenticated users can access
+    /// based on their authentication context.
+    ///
+    /// # Arguments
+    ///
+    /// * `authorizer` - The tool authorization implementation
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use pmcp::{Server, auth::ScopeBasedAuthorizer};
+    ///
+    /// let authorizer = ScopeBasedAuthorizer::new()
+    ///     .require_scopes("sensitive_tool", vec!["admin".to_string()])
+    ///     .default_scopes(vec!["read".to_string()]);
+    ///
+    /// let server = Server::builder()
+    ///     .name("secure-server")
+    ///     .version("1.0.0")
+    ///     .tool_authorizer(authorizer)
+    ///     .build()?;
+    /// # Ok::<(), pmcp::Error>(())
+    /// ```
+    pub fn tool_authorizer(mut self, authorizer: impl auth::ToolAuthorizer + 'static) -> Self {
+        if !self.tool_protections.is_empty() {
+            // Log a warning or panic - for now we'll clear the protections with a warning
+            eprintln!("Warning: Setting a custom tool_authorizer clears any previous protect_tool() configurations");
+            self.tool_protections.clear();
+        }
+        self.tool_authorizer = Some(Arc::new(authorizer));
+        self
+    }
+
+    /// Protect a specific tool with required scopes.
+    ///
+    /// This is a convenience method that creates or updates a scope-based authorizer
+    /// to require specific scopes for accessing the named tool.
+    ///
+    /// # Arguments
+    ///
+    /// * `tool_name` - The name of the tool to protect
+    /// * `scopes` - The required scopes for accessing this tool
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use pmcp::Server;
+    ///
+    /// let server = Server::builder()
+    ///     .name("secure-server")
+    ///     .version("1.0.0")
+    ///     .protect_tool("delete_data", vec!["admin".to_string(), "write".to_string()])
+    ///     .protect_tool("read_data", vec!["read".to_string()])
+    ///     .build()?;
+    /// # Ok::<(), pmcp::Error>(())
+    /// ```
+    pub fn protect_tool(mut self, tool_name: impl Into<String>, scopes: Vec<String>) -> Self {
+        // Store the tool protection requirements to be applied at build time
+        self.tool_protections.insert(tool_name.into(), scopes);
+        self
+    }
+
     ///
     /// # Errors
     ///
@@ -1399,6 +1618,27 @@ impl ServerBuilder {
         let version = self
             .version
             .ok_or_else(|| crate::Error::validation("Server version is required"))?;
+
+        // Apply tool protections
+        let tool_authorizer = if !self.tool_protections.is_empty() {
+            if self.tool_authorizer.is_some() {
+                // If there's an existing authorizer and tool protections are specified,
+                // this is a configuration error
+                return Err(crate::Error::validation(
+                    "Cannot use protect_tool() with a custom tool_authorizer. \
+                     Either use protect_tool() to configure scope-based authorization, \
+                     or provide a custom ToolAuthorizer implementation, but not both.",
+                ));
+            }
+            // Create a ScopeBasedAuthorizer with all the tool protections
+            let mut authorizer = auth::ScopeBasedAuthorizer::new();
+            for (tool_name, scopes) in self.tool_protections {
+                authorizer = authorizer.require_scopes(tool_name, scopes);
+            }
+            Some(Arc::new(authorizer) as Arc<dyn auth::ToolAuthorizer>)
+        } else {
+            self.tool_authorizer
+        };
 
         Ok(Server {
             info: Implementation { name, version },
@@ -1414,10 +1654,13 @@ impl ServerBuilder {
             roots_manager: Arc::new(RwLock::new(self.roots_manager)),
             subscription_manager: Arc::new(RwLock::new(subscriptions::SubscriptionManager::new())),
             elicitation_manager: None,
+            auth_provider: self.auth_provider,
+            tool_authorizer,
         })
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Default for ServerBuilder {
     fn default() -> Self {
         Self::new()

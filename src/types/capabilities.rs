@@ -86,7 +86,7 @@ pub struct ServerCapabilities {
 }
 
 /// Tool-related capabilities.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ToolCapabilities {
     /// Whether list changes are supported
@@ -95,7 +95,7 @@ pub struct ToolCapabilities {
 }
 
 /// Prompt-related capabilities.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PromptCapabilities {
     /// Whether list changes are supported
