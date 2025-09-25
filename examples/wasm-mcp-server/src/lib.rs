@@ -207,10 +207,8 @@ async fn main(mut req: Request, _env: Env, _ctx: Context) -> Result<Response> {
         }
     };
 
-    // Extract request ID and method
-    let id = request_value.get("id")
-        .and_then(|v| serde_json::from_value(v.clone()).ok())
-        .unwrap_or(pmcp::types::RequestId::String("0".to_string()));
+    // Check if this is a notification (no id field means it's a notification)
+    let maybe_id = request_value.get("id");
 
     let method = request_value.get("method")
         .and_then(|v| v.as_str())
@@ -219,6 +217,32 @@ async fn main(mut req: Request, _env: Env, _ctx: Context) -> Result<Response> {
     let params = request_value.get("params")
         .cloned()
         .unwrap_or(Value::Null);
+
+    // Handle notifications - they don't require a response
+    if maybe_id.is_none() {
+        // This is a notification
+        match method {
+            "notifications/initialized" => {
+                // Client is telling us it's initialized - no action needed
+                console_log!("Received initialized notification");
+                // Return an empty successful response (notifications don't get responses in JSON-RPC)
+                return Response::empty();
+            },
+            "notifications/cancelled" => {
+                console_log!("Received cancellation notification");
+                return Response::empty();
+            },
+            _ => {
+                console_log!("Received unknown notification: {}", method);
+                return Response::empty();
+            }
+        }
+    }
+
+    // Extract request ID for regular requests
+    let id = maybe_id
+        .and_then(|v| serde_json::from_value(v.clone()).ok())
+        .unwrap_or(pmcp::types::RequestId::String("0".to_string()));
 
     // Construct ClientRequest based on method
     let client_request = match method {
@@ -256,7 +280,21 @@ async fn main(mut req: Request, _env: Env, _ctx: Context) -> Result<Response> {
         },
         _ => {
             console_error!("Unknown method: {}", method);
-            return Response::error(&format!("Unknown method: {}", method), 400);
+            // Return proper JSON-RPC error response for unknown methods
+            let error_response = json!({
+                "jsonrpc": "2.0",
+                "id": id,
+                "error": {
+                    "code": -32601,
+                    "message": format!("Method not found: {}", method)
+                }
+            });
+
+            return Response::ok(&error_response.to_string())
+                .and_then(|mut res| {
+                    res.headers_mut().set("Content-Type", "application/json")?;
+                    Ok(res)
+                })
         }
     };
 

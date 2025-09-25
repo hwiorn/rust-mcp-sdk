@@ -366,11 +366,63 @@ impl StreamableHttpTransport {
             ))));
         }
 
+        // Get response metadata before potentially consuming the response
+        let status_code = response.status();
         let content_type = response
             .headers()
             .get(CONTENT_TYPE)
             .and_then(|v| v.to_str().ok())
-            .unwrap_or("");
+            .unwrap_or("")
+            .to_string();
+        let content_length = response
+            .headers()
+            .get("content-length")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.parse::<usize>().ok());
+
+        // If it's a 200 response with either Content-Length: 0 or no Content-Type
+        // (often happens with notifications), check if it's actually empty
+        if status_code == 200 && (content_length == Some(0) || content_type.is_empty()) {
+            // Check if there's actually no body by consuming it
+            let body = response
+                .bytes()
+                .await
+                .map_err(|e| Error::Transport(TransportError::Request(e.to_string())))?;
+
+            if body.is_empty() {
+                // Empty 200 response (e.g., for notifications) - just return Ok
+                return Ok(());
+            }
+
+            // If there was a body but no content-type, that's an error
+            if content_type.is_empty() {
+                return Err(Error::Transport(TransportError::Request(
+                    "Response has body but no Content-Type header".to_string(),
+                )));
+            }
+
+            // We have a body with content, parse it as JSON
+            // Try to parse as array first (batch response - JSON-RPC 2.0)
+            if let Ok(batch) = serde_json::from_slice::<Vec<serde_json::Value>>(&body) {
+                for json_msg in batch {
+                    let json_str = serde_json::to_string(&json_msg).map_err(|e| {
+                        Error::Transport(TransportError::Deserialization(e.to_string()))
+                    })?;
+                    // Use JSON-RPC compatibility layer
+                    let msg = crate::shared::StdioTransport::parse_message(json_str.as_bytes())?;
+                    self.sender
+                        .send(msg)
+                        .map_err(|e| Error::Transport(TransportError::Send(e.to_string())))?;
+                }
+            } else {
+                // Single message - use JSON-RPC compatibility layer
+                let message = crate::shared::StdioTransport::parse_message(&body)?;
+                self.sender
+                    .send(message)
+                    .map_err(|e| Error::Transport(TransportError::Send(e.to_string())))?;
+            }
+            return Ok(());
+        }
 
         if content_type.contains(APPLICATION_JSON) {
             // JSON response (single or batch)
@@ -430,7 +482,7 @@ impl StreamableHttpTransport {
                     }
                 }
             });
-        } else if response.status().as_u16() == 202 {
+        } else if status_code.as_u16() == 202 {
             // 202 Accepted with no body is valid
             return Ok(());
         } else {

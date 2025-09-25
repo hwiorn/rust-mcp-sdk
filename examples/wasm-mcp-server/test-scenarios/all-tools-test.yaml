@@ -1,0 +1,199 @@
+name: "All Tools Integration Test"
+description: "Tests calculator, weather, and system_info tools"
+timeout: 10
+
+steps:
+  - name: "Initialize MCP Session"
+    action: initialize
+    params:
+      protocolVersion: "2024-11-05"
+      clientInfo:
+        name: "integration-tester"
+        version: "1.0.0"
+    expect:
+      success: true
+
+  - name: "Verify All Tools Available"
+    action: tools/list
+    expect:
+      success: true
+      response:
+        tools:
+          - name: "calculator"
+          - name: "weather"
+          - name: "system_info"
+
+  # Calculator Tool Tests
+  - name: "Calculator: Complex Calculation (10 + 5) * 2"
+    action: tools/call
+    params:
+      name: "calculator"
+      arguments:
+        operation: "add"
+        a: 10
+        b: 5
+    expect:
+      success: true
+      response:
+        content:
+          - type: "text"
+            text_contains: "\"result\": 15"
+
+  - name: "Calculator: Multiply Previous Result"
+    action: tools/call
+    params:
+      name: "calculator"
+      arguments:
+        operation: "multiply"
+        a: 15
+        b: 2
+    expect:
+      success: true
+      response:
+        content:
+          - type: "text"
+            text_contains: "\"result\": 30"
+
+  # Weather Tool Tests
+  - name: "Weather: Get Default Location"
+    action: tools/call
+    params:
+      name: "weather"
+      arguments: {}
+    expect:
+      success: true
+      response:
+        content:
+          - type: "text"
+            text_contains: "San Francisco"
+
+  - name: "Weather: Get Weather for New York"
+    action: tools/call
+    params:
+      name: "weather"
+      arguments:
+        location: "New York"
+    expect:
+      success: true
+      response:
+        content:
+          - type: "text"
+            text_contains: "\"location\": \"New York\""
+
+  - name: "Weather: Get Weather for London"
+    action: tools/call
+    params:
+      name: "weather"
+      arguments:
+        location: "London"
+    expect:
+      success: true
+      response:
+        content:
+          - type: "text"
+            text_contains: "temperature"
+
+  # System Info Tool Tests
+  - name: "System Info: Get Runtime Information"
+    action: tools/call
+    params:
+      name: "system_info"
+      arguments: {}
+    expect:
+      success: true
+      response:
+        content:
+          - type: "text"
+            text_contains: "\"sdk\": \"pmcp\""
+
+  - name: "System Info: Verify Architecture"
+    action: tools/call
+    params:
+      name: "system_info"
+      arguments: {}
+    expect:
+      success: true
+      response:
+        content:
+          - type: "text"
+            text_contains: "wasm"
+
+  # Mixed Operations
+  - name: "Calculate Temperature Conversion: (72°F - 32) * 5/9"
+    action: tools/call
+    params:
+      name: "calculator"
+      arguments:
+        operation: "subtract"
+        a: 72
+        b: 32
+    expect:
+      success: true
+      response:
+        content:
+          - type: "text"
+            text_contains: "\"result\": 40"
+
+  - name: "Continue Temperature Conversion: 40 * 5"
+    action: tools/call
+    params:
+      name: "calculator"
+      arguments:
+        operation: "multiply"
+        a: 40
+        b: 5
+    expect:
+      success: true
+      response:
+        content:
+          - type: "text"
+            text_contains: "\"result\": 200"
+
+  - name: "Complete Temperature Conversion: 200 / 9"
+    action: tools/call
+    params:
+      name: "calculator"
+      arguments:
+        operation: "divide"
+        a: 200
+        b: 9
+    expect:
+      success: true
+      response:
+        content:
+          - type: "text"
+            text_contains: "22.22"  # ~22.22°C
+
+  # Edge Cases
+  - name: "Calculator: Large Numbers"
+    action: tools/call
+    params:
+      name: "calculator"
+      arguments:
+        operation: "multiply"
+        a: 1000000
+        b: 1000000
+    expect:
+      success: true
+      response:
+        content:
+          - type: "text"
+            text_contains: "1000000000000"  # 1 trillion
+
+  - name: "Weather: Empty String Location"
+    action: tools/call
+    params:
+      name: "weather"
+      arguments:
+        location: ""
+    expect:
+      success: true
+      # Should still return some weather data
+
+  # Notifications Test (should be handled silently)
+  - name: "Send Initialized Notification"
+    action: notifications/initialized
+    params: {}
+    expect:
+      success: true
+      # Notifications don't return responses

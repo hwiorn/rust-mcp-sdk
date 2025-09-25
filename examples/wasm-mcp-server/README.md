@@ -45,7 +45,7 @@ cargo build --target wasm32-unknown-unknown --release
 cd deployments/cloudflare
 make deploy
 
-# Live at: https://mcp-sdk-worker.guy-ernest.workers.dev
+# Your deployment will be available at: https://<your-worker-name>.workers.dev
 ```
 
 ### Deploy to Fermyon Spin
@@ -54,7 +54,7 @@ make deploy
 cd deployments/fermyon-spin
 make deploy
 
-# Live at: https://mcp-fermyon-spin-3juc7zc4.fermyon.app/
+# Your deployment will be available at: https://<your-app-name>.fermyon.app/
 ```
 
 ## 🏗️ Architecture
@@ -116,7 +116,58 @@ Reports the runtime environment (Cloudflare vs Fermyon)
 
 ## 🧪 Testing
 
-### Test Any Deployment
+### Using MCP Tester with Scenario Files
+
+The repository includes comprehensive test scenarios that can be run with the `mcp-tester` tool:
+
+```bash
+# Test with simple calculator scenario
+mcp-tester scenario <deployment-url> test-scenarios/calculator-simple.json
+
+# Test with comprehensive calculator tests (including error cases)
+mcp-tester scenario <deployment-url> test-scenarios/calculator-test.yaml
+
+# Test with minimal tool listing
+mcp-tester scenario <deployment-url> test-scenarios/minimal-test.json
+```
+
+#### Example: Testing Cloudflare Deployment
+```bash
+# From the rust-mcp-sdk root directory
+# Replace <your-worker-name> with your Cloudflare Worker subdomain
+./target/release/mcp-tester scenario \
+  https://<your-worker-name>.workers.dev \
+  examples/wasm-mcp-server/test-scenarios/calculator-test.yaml
+```
+
+#### Example: Testing Fermyon Spin Deployment
+```bash
+# From the rust-mcp-sdk root directory
+# Replace <your-app-name> with your Fermyon app URL
+./target/release/mcp-tester scenario \
+  https://<your-app-name>.fermyon.app/ \
+  examples/wasm-mcp-server/test-scenarios/calculator-test.yaml
+```
+
+### Available Test Scenarios
+
+1. **`calculator-simple.json`** - Basic calculator operations
+   - Tests addition, multiplication, division, and subtraction
+   - Validates correct results for each operation
+
+2. **`calculator-test.yaml`** - Comprehensive calculator test suite
+   - Tests all arithmetic operations with various inputs
+   - Tests negative numbers and decimals
+   - Tests error handling (division by zero, invalid operations, missing parameters)
+   - Tests large numbers and edge cases
+
+3. **`minimal-test.json`** - Minimal connectivity test
+   - Simply lists available tools
+   - Quick smoke test for deployment health
+
+### Manual Testing with curl
+
+You can also test deployments manually:
 
 ```bash
 # Initialize connection
@@ -133,6 +184,17 @@ curl -X POST <deployment-url> \
 curl -X POST <deployment-url> \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":"3","method":"tools/call","params":{"name":"calculator","arguments":{"operation":"add","a":5,"b":3}}}'
+```
+
+### Building the MCP Tester
+
+If you need to build the mcp-tester tool:
+
+```bash
+# From the rust-mcp-sdk root directory
+cargo build --release --package mcp-server-tester
+
+# The binary will be at: ./target/release/mcp-tester
 ```
 
 ## 📊 Deployment Comparison
@@ -222,6 +284,9 @@ MIT
 
 ---
 
-**Current Production Deployments:**
-- 🌐 Cloudflare: https://mcp-sdk-worker.guy-ernest.workers.dev
-- 🔄 Fermyon: https://mcp-fermyon-spin-3juc7zc4.fermyon.app/
+**Example Deployments for Testing:**
+You can test the MCP protocol with these example deployments:
+- 🌐 Cloudflare Example: https://mcp-sdk-worker.guy-ernest.workers.dev
+- 🔄 Fermyon Example: https://mcp-fermyon-spin-3juc7zc4.fermyon.app/
+
+Note: These are example deployments for testing. Deploy your own instances using the instructions above.

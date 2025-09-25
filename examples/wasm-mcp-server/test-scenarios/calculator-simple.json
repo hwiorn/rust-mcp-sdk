@@ -1,0 +1,111 @@
+{
+  "name": "Simple Calculator Test",
+  "description": "Basic calculator operations test",
+  "timeout": 15,
+  "steps": [
+    {
+      "name": "List available tools",
+      "operation": {
+        "type": "list_tools"
+      },
+      "assertions": [
+        {
+          "type": "success"
+        },
+        {
+          "type": "array_length",
+          "path": "tools",
+          "greater_than": 0
+        }
+      ]
+    },
+    {
+      "name": "Addition: 2 + 3",
+      "operation": {
+        "type": "tool_call",
+        "tool": "calculator",
+        "arguments": {
+          "operation": "add",
+          "a": 2,
+          "b": 3
+        }
+      },
+      "assertions": [
+        {
+          "type": "success"
+        },
+        {
+          "type": "contains",
+          "path": "result",
+          "value": "5"
+        }
+      ]
+    },
+    {
+      "name": "Multiplication: 6 * 7",
+      "operation": {
+        "type": "tool_call",
+        "tool": "calculator",
+        "arguments": {
+          "operation": "multiply",
+          "a": 6,
+          "b": 7
+        }
+      },
+      "assertions": [
+        {
+          "type": "success"
+        },
+        {
+          "type": "contains",
+          "path": "result",
+          "value": "42"
+        }
+      ]
+    },
+    {
+      "name": "Division: 100 / 4",
+      "operation": {
+        "type": "tool_call",
+        "tool": "calculator",
+        "arguments": {
+          "operation": "divide",
+          "a": 100,
+          "b": 4
+        }
+      },
+      "assertions": [
+        {
+          "type": "success"
+        },
+        {
+          "type": "contains",
+          "path": "result",
+          "value": "25"
+        }
+      ]
+    },
+    {
+      "name": "Subtraction: 10 - 3",
+      "operation": {
+        "type": "tool_call",
+        "tool": "calculator",
+        "arguments": {
+          "operation": "subtract",
+          "a": 10,
+          "b": 3
+        }
+      },
+      "assertions": [
+        {
+          "type": "success"
+        },
+        {
+          "type": "contains",
+          "path": "result",
+          "value": "7"
+        }
+      ]
+    }
+  ]
+}
