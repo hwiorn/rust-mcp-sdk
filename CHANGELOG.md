@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2025-09-25
+
+### Fixed
+- Release workflow to handle existing releases gracefully
+- Cargo.toml version alignment for proper crates.io publishing
+
+### Changed
+- Updated release workflow to use GitHub CLI instead of deprecated actions/create-release
+
+## [1.5.0] - 2025-09-25
+
+### Added
+- **WASM MCP Server Support**: Complete WebAssembly deployment capabilities
+  - Platform-agnostic WasmMcpServer implementation using PMCP SDK
+  - Cloudflare Workers deployment with worker crate
+  - Fermyon Spin deployment with spin-sdk
+  - "Write once, deploy everywhere" architecture
+  - Calculator tool example with comprehensive operations
+- **MCP Scenario Testing**: YAML/JSON-based test scenarios
+  - Declarative test definitions for MCP servers
+  - Support for tool testing with assertions
+  - Integration with mcp-tester for automated validation
+  - Example scenarios for calculator tool testing
+- **Streamable HTTP Transport**: Enhanced HTTP transport with empty response handling
+  - Support for 200 OK with empty body
+  - Proper Content-Type detection for responses
+  - Improved error handling for edge cases
+
+### Fixed
+- JSON-RPC notification handling in WASM servers (notifications have no 'id' field)
+- Verbose flag propagation in mcp-tester
+- Scenario executor assertion logic for Success/Failure cases
+- Windows release asset upload paths in GitHub Actions
+
+### Changed
+- Refactored WASM server into platform-specific implementations
+- Separated core MCP logic from transport/platform layers
+- Improved scenario executor to return actual tool responses
+
 ## [1.4.2] - 2025-01-15
 
 ### Added
