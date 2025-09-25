@@ -42,6 +42,61 @@ spin up
 
 ## Testing
 
+### Using MCP Tester with Scenario Files
+
+The deployment can be tested using the mcp-tester tool with predefined scenarios:
+
+```bash
+# Test locally running instance
+./target/release/mcp-tester scenario \
+  http://localhost:3000 \
+  examples/wasm-mcp-server/test-scenarios/calculator-test.yaml
+
+# Test production deployment on Fermyon Cloud
+# Replace <your-app-name> with your Fermyon app URL
+./target/release/mcp-tester scenario \
+  https://<your-app-name>.fermyon.app/ \
+  examples/wasm-mcp-server/test-scenarios/calculator-test.yaml
+
+# Quick connectivity test
+./target/release/mcp-tester scenario \
+  https://<your-app-name>.fermyon.app/ \
+  examples/wasm-mcp-server/test-scenarios/minimal-test.json
+
+# Basic calculator operations
+./target/release/mcp-tester scenario \
+  https://<your-app-name>.fermyon.app/ \
+  examples/wasm-mcp-server/test-scenarios/calculator-simple.json
+```
+
+#### Expected Results
+
+All test scenarios should pass:
+```
+╔════════════════════════════════════════════════════════════╗
+║              MCP SERVER TESTING TOOL v0.1.0               ║
+╚════════════════════════════════════════════════════════════╝
+
+TEST RESULTS
+════════════════════════════════════════════════════════════
+  ✓ Test Addition - 10 + 5
+  ✓ Test Subtraction - 20 - 8
+  ✓ Test Multiplication - 4 * 7
+  ✓ Test Division - 20 / 4
+  ✓ Test Division by Zero (error case)
+  ✓ Test Invalid Operation (error case)
+  ✓ Test Missing Parameter (error case)
+
+SUMMARY
+════════════════════════════════════════════════════════════
+| Total Tests | 14    |
+| Passed      | 14    |
+
+Overall Status: PASSED
+```
+
+### Manual Testing with curl
+
 Test with curl:
 
 ```bash
@@ -71,7 +126,7 @@ curl -X POST http://localhost:3000 \
     "params": {}
   }'
 
-# Call a tool
+# Call a tool (calculator example)
 curl -X POST http://localhost:3000 \
   -H "Content-Type: application/json" \
   -d '{
@@ -79,8 +134,9 @@ curl -X POST http://localhost:3000 \
     "id": "3",
     "method": "tools/call",
     "params": {
-      "name": "add",
+      "name": "calculator",
       "arguments": {
+        "operation": "add",
         "a": 10,
         "b": 20
       }
@@ -137,9 +193,18 @@ The MCP logic (`WasmMcpServer`) remains identical across platforms. Only the HTT
 
 ## Tools Included
 
-- **add**: Add two numbers
-- **reverse**: Reverse a string
-- **environment**: Get runtime information
+- **calculator**: Perform arithmetic operations (add, subtract, multiply, divide)
+- **weather**: Get weather information for a location (mock data)
+- **system_info**: Get runtime information (reports "Fermyon Spin" environment)
+
+## Deployment URL
+
+After deploying with `spin deploy`, your MCP server will be available at:
+🔄 `https://<your-app-name>.fermyon.app/`
+
+### Example Deployment for Testing
+You can test the MCP protocol with this example deployment:
+🔄 https://mcp-fermyon-spin-3juc7zc4.fermyon.app/
 
 ## License
 

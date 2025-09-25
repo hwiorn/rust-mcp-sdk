@@ -40,7 +40,7 @@ pub enum TransportType {
 
 pub struct ServerTester {
     url: String,
-    transport_type: TransportType,
+    pub transport_type: TransportType,
     http_config: Option<StreamableHttpTransportConfig>,
     json_rpc_client: Option<Client>,
     #[allow(dead_code)]
@@ -53,7 +53,7 @@ pub struct ServerTester {
     server_info: Option<InitializeResult>,
     tools: Option<Vec<ToolInfo>>,
     // Store the initialized pmcp client for reuse across tests
-    pmcp_client: Option<pmcp::Client<StreamableHttpTransport>>,
+    pub pmcp_client: Option<pmcp::Client<StreamableHttpTransport>>,
     stdio_client: Option<pmcp::Client<StdioTransport>>,
 }
 
@@ -288,12 +288,32 @@ impl ServerTester {
     }
 
     pub async fn run_tools_discovery(&mut self, test_all: bool) -> Result<TestReport> {
+        self.run_tools_discovery_with_verbose(test_all, false).await
+    }
+
+    pub async fn run_tools_discovery_with_verbose(
+        &mut self,
+        test_all: bool,
+        verbose: bool,
+    ) -> Result<TestReport> {
         let mut report = TestReport::new();
         let start = Instant::now();
 
         // Initialize
         let init_result = self.test_initialize().await;
         report.add_test(init_result.clone());
+
+        if verbose && init_result.status == TestStatus::Passed {
+            println!("  ✓ Server initialized successfully");
+            if let Some(ref server) = self.server_info {
+                println!(
+                    "    Server: {} v{}",
+                    server.server_info.name, server.server_info.version
+                );
+            }
+        } else if verbose && init_result.status != TestStatus::Passed {
+            println!("  ✗ Initialization failed: {:?}", init_result.error);
+        }
 
         if init_result.status != TestStatus::Passed {
             return Ok(report);
@@ -302,6 +322,32 @@ impl ServerTester {
         // List tools
         let tools_result = self.test_tools_list().await;
         report.add_test(tools_result.clone());
+
+        if verbose {
+            if tools_result.status == TestStatus::Passed {
+                if let Some(ref tools) = self.tools {
+                    println!("  ✓ Found {} tools:", tools.len());
+                    for tool in tools {
+                        println!(
+                            "    • {} - {}",
+                            tool.name,
+                            tool.description.as_deref().unwrap_or("No description")
+                        );
+                    }
+                } else {
+                    println!("  ✓ No tools found");
+                }
+            } else {
+                println!("  ✗ Failed to list tools: {:?}", tools_result.error);
+                if verbose {
+                    // Print the actual error details
+                    println!(
+                        "    Error details: {}",
+                        tools_result.error.as_deref().unwrap_or("Unknown error")
+                    );
+                }
+            }
+        }
 
         if tools_result.status == TestStatus::Passed && test_all {
             let tools_to_test: Vec<(String, Value)> = self
@@ -319,7 +365,14 @@ impl ServerTester {
                 .unwrap_or_default();
 
             for (tool_name, test_args) in tools_to_test {
-                report.add_test(self.test_tool(&tool_name, test_args).await?);
+                let test_result = self.test_tool(&tool_name, test_args.clone()).await?;
+                if verbose {
+                    println!("  Testing tool '{}': {:?}", tool_name, test_result.status);
+                    if test_result.status != TestStatus::Passed {
+                        println!("    Error: {:?}", test_result.error);
+                    }
+                }
+                report.add_test(test_result);
             }
         }
 

@@ -24,6 +24,51 @@ make deploy
 make test-prod
 ```
 
+## Testing with MCP Tester
+
+### Automated Scenario Testing
+
+The deployment can be tested using the mcp-tester tool with predefined scenarios:
+
+```bash
+# From the rust-mcp-sdk root directory
+# Replace <your-worker-name> with your deployed Worker subdomain
+
+# Test with comprehensive calculator scenario
+./target/release/mcp-tester scenario \
+  https://<your-worker-name>.workers.dev \
+  examples/wasm-mcp-server/test-scenarios/calculator-test.yaml
+
+# Quick connectivity test
+./target/release/mcp-tester scenario \
+  https://<your-worker-name>.workers.dev \
+  examples/wasm-mcp-server/test-scenarios/minimal-test.json
+
+# Basic calculator operations test
+./target/release/mcp-tester scenario \
+  https://<your-worker-name>.workers.dev \
+  examples/wasm-mcp-server/test-scenarios/calculator-simple.json
+```
+
+### Expected Test Results
+
+All scenarios should pass with output like:
+```
+╔════════════════════════════════════════════════════════════╗
+║              MCP SERVER TESTING TOOL v0.1.0               ║
+╚════════════════════════════════════════════════════════════╝
+
+TEST RESULTS
+════════════════════════════════════════════════════════════
+  ✓ Test Addition - 10 + 5
+  ✓ Test Multiplication - 4 * 7
+  ✓ Test Division - 20 / 4
+  ✓ Test Division by Zero (error case)
+  ✓ Test Invalid Operation (error case)
+
+SUMMARY: PASSED
+```
+
 ## Configuration
 
 The `wrangler.toml` file specifies:
@@ -50,6 +95,11 @@ The `wrangler.toml` file specifies:
 - If runtime fails: Check the JavaScript wrapper initialization
 - For CORS issues: Headers are set in the Rust code
 
-## Live Deployment
+## Deployment URL
 
+After deploying, your MCP server will be available at:
+🌐 `https://<your-worker-name>.workers.dev`
+
+### Example Deployment for Testing
+You can test the MCP protocol with this example deployment:
 🌐 https://mcp-sdk-worker.guy-ernest.workers.dev

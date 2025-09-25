@@ -1,0 +1,205 @@
+name: Calculator Tool Test Suite
+description: Comprehensive tests for the calculator tool functionality
+timeout: 30
+
+steps:
+  # Test Addition
+  - name: Test Addition - 10 + 5
+    operation:
+      type: tool_call
+      tool: calculator
+      arguments:
+        operation: add
+        a: 10
+        b: 5
+    assertions:
+      - type: success
+      - type: contains
+        path: result
+        value: '"result": 15'
+
+  - name: Test Addition - Negative numbers
+    operation:
+      type: tool_call
+      tool: calculator
+      arguments:
+        operation: add
+        a: -5
+        b: 3
+    assertions:
+      - type: success
+      - type: contains
+        path: result
+        value: '"result": -2'
+
+  - name: Test Addition - Decimals
+    operation:
+      type: tool_call
+      tool: calculator
+      arguments:
+        operation: add
+        a: 3.5
+        b: 2.5
+    assertions:
+      - type: success
+      - type: contains
+        path: result
+        value: '"result": 6'
+
+  # Test Subtraction
+  - name: Test Subtraction - 20 - 8
+    operation:
+      type: tool_call
+      tool: calculator
+      arguments:
+        operation: subtract
+        a: 20
+        b: 8
+    assertions:
+      - type: success
+      - type: contains
+        path: result
+        value: '"result": 12'
+
+  - name: Test Subtraction - Negative result
+    operation:
+      type: tool_call
+      tool: calculator
+      arguments:
+        operation: subtract
+        a: 5
+        b: 10
+    assertions:
+      - type: success
+      - type: contains
+        path: result
+        value: '"result": -5'
+
+  # Test Multiplication
+  - name: Test Multiplication - 4 * 7
+    operation:
+      type: tool_call
+      tool: calculator
+      arguments:
+        operation: multiply
+        a: 4
+        b: 7
+    assertions:
+      - type: success
+      - type: contains
+        path: result
+        value: '"result": 28'
+
+  - name: Test Multiplication - By zero
+    operation:
+      type: tool_call
+      tool: calculator
+      arguments:
+        operation: multiply
+        a: 0
+        b: 100
+    assertions:
+      - type: success
+      - type: contains
+        path: result
+        value: '"result": 0'
+
+  - name: Test Multiplication - Decimals
+    operation:
+      type: tool_call
+      tool: calculator
+      arguments:
+        operation: multiply
+        a: 7.25
+        b: 4
+    assertions:
+      - type: success
+      - type: contains
+        path: result
+        value: '"result": 29'
+
+  # Test Division
+  - name: Test Division - 20 / 4
+    operation:
+      type: tool_call
+      tool: calculator
+      arguments:
+        operation: divide
+        a: 20
+        b: 4
+    assertions:
+      - type: success
+      - type: contains
+        path: result
+        value: '"result": 5'
+
+  - name: Test Division - With decimal result
+    operation:
+      type: tool_call
+      tool: calculator
+      arguments:
+        operation: divide
+        a: 10
+        b: 3
+    assertions:
+      - type: success
+      - type: contains
+        path: result
+        value: '3.333'  # Check for partial match
+
+  - name: Test Division - Negative numbers
+    operation:
+      type: tool_call
+      tool: calculator
+      arguments:
+        operation: divide
+        a: -15
+        b: 3
+    assertions:
+      - type: success
+      - type: contains
+        path: result
+        value: '"result": -5'
+
+  # Error Cases
+  - name: Test Division by Zero
+    operation:
+      type: tool_call
+      tool: calculator
+      arguments:
+        operation: divide
+        a: 10
+        b: 0
+    assertions:
+      - type: failure
+      - type: contains
+        path: error
+        value: "Division by zero"
+
+  - name: Test Invalid Operation
+    operation:
+      type: tool_call
+      tool: calculator
+      arguments:
+        operation: power
+        a: 2
+        b: 3
+    assertions:
+      - type: failure
+      - type: contains
+        path: error
+        value: "Unknown operation"
+
+  - name: Test Missing Parameter
+    operation:
+      type: tool_call
+      tool: calculator
+      arguments:
+        operation: add
+        a: 10
+        # b is missing
+    assertions:
+      - type: failure
+      - type: contains
+        path: error
+        value: "parameter 'b' is required"

@@ -215,6 +215,7 @@ async fn main() -> Result<()> {
                 cli.insecure,
                 cli.api_key.as_deref(),
                 cli.transport.as_deref(),
+                cli.verbose > 0,
             )
             .await
         },
@@ -409,6 +410,7 @@ async fn run_tools_test(
     insecure: bool,
     api_key: Option<&str>,
     transport: Option<&str>,
+    verbose: bool,
 ) -> Result<TestReport> {
     let mut tester = ServerTester::new(
         url,
@@ -421,7 +423,10 @@ async fn run_tools_test(
     println!("{}", "Discovering and testing tools...".green());
     println!();
 
-    tester.run_tools_discovery(test_all).await
+    // Pass verbose flag to the tester for detailed output
+    tester
+        .run_tools_discovery_with_verbose(test_all, verbose)
+        .await
 }
 
 async fn run_diagnostics(

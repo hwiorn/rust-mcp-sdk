@@ -237,12 +237,62 @@ impl<'a> ScenarioExecutor<'a> {
 
         match operation {
             Operation::ToolCall { tool, arguments } => {
-                let result = self.tester.test_tool(&tool, arguments).await?;
-                Ok(json!({
-                    "success": result.status == crate::report::TestStatus::Passed,
-                    "result": result.details,
-                    "error": result.error
-                }))
+                // Call the tool directly to get raw response for assertions
+                match self.tester.transport_type {
+                    crate::tester::TransportType::Http => {
+                        if let Some(ref client) = self.tester.pmcp_client {
+                            match client.call_tool(tool.clone(), arguments).await {
+                                Ok(result) => {
+                                    // Extract the text content from the response
+                                    let content_text = result
+                                        .content
+                                        .into_iter()
+                                        .filter_map(|c| match c {
+                                            pmcp::types::Content::Text { text } => Some(text),
+                                            _ => None,
+                                        })
+                                        .collect::<Vec<_>>()
+                                        .join("\n");
+
+                                    // Check if the content indicates an error
+                                    if content_text.starts_with("Error:") {
+                                        Ok(json!({
+                                            "success": false,
+                                            "result": null,
+                                            "error": content_text
+                                        }))
+                                    } else {
+                                        Ok(json!({
+                                            "success": true,
+                                            "result": content_text,
+                                            "error": null
+                                        }))
+                                    }
+                                },
+                                Err(e) => Ok(json!({
+                                    "success": false,
+                                    "result": null,
+                                    "error": e.to_string()
+                                })),
+                            }
+                        } else {
+                            Ok(json!({
+                                "success": false,
+                                "result": null,
+                                "error": "Client not initialized"
+                            }))
+                        }
+                    },
+                    _ => {
+                        // Fall back to test_tool for other transport types
+                        let result = self.tester.test_tool(&tool, arguments).await?;
+                        Ok(json!({
+                            "success": result.status == crate::report::TestStatus::Passed,
+                            "result": result.details,
+                            "error": result.error
+                        }))
+                    },
+                }
             },
 
             Operation::ListTools => {
@@ -523,7 +573,10 @@ impl<'a> ScenarioExecutor<'a> {
             },
 
             Assertion::Success => {
-                let has_error = response.get("error").is_some();
+                let has_error = response
+                    .get("error")
+                    .and_then(|e| if e.is_null() { None } else { Some(e) })
+                    .is_some();
                 AssertionResult {
                     assertion: "Success".to_string(),
                     passed: !has_error,
@@ -538,7 +591,10 @@ impl<'a> ScenarioExecutor<'a> {
             },
 
             Assertion::Failure => {
-                let has_error = response.get("error").is_some();
+                let has_error = response
+                    .get("error")
+                    .and_then(|e| if e.is_null() { None } else { Some(e) })
+                    .is_some();
                 AssertionResult {
                     assertion: "Failure".to_string(),
                     passed: has_error,
