@@ -5,7 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.5.2] - 2025-09-25
+## [1.5.3] - 2025-09-26
+
+### Fixed
+- Removed accidentally committed 96MB spin binary from package
+- Package size reduced from 98.2MB to ~2MB for successful crates.io publishing
+
+## [1.5.2] - 2025-09-25 (Failed to publish)
 
 ### Fixed
 - Release workflow to handle existing releases gracefully
