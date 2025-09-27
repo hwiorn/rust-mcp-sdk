@@ -3,6 +3,7 @@
 use crate::types::{Content, ListResourcesResult, ReadResourceResult, ResourceInfo};
 use crate::Result;
 use async_trait::async_trait;
+use base64::Engine;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;

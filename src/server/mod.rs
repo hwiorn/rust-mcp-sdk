@@ -47,6 +47,9 @@ pub mod simple_prompt;
 /// Simple resource implementations with builder pattern support.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod simple_resources;
+/// Simple tool implementations with schema support.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod simple_tool;
 
 // For WASM, provide a simple stub for RequestHandlerExtra
 #[cfg(target_arch = "wasm32")]
