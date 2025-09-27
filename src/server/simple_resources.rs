@@ -39,7 +39,7 @@ impl StaticResource {
     }
 
     /// Create a new static resource with URI and image content.
-    pub fn new_image(uri: impl Into<String>, data: Vec<u8>, mime_type: impl Into<String>) -> Self {
+    pub fn new_image(uri: impl Into<String>, data: &[u8], mime_type: impl Into<String>) -> Self {
         let uri = uri.into();
         let name = uri.rsplit('/').next().unwrap_or(&uri).to_string();
         let mime_type = mime_type.into();
@@ -50,7 +50,7 @@ impl StaticResource {
             description: None,
             mime_type: Some(mime_type.clone()),
             content: Content::Image {
-                data: base64::prelude::BASE64_STANDARD.encode(&data),
+                data: base64::prelude::BASE64_STANDARD.encode(data),
                 mime_type,
             },
         }

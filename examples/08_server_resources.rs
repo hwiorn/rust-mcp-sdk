@@ -67,7 +67,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     resources = resources.add_resource(
-        StaticResource::new_image("image://logo.png", red_pixel_png, "image/png")
+        StaticResource::new_image("image://logo.png", &red_pixel_png, "image/png")
             .with_name("Company Logo")
             .with_description("A simple red pixel logo for demonstration"),
     );
