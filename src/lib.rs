@@ -92,7 +92,9 @@ pub use error::{Error, ErrorCode, Result};
 pub use server::cancellation::RequestHandlerExtra;
 #[cfg(not(target_arch = "wasm32"))]
 pub use server::{
-    auth, PromptHandler, ResourceHandler, SamplingHandler, Server, ServerBuilder, ToolHandler,
+    auth,
+    simple_tool::{SimpleTool, SyncTool},
+    PromptHandler, ResourceHandler, SamplingHandler, Server, ServerBuilder, ToolHandler,
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use shared::StdioTransport;
