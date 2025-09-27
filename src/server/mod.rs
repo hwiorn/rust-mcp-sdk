@@ -41,6 +41,12 @@ pub mod auth;
 pub mod batch;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod cancellation;
+/// Simple prompt implementations with metadata support.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod simple_prompt;
+/// Simple resource implementations with builder pattern support.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod simple_resources;
 /// Simple tool implementations with schema support.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod simple_tool;
@@ -134,6 +140,12 @@ pub trait PromptHandler: Send + Sync {
         args: HashMap<String, String>,
         extra: cancellation::RequestHandlerExtra,
     ) -> Result<crate::types::GetPromptResult>;
+
+    /// Get prompt metadata including description and arguments schema.
+    /// Returns None to use default empty metadata.
+    fn metadata(&self) -> Option<crate::types::PromptInfo> {
+        None
+    }
 }
 
 /// Handler for resource access.

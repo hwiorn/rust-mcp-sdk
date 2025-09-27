@@ -243,7 +243,7 @@ impl ToolHandler for ValidatedDataTool {
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::INFO)
@@ -282,7 +282,8 @@ async fn main() -> Result<()> {
     println!();
 
     // Run the server
-    server.run_stdio().await
+    server.run_stdio().await?;
+    Ok(())
 }
 
 #[cfg(test)]

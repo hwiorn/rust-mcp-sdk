@@ -93,6 +93,8 @@ pub use server::cancellation::RequestHandlerExtra;
 #[cfg(not(target_arch = "wasm32"))]
 pub use server::{
     auth,
+    simple_prompt::{SimplePrompt, SyncPrompt},
+    simple_resources::{DynamicResourceHandler, ResourceCollection, StaticResource},
     simple_tool::{SimpleTool, SyncTool},
     PromptHandler, ResourceHandler, SamplingHandler, Server, ServerBuilder, ToolHandler,
 };
