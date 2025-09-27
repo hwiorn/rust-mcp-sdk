@@ -7,6 +7,7 @@ mod diagnostics;
 mod report;
 mod scenario;
 mod scenario_executor;
+mod scenario_generator;
 mod tester;
 mod validators;
 
@@ -15,7 +16,19 @@ use tester::ServerTester;
 
 #[derive(Parser)]
 #[command(name = "mcp-tester")]
-#[command(about = "Comprehensive MCP server testing tool")]
+#[command(about = "Comprehensive MCP server testing and validation tool")]
+#[command(
+    long_about = "The MCP Server Tester is a powerful tool for testing, validating, and exploring MCP servers.
+
+Key Features:
+• Protocol compliance validation with detailed error reporting
+• Tool discovery with JSON schema validation and warnings
+• Resource and prompt testing with metadata validation
+• Automated test scenario generation from server capabilities
+• Performance benchmarking and comparison between servers
+• Health monitoring and diagnostics
+• Support for multiple transport types (HTTP, stdio, JSON-RPC)"
+)]
 #[command(version)]
 struct Cli {
     #[command(subcommand)]
@@ -92,6 +105,18 @@ enum Commands {
         test_all: bool,
     },
 
+    /// List and test available resources
+    Resources {
+        /// Server URL
+        url: String,
+    },
+
+    /// List and test available prompts
+    Prompts {
+        /// Server URL
+        url: String,
+    },
+
     /// Connection diagnostics
     Diagnose {
         /// Server URL
@@ -132,6 +157,28 @@ enum Commands {
         /// Show detailed output for scenario execution
         #[arg(long)]
         detailed: bool,
+    },
+
+    /// Generate a scenario file from server's tools
+    GenerateScenario {
+        /// Server URL
+        url: String,
+
+        /// Output file path (defaults to generated_scenario.yaml)
+        #[arg(short, long, default_value = "generated_scenario.yaml")]
+        output: String,
+
+        /// Include all discovered tools (not just first few)
+        #[arg(long)]
+        all_tools: bool,
+
+        /// Include resources in scenario
+        #[arg(long)]
+        with_resources: bool,
+
+        /// Include prompts in scenario
+        #[arg(long)]
+        with_prompts: bool,
     },
 }
 
@@ -220,6 +267,30 @@ async fn main() -> Result<()> {
             .await
         },
 
+        Commands::Resources { url } => {
+            run_resources_test(
+                &url,
+                cli.timeout,
+                cli.insecure,
+                cli.api_key.as_deref(),
+                cli.transport.as_deref(),
+                cli.verbose > 0,
+            )
+            .await
+        },
+
+        Commands::Prompts { url } => {
+            run_prompts_test(
+                &url,
+                cli.timeout,
+                cli.insecure,
+                cli.api_key.as_deref(),
+                cli.transport.as_deref(),
+                cli.verbose > 0,
+            )
+            .await
+        },
+
         Commands::Diagnose { url, network } => {
             run_diagnostics(
                 &url,
@@ -275,6 +346,27 @@ async fn main() -> Result<()> {
             )
             .await
         },
+
+        Commands::GenerateScenario {
+            url,
+            output,
+            all_tools,
+            with_resources,
+            with_prompts,
+        } => {
+            generate_scenario(
+                &url,
+                &output,
+                all_tools,
+                with_resources,
+                with_prompts,
+                cli.timeout,
+                cli.insecure,
+                cli.api_key.as_deref(),
+                cli.transport.as_deref(),
+            )
+            .await
+        },
     };
 
     // Handle results and output
@@ -317,6 +409,7 @@ fn print_header() {
     println!();
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn run_full_test(
     url: &str,
     with_tools: bool,
@@ -429,6 +522,58 @@ async fn run_tools_test(
         .await
 }
 
+async fn run_resources_test(
+    url: &str,
+    timeout: u64,
+    insecure: bool,
+    api_key: Option<&str>,
+    transport: Option<&str>,
+    verbose: bool,
+) -> Result<TestReport> {
+    let mut tester = ServerTester::new(
+        url,
+        Duration::from_secs(timeout),
+        insecure,
+        api_key,
+        transport,
+    )?;
+
+    println!("{}", "Discovering and testing resources...".green());
+    println!();
+
+    if verbose {
+        println!("Connecting to {}...", url);
+    }
+
+    tester.run_resources_discovery().await
+}
+
+async fn run_prompts_test(
+    url: &str,
+    timeout: u64,
+    insecure: bool,
+    api_key: Option<&str>,
+    transport: Option<&str>,
+    verbose: bool,
+) -> Result<TestReport> {
+    let mut tester = ServerTester::new(
+        url,
+        Duration::from_secs(timeout),
+        insecure,
+        api_key,
+        transport,
+    )?;
+
+    println!("{}", "Discovering and testing prompts...".green());
+    println!();
+
+    if verbose {
+        println!("Connecting to {}...", url);
+    }
+
+    tester.run_prompts_discovery().await
+}
+
 async fn run_diagnostics(
     url: &str,
     network: bool,
@@ -504,6 +649,46 @@ async fn run_health_check(
     println!();
 
     tester.run_health_check().await
+}
+
+async fn generate_scenario(
+    url: &str,
+    output: &str,
+    all_tools: bool,
+    with_resources: bool,
+    with_prompts: bool,
+    timeout: u64,
+    insecure: bool,
+    api_key: Option<&str>,
+    transport: Option<&str>,
+) -> Result<TestReport> {
+    use scenario_generator::ScenarioGenerator;
+
+    let mut tester = ServerTester::new(
+        url,
+        Duration::from_secs(timeout),
+        insecure,
+        api_key,
+        transport,
+    )?;
+
+    let generator =
+        ScenarioGenerator::new(url.to_string(), all_tools, with_resources, with_prompts);
+
+    generator.generate(&mut tester, output).await?;
+
+    // Return a simple success report
+    let mut report = TestReport::new();
+    report.add_test(crate::report::TestResult {
+        name: "Generate Scenario".to_string(),
+        category: crate::report::TestCategory::Core,
+        status: crate::report::TestStatus::Passed,
+        duration: Duration::from_secs(0),
+        error: None,
+        details: Some(format!("Scenario generated successfully: {}", output)),
+    });
+
+    Ok(report)
 }
 
 async fn run_scenario(

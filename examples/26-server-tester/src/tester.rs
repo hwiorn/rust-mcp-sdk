@@ -4,7 +4,10 @@ use pmcp::{
         streamable_http::{StreamableHttpTransport, StreamableHttpTransportConfig},
         StdioTransport,
     },
-    types::{ClientCapabilities, InitializeResult, ListToolsResult, ToolInfo},
+    types::{
+        ClientCapabilities, InitializeResult, ListPromptsResult, ListResourcesResult,
+        ListToolsResult, PromptInfo, ResourceInfo, ServerCapabilities, ToolInfo,
+    },
 };
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -51,7 +54,10 @@ pub struct ServerTester {
     #[allow(dead_code)]
     force_transport: Option<String>,
     server_info: Option<InitializeResult>,
+    server_capabilities: Option<ServerCapabilities>,
     tools: Option<Vec<ToolInfo>>,
+    resources: Option<Vec<ResourceInfo>>,
+    prompts: Option<Vec<PromptInfo>>,
     // Store the initialized pmcp client for reuse across tests
     pub pmcp_client: Option<pmcp::Client<StreamableHttpTransport>>,
     stdio_client: Option<pmcp::Client<StdioTransport>>,
@@ -151,7 +157,10 @@ impl ServerTester {
             api_key: api_key.map(|s| s.to_string()),
             force_transport: force_transport.map(|s| s.to_string()),
             server_info: None,
+            server_capabilities: None,
             tools: None,
+            resources: None,
+            prompts: None,
             pmcp_client: None,
             stdio_client: None,
         })
@@ -241,6 +250,22 @@ impl ServerTester {
                 }
             }
 
+            // Resources discovery and testing if advertised
+            if let Some(caps) = &self.server_capabilities {
+                if caps.resources.is_some() {
+                    let resources_result = self.test_resources_list().await;
+                    report.add_test(resources_result.clone());
+                }
+            }
+
+            // Prompts discovery and testing if advertised
+            if let Some(caps) = &self.server_capabilities {
+                if caps.prompts.is_some() {
+                    let prompts_result = self.test_prompts_list().await;
+                    report.add_test(prompts_result.clone());
+                }
+            }
+
             // Test error handling
             report.add_test(self.test_error_handling().await);
         }
@@ -287,8 +312,81 @@ impl ServerTester {
         Ok(report)
     }
 
+    #[allow(dead_code)]
     pub async fn run_tools_discovery(&mut self, test_all: bool) -> Result<TestReport> {
         self.run_tools_discovery_with_verbose(test_all, false).await
+    }
+
+    pub async fn run_resources_discovery(&mut self) -> Result<TestReport> {
+        let mut report = TestReport::new();
+        let start = Instant::now();
+
+        // Initialize first
+        let init_result = self.test_initialize().await;
+        report.add_test(init_result.clone());
+
+        if init_result.status != TestStatus::Passed {
+            report.duration = start.elapsed();
+            return Ok(report);
+        }
+
+        // Check if resources are advertised
+        if let Some(caps) = &self.server_capabilities {
+            if caps.resources.is_none() {
+                report.add_test(TestResult {
+                    name: "Resources support".to_string(),
+                    category: TestCategory::Resources,
+                    status: TestStatus::Skipped,
+                    duration: Duration::from_secs(0),
+                    error: None,
+                    details: Some("Server does not advertise resource capabilities".to_string()),
+                });
+                report.duration = start.elapsed();
+                return Ok(report);
+            }
+        }
+
+        // List and validate resources
+        report.add_test(self.test_resources_list().await);
+
+        report.duration = start.elapsed();
+        Ok(report)
+    }
+
+    pub async fn run_prompts_discovery(&mut self) -> Result<TestReport> {
+        let mut report = TestReport::new();
+        let start = Instant::now();
+
+        // Initialize first
+        let init_result = self.test_initialize().await;
+        report.add_test(init_result.clone());
+
+        if init_result.status != TestStatus::Passed {
+            report.duration = start.elapsed();
+            return Ok(report);
+        }
+
+        // Check if prompts are advertised
+        if let Some(caps) = &self.server_capabilities {
+            if caps.prompts.is_none() {
+                report.add_test(TestResult {
+                    name: "Prompts support".to_string(),
+                    category: TestCategory::Prompts,
+                    status: TestStatus::Skipped,
+                    duration: Duration::from_secs(0),
+                    error: None,
+                    details: Some("Server does not advertise prompt capabilities".to_string()),
+                });
+                report.duration = start.elapsed();
+                return Ok(report);
+            }
+        }
+
+        // List and validate prompts
+        report.add_test(self.test_prompts_list().await);
+
+        report.duration = start.elapsed();
+        Ok(report)
     }
 
     pub async fn run_tools_discovery_with_verbose(
@@ -327,12 +425,69 @@ impl ServerTester {
             if tools_result.status == TestStatus::Passed {
                 if let Some(ref tools) = self.tools {
                     println!("  ✓ Found {} tools:", tools.len());
+
+                    // Track overall schema validation results
+                    let mut total_warnings = Vec::new();
+
                     for tool in tools {
                         println!(
                             "    • {} - {}",
                             tool.name,
                             tool.description.as_deref().unwrap_or("No description")
                         );
+
+                        // Validate the tool schema
+                        let schema_warnings = self.validate_tool_schema(tool);
+                        if !schema_warnings.is_empty() {
+                            for warning in &schema_warnings {
+                                println!("      ⚠ {}", warning);
+                            }
+                            total_warnings.extend(schema_warnings);
+                        } else {
+                            println!("      ✓ Schema properly defined");
+                        }
+                    }
+
+                    // Print summary of schema validation
+                    if !total_warnings.is_empty() {
+                        println!("\n  Schema Validation Summary:");
+                        println!("  ⚠ {} total warnings found", total_warnings.len());
+
+                        // Count by type
+                        let missing_desc = total_warnings
+                            .iter()
+                            .filter(|w| w.contains("missing description"))
+                            .count();
+                        let empty_schema = total_warnings
+                            .iter()
+                            .filter(|w| w.contains("empty input schema"))
+                            .count();
+                        let missing_type = total_warnings
+                            .iter()
+                            .filter(|w| w.contains("missing 'type' field"))
+                            .count();
+                        let missing_props = total_warnings
+                            .iter()
+                            .filter(|w| w.contains("missing 'properties' field"))
+                            .count();
+
+                        if missing_desc > 0 {
+                            println!("    - {} tools missing description", missing_desc);
+                        }
+                        if empty_schema > 0 {
+                            println!("    - {} tools with empty schema", empty_schema);
+                        }
+                        if missing_type > 0 {
+                            println!("    - {} tools missing 'type' in schema", missing_type);
+                        }
+                        if missing_props > 0 {
+                            println!(
+                                "    - {} tools missing 'properties' in schema",
+                                missing_props
+                            );
+                        }
+                    } else {
+                        println!("\n  ✓ All tools have properly defined schemas");
                     }
                 } else {
                     println!("  ✓ No tools found");
@@ -584,7 +739,7 @@ impl ServerTester {
         }
     }
 
-    async fn test_initialize(&mut self) -> TestResult {
+    pub async fn test_initialize(&mut self) -> TestResult {
         let start = Instant::now();
         let name = "Initialize".to_string();
 
@@ -691,6 +846,7 @@ impl ServerTester {
         match result {
             Ok(result) => {
                 self.server_info = Some(result.clone());
+                self.server_capabilities = Some(result.capabilities.clone());
 
                 TestResult {
                     name,
@@ -793,7 +949,7 @@ impl ServerTester {
         }
     }
 
-    async fn test_tools_list(&mut self) -> TestResult {
+    pub async fn test_tools_list(&mut self) -> TestResult {
         let start = Instant::now();
         let name = "List Tools".to_string();
 
@@ -1033,6 +1189,306 @@ impl ServerTester {
                 })
             },
         }
+    }
+
+    async fn test_resources_list(&mut self) -> TestResult {
+        let start = Instant::now();
+        let name = "List Resources".to_string();
+
+        // Check if resources capability is advertised
+        if let Some(ref info) = self.server_info {
+            if info.capabilities.resources.is_none() {
+                return TestResult {
+                    name,
+                    category: TestCategory::Resources,
+                    status: TestStatus::Skipped,
+                    duration: start.elapsed(),
+                    error: None,
+                    details: Some("Resources capability not advertised".to_string()),
+                };
+            }
+        }
+
+        // Use the stored initialized client
+        let result = match self.transport_type {
+            TransportType::Http => {
+                if let Some(ref client) = self.pmcp_client {
+                    client.list_resources(None).await
+                } else {
+                    return TestResult {
+                        name,
+                        category: TestCategory::Resources,
+                        status: TestStatus::Failed,
+                        duration: start.elapsed(),
+                        error: Some(
+                            "Client not initialized - please run initialize test first".to_string(),
+                        ),
+                        details: None,
+                    };
+                }
+            },
+            TransportType::Stdio => {
+                return TestResult {
+                    name,
+                    category: TestCategory::Resources,
+                    status: TestStatus::Skipped,
+                    duration: start.elapsed(),
+                    error: None,
+                    details: Some(
+                        "Stdio transport doesn't support multiple operations in tester".to_string(),
+                    ),
+                };
+            },
+            TransportType::JsonRpcHttp => {
+                let request = JsonRpcRequest {
+                    jsonrpc: "2.0".to_string(),
+                    method: "resources/list".to_string(),
+                    params: None,
+                    id: Some(json!(4)),
+                };
+
+                match self.send_json_rpc_request(request).await {
+                    Ok(response) => {
+                        if let Some(error) = response.error {
+                            Err(pmcp::Error::Internal(format!(
+                                "JSON-RPC error: {:?}",
+                                error
+                            )))
+                        } else if let Some(result) = response.result {
+                            match serde_json::from_value::<ListResourcesResult>(result) {
+                                Ok(resources) => Ok(resources),
+                                Err(e) => Err(pmcp::Error::Internal(e.to_string())),
+                            }
+                        } else {
+                            Err(pmcp::Error::Internal("Empty response".to_string()))
+                        }
+                    },
+                    Err(e) => Err(pmcp::Error::Internal(e.to_string())),
+                }
+            },
+        };
+
+        match result {
+            Ok(resources) => {
+                let count = resources.resources.len();
+                self.resources = Some(resources.resources.clone());
+
+                // Check for missing MIME types
+                let missing_mime_types: Vec<String> = resources
+                    .resources
+                    .iter()
+                    .filter(|r| r.mime_type.is_none())
+                    .map(|r| r.name.clone())
+                    .collect();
+
+                let details = if missing_mime_types.is_empty() {
+                    format!("Found {} resources", count)
+                } else {
+                    format!(
+                        "Found {} resources. Warning: {} resources missing MIME type: {}",
+                        count,
+                        missing_mime_types.len(),
+                        missing_mime_types.join(", ")
+                    )
+                };
+
+                TestResult {
+                    name,
+                    category: TestCategory::Resources,
+                    status: if missing_mime_types.is_empty() {
+                        TestStatus::Passed
+                    } else {
+                        TestStatus::Warning
+                    },
+                    duration: start.elapsed(),
+                    error: None,
+                    details: Some(details),
+                }
+            },
+            Err(e) => TestResult {
+                name,
+                category: TestCategory::Resources,
+                status: TestStatus::Failed,
+                duration: start.elapsed(),
+                error: Some(e.to_string()),
+                details: None,
+            },
+        }
+    }
+
+    async fn test_prompts_list(&mut self) -> TestResult {
+        let start = Instant::now();
+        let name = "List Prompts".to_string();
+
+        // Check if prompts capability is advertised
+        if let Some(ref info) = self.server_info {
+            if info.capabilities.prompts.is_none() {
+                return TestResult {
+                    name,
+                    category: TestCategory::Prompts,
+                    status: TestStatus::Skipped,
+                    duration: start.elapsed(),
+                    error: None,
+                    details: Some("Prompts capability not advertised".to_string()),
+                };
+            }
+        }
+
+        // Use the stored initialized client
+        let result = match self.transport_type {
+            TransportType::Http => {
+                if let Some(ref client) = self.pmcp_client {
+                    client.list_prompts(None).await
+                } else {
+                    return TestResult {
+                        name,
+                        category: TestCategory::Prompts,
+                        status: TestStatus::Failed,
+                        duration: start.elapsed(),
+                        error: Some(
+                            "Client not initialized - please run initialize test first".to_string(),
+                        ),
+                        details: None,
+                    };
+                }
+            },
+            TransportType::Stdio => {
+                return TestResult {
+                    name,
+                    category: TestCategory::Prompts,
+                    status: TestStatus::Skipped,
+                    duration: start.elapsed(),
+                    error: None,
+                    details: Some(
+                        "Stdio transport doesn't support multiple operations in tester".to_string(),
+                    ),
+                };
+            },
+            TransportType::JsonRpcHttp => {
+                let request = JsonRpcRequest {
+                    jsonrpc: "2.0".to_string(),
+                    method: "prompts/list".to_string(),
+                    params: None,
+                    id: Some(json!(5)),
+                };
+
+                match self.send_json_rpc_request(request).await {
+                    Ok(response) => {
+                        if let Some(error) = response.error {
+                            Err(pmcp::Error::Internal(format!(
+                                "JSON-RPC error: {:?}",
+                                error
+                            )))
+                        } else if let Some(result) = response.result {
+                            match serde_json::from_value::<ListPromptsResult>(result) {
+                                Ok(prompts) => Ok(prompts),
+                                Err(e) => Err(pmcp::Error::Internal(e.to_string())),
+                            }
+                        } else {
+                            Err(pmcp::Error::Internal("Empty response".to_string()))
+                        }
+                    },
+                    Err(e) => Err(pmcp::Error::Internal(e.to_string())),
+                }
+            },
+        };
+
+        match result {
+            Ok(prompts) => {
+                let count = prompts.prompts.len();
+                self.prompts = Some(prompts.prompts.clone());
+
+                // Check for missing descriptions or arguments
+                let missing_descriptions: Vec<String> = prompts
+                    .prompts
+                    .iter()
+                    .filter(|p| p.description.is_none())
+                    .map(|p| p.name.clone())
+                    .collect();
+
+                let missing_arguments: Vec<String> = prompts
+                    .prompts
+                    .iter()
+                    .filter(|p| {
+                        p.arguments.is_none() || p.arguments.as_ref().is_some_and(|a| a.is_empty())
+                    })
+                    .map(|p| p.name.clone())
+                    .collect();
+
+                let mut warnings = Vec::new();
+                if !missing_descriptions.is_empty() {
+                    warnings.push(format!(
+                        "{} prompts missing description: {}",
+                        missing_descriptions.len(),
+                        missing_descriptions.join(", ")
+                    ));
+                }
+                if !missing_arguments.is_empty() {
+                    warnings.push(format!(
+                        "{} prompts missing argument definitions: {}",
+                        missing_arguments.len(),
+                        missing_arguments.join(", ")
+                    ));
+                }
+
+                let details = if warnings.is_empty() {
+                    format!("Found {} prompts with complete metadata", count)
+                } else {
+                    format!("Found {} prompts. Warnings: {}", count, warnings.join("; "))
+                };
+
+                TestResult {
+                    name,
+                    category: TestCategory::Prompts,
+                    status: if warnings.is_empty() {
+                        TestStatus::Passed
+                    } else {
+                        TestStatus::Warning
+                    },
+                    duration: start.elapsed(),
+                    error: None,
+                    details: Some(details),
+                }
+            },
+            Err(e) => TestResult {
+                name,
+                category: TestCategory::Prompts,
+                status: TestStatus::Failed,
+                duration: start.elapsed(),
+                error: Some(e.to_string()),
+                details: None,
+            },
+        }
+    }
+
+    fn validate_tool_schema(&self, tool: &ToolInfo) -> Vec<String> {
+        let mut warnings = Vec::new();
+
+        // Check if description is missing
+        if tool.description.is_none() || tool.description.as_ref().is_some_and(|d| d.is_empty()) {
+            warnings.push(format!("Tool '{}' missing description", tool.name));
+        }
+
+        // Check if schema is empty or just {}
+        if tool.input_schema == json!({}) {
+            warnings.push(format!(
+                "Tool '{}' has empty input schema - consider defining parameters",
+                tool.name
+            ));
+        } else if let Some(obj) = tool.input_schema.as_object() {
+            // Check for common JSON Schema properties
+            if !obj.contains_key("type") {
+                warnings.push(format!("Tool '{}' schema missing 'type' field", tool.name));
+            }
+            if obj.get("type") == Some(&json!("object")) && !obj.contains_key("properties") {
+                warnings.push(format!(
+                    "Tool '{}' schema missing 'properties' field for object type",
+                    tool.name
+                ));
+            }
+        }
+
+        warnings
     }
 
     async fn test_error_handling(&self) -> TestResult {
@@ -1412,11 +1868,7 @@ impl ServerTester {
                 "Server1: {:?}, Server2: {:?} (diff: {:?})",
                 latency1,
                 latency2,
-                if latency1 > latency2 {
-                    latency1 - latency2
-                } else {
-                    latency2 - latency1
-                }
+                latency1.abs_diff(latency2)
             )),
         }
     }
@@ -1483,24 +1935,50 @@ impl ServerTester {
         })
     }
 
-    pub async fn list_resources(&mut self) -> Result<pmcp::types::ListResourcesResult> {
-        // For now, return empty resources
-        // This would need to be implemented based on the transport type
-        Ok(pmcp::types::ListResourcesResult {
-            resources: vec![],
-            next_cursor: None,
-        })
-    }
-
     pub async fn read_resource(&mut self, _uri: &str) -> Result<pmcp::types::ReadResourceResult> {
         // For now, return empty resource
         // This would need to be implemented based on the transport type
         Ok(pmcp::types::ReadResourceResult { contents: vec![] })
     }
 
+    pub fn get_tools(&self) -> Option<&Vec<ToolInfo>> {
+        self.tools.as_ref()
+    }
+
+    pub fn get_server_name(&self) -> Option<String> {
+        self.server_info
+            .as_ref()
+            .map(|info| info.server_info.name.clone())
+    }
+
+    pub async fn list_resources(&mut self) -> Result<pmcp::types::ListResourcesResult> {
+        // Try to use existing client if initialized
+        if let Some(client) = &mut self.pmcp_client {
+            return client.list_resources(None).await.map_err(|e| e.into());
+        }
+
+        if let Some(client) = &mut self.stdio_client {
+            return client.list_resources(None).await.map_err(|e| e.into());
+        }
+
+        // Fallback implementation
+        Ok(pmcp::types::ListResourcesResult {
+            resources: vec![],
+            next_cursor: None,
+        })
+    }
+
     pub async fn list_prompts(&mut self) -> Result<pmcp::types::ListPromptsResult> {
-        // For now, return empty prompts
-        // This would need to be implemented based on the transport type
+        // Try to use existing client if initialized
+        if let Some(client) = &mut self.pmcp_client {
+            return client.list_prompts(None).await.map_err(|e| e.into());
+        }
+
+        if let Some(client) = &mut self.stdio_client {
+            return client.list_prompts(None).await.map_err(|e| e.into());
+        }
+
+        // Fallback implementation
         Ok(pmcp::types::ListPromptsResult {
             prompts: vec![],
             next_cursor: None,

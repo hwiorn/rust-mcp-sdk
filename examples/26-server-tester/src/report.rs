@@ -27,6 +27,7 @@ pub enum TestCategory {
     Protocol,
     Tools,
     Resources,
+    Prompts,
     Performance,
 }
 
@@ -133,10 +134,7 @@ impl TestReport {
 
         for test in &self.tests {
             let category = format!("{:?}", test.category);
-            by_category
-                .entry(category)
-                .or_insert_with(Vec::new)
-                .push(test);
+            by_category.entry(category).or_default().push(test);
         }
 
         // Print each category

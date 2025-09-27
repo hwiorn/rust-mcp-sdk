@@ -399,7 +399,7 @@ impl Validator {
             } else {
                 let code_num = code.as_i64().unwrap();
                 // Standard error codes
-                let standard_codes = vec![
+                let standard_codes = [
                     (-32700, "Parse error"),
                     (-32600, "Invalid Request"),
                     (-32601, "Method not found"),
@@ -409,9 +409,9 @@ impl Validator {
 
                 let is_standard = standard_codes.iter().any(|(c, _)| *c == code_num);
 
-                if !is_standard && !(code_num >= -32099 && code_num <= -32000) {
+                if !(is_standard || (-32099..=-32000).contains(&code_num)) {
                     result.add_info("error_code", code_num.to_string());
-                    if code_num < -32768 || code_num > -32000 {
+                    if !(-32768..=-32000).contains(&code_num) {
                         result.add_warning(format!("Non-standard error code: {}", code_num));
                     }
                 }
