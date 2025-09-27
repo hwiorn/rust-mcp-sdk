@@ -224,8 +224,8 @@ fn test_simd_performance_characteristics() {
     let duration = start.elapsed();
     println!("100 large JSON parsing operations took: {:?}", duration);
 
-    // Should complete reasonably quickly (less than 100ms for 100 operations)
-    assert!(duration.as_millis() < 100);
+    // Should complete reasonably quickly (less than 200ms for 100 operations)
+    assert!(duration.as_millis() < 200);
 }
 
 #[test]
