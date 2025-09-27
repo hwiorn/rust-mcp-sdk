@@ -15,17 +15,8 @@ use pmcp::{
 use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
-
-// Type alias for async prompt handler
-type AsyncPromptHandler = Box<
-    dyn Fn(
-            HashMap<String, String>,
-            pmcp::RequestHandlerExtra,
-        ) -> Pin<Box<dyn Future<Output = pmcp::Result<GetPromptResult>> + Send>>
-        + Send
-        + Sync,
->;
-
+// Import AsyncPromptHandler from the pmcp crate
+use pmcp::types::AsyncPromptHandler;
 // Create code review prompt using SimplePrompt
 fn create_code_review_prompt() -> SimplePrompt<AsyncPromptHandler> {
     SimplePrompt::new(
