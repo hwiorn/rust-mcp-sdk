@@ -49,7 +49,7 @@ impl StaticResource {
             description: None,
             mime_type: Some(mime_type.clone()),
             content: Content::Image {
-                data: base64::Engine::encode(&base64::prelude::BASE64_STANDARD, data),
+                data: base64::prelude::BASE64_STANDARD.encode(&data),
                 mime_type,
             },
         }
