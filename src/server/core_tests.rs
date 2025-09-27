@@ -260,6 +260,76 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_tool_schema_in_list() {
+        use crate::server::simple_tool::SyncTool;
+
+        let tool_with_schema = SyncTool::new("math_tool", |args| {
+            let a = args.get("a").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let b = args.get("b").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            Ok(json!({ "result": a + b }))
+        })
+        .with_description("Adds two numbers")
+        .with_schema(json!({
+            "type": "object",
+            "properties": {
+                "a": { "type": "number", "description": "First number" },
+                "b": { "type": "number", "description": "Second number" }
+            },
+            "required": ["a", "b"]
+        }));
+
+        let server = ServerCoreBuilder::new()
+            .name("test-server")
+            .version("1.0.0")
+            .tool("math_tool", tool_with_schema)
+            .tool("plain_tool", MockTool::new())
+            .build()
+            .unwrap();
+
+        // Initialize
+        server
+            .handle_request(RequestId::from(1i64), create_init_request())
+            .await;
+
+        // List tools
+        let request = Request::Client(Box::new(ClientRequest::ListTools(ListToolsParams {
+            cursor: None,
+        })));
+
+        let response = server.handle_request(RequestId::from(2i64), request).await;
+
+        match response.payload {
+            crate::types::jsonrpc::ResponsePayload::Result(result) => {
+                let tools_result: ListToolsResult = serde_json::from_value(result).unwrap();
+                assert_eq!(tools_result.tools.len(), 2);
+
+                // Check tool with schema
+                let math_tool = tools_result
+                    .tools
+                    .iter()
+                    .find(|t| t.name == "math_tool")
+                    .expect("math_tool not found");
+
+                assert_eq!(math_tool.description.as_deref(), Some("Adds two numbers"));
+                assert_eq!(math_tool.input_schema["type"], "object");
+                assert_eq!(math_tool.input_schema["required"], json!(["a", "b"]));
+                assert_eq!(math_tool.input_schema["properties"]["a"]["type"], "number");
+
+                // Check plain tool has default empty schema
+                let plain_tool = tools_result
+                    .tools
+                    .iter()
+                    .find(|t| t.name == "plain_tool")
+                    .expect("plain_tool not found");
+
+                assert_eq!(plain_tool.description, None);
+                assert_eq!(plain_tool.input_schema, json!({}));
+            },
+            _ => panic!("Expected successful tools list"),
+        }
+    }
+
+    #[tokio::test]
     async fn test_tool_invocation() {
         let tool = Arc::new(MockTool::with_return(json!({
             "result": "computed",

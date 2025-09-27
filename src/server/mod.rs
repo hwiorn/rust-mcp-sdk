@@ -110,6 +110,8 @@ mod wasi_protocol {
 mod adapter_tests;
 #[cfg(test)]
 mod core_tests;
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod simple_tool_tests;
 
 /// Handler for tool execution.
 #[cfg(not(target_arch = "wasm32"))]
@@ -117,6 +119,12 @@ mod core_tests;
 pub trait ToolHandler: Send + Sync {
     /// Handle a tool call with the given arguments.
     async fn handle(&self, args: Value, extra: cancellation::RequestHandlerExtra) -> Result<Value>;
+
+    /// Get tool metadata including description and schema.
+    /// Returns None to use default empty metadata.
+    fn metadata(&self) -> Option<crate::types::ToolInfo> {
+        None
+    }
 }
 
 /// Handler for prompt generation.

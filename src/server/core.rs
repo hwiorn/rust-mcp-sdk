@@ -192,11 +192,20 @@ impl ServerCore {
     async fn handle_list_tools(&self, _req: &ListToolsParams) -> Result<ListToolsResult> {
         let tools = self
             .tools
-            .keys()
-            .map(|name| ToolInfo {
-                name: name.clone(),
-                description: None,
-                input_schema: serde_json::json!({}),
+            .iter()
+            .map(|(name, handler)| {
+                // Use tool metadata if provided, otherwise use defaults
+                if let Some(mut info) = handler.metadata() {
+                    // Ensure the name matches the registered name
+                    info.name.clone_from(name);
+                    info
+                } else {
+                    ToolInfo {
+                        name: name.clone(),
+                        description: None,
+                        input_schema: serde_json::json!({}),
+                    }
+                }
             })
             .collect();
 

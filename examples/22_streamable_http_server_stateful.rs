@@ -22,7 +22,8 @@
 use async_trait::async_trait;
 use pmcp::server::streamable_http_server::StreamableHttpServer;
 use pmcp::types::capabilities::ServerCapabilities;
-use pmcp::{Server, ToolHandler};
+use pmcp::types::ToolInfo;
+use pmcp::{Server, SimpleTool, SyncTool, ToolHandler};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::net::{Ipv4Addr, SocketAddr};
@@ -100,6 +101,32 @@ impl ToolHandler for CalculatorTool {
             expression,
         })?)
     }
+
+    fn metadata(&self) -> Option<ToolInfo> {
+        Some(ToolInfo {
+            name: "calculate".to_string(),
+            description: Some("Perform basic arithmetic operations".to_string()),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["add", "subtract", "multiply", "divide"],
+                        "description": "The operation to perform"
+                    },
+                    "a": {
+                        "type": "number",
+                        "description": "First operand"
+                    },
+                    "b": {
+                        "type": "number",
+                        "description": "Second operand"
+                    }
+                },
+                "required": ["operation", "a", "b"]
+            }),
+        })
+    }
 }
 
 /// Session info tool - returns information about the current session
@@ -128,6 +155,110 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
     info!("Starting Stateful Streamable HTTP Server Example");
 
+    // Create an advanced math tool using SimpleTool with schema
+    let advanced_math_tool = SimpleTool::new(
+        "advanced_math",
+        Box::new(|args: Value, _extra: pmcp::RequestHandlerExtra| {
+            Box::pin(async move {
+                let func = args
+                    .get("function")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| pmcp::Error::validation("Missing function parameter"))?;
+                let x = args
+                    .get("x")
+                    .and_then(|v| v.as_f64())
+                    .ok_or_else(|| pmcp::Error::validation("Missing x parameter"))?;
+
+                let result = match func {
+                    "sin" => x.sin(),
+                    "cos" => x.cos(),
+                    "tan" => x.tan(),
+                    "sqrt" => {
+                        if x < 0.0 {
+                            return Err(pmcp::Error::validation(
+                                "Cannot take square root of negative number",
+                            ));
+                        }
+                        x.sqrt()
+                    },
+                    "ln" => {
+                        if x <= 0.0 {
+                            return Err(pmcp::Error::validation(
+                                "Cannot take natural log of non-positive number",
+                            ));
+                        }
+                        x.ln()
+                    },
+                    _ => {
+                        return Err(pmcp::Error::validation(format!(
+                            "Unknown function: {}",
+                            func
+                        )))
+                    },
+                };
+
+                Ok(json!({
+                    "result": result,
+                    "function": func,
+                    "input": x
+                }))
+            })
+                as std::pin::Pin<Box<dyn std::future::Future<Output = pmcp::Result<Value>> + Send>>
+        }),
+    )
+    .with_description("Perform advanced mathematical functions")
+    .with_schema(json!({
+        "type": "object",
+        "properties": {
+            "function": {
+                "type": "string",
+                "enum": ["sin", "cos", "tan", "sqrt", "ln"],
+                "description": "The mathematical function to apply"
+            },
+            "x": {
+                "type": "number",
+                "description": "The input value"
+            }
+        },
+        "required": ["function", "x"]
+    }));
+
+    // Create a simple random tool using SyncTool
+    let random_tool = SyncTool::new("random", |args| {
+        let min = args.get("min").and_then(|v| v.as_f64()).unwrap_or(0.0);
+        let max = args.get("max").and_then(|v| v.as_f64()).unwrap_or(1.0);
+
+        // Simple pseudo-random using system time
+        let seed = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as f64;
+        let random = ((seed * 9.869604401089358) % 1.0).abs();
+        let value = min + (max - min) * random;
+
+        Ok(json!({
+            "value": value,
+            "min": min,
+            "max": max
+        }))
+    })
+    .with_description("Generate a random number within a range")
+    .with_schema(json!({
+        "type": "object",
+        "properties": {
+            "min": {
+                "type": "number",
+                "description": "Minimum value (inclusive)",
+                "default": 0
+            },
+            "max": {
+                "type": "number",
+                "description": "Maximum value (exclusive)",
+                "default": 1
+            }
+        }
+    }));
+
     // Build the MCP server with tools
     let server = Server::builder()
         .name("stateful-http-example")
@@ -136,6 +267,8 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         .tool("echo", EchoTool)
         .tool("calculate", CalculatorTool)
         .tool("session_info", SessionInfoTool)
+        .tool("advanced_math", advanced_math_tool)
+        .tool("random", random_tool)
         .build()
         .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
@@ -174,8 +307,10 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     println!("╠════════════════════════════════════════════════════════════╣");
     println!("║ Available Tools:                                           ║");
     println!("║ • echo         - Echo back messages                       ║");
-    println!("║ • calculate    - Perform arithmetic                       ║");
+    println!("║ • calculate    - Perform arithmetic (with schema)         ║");
     println!("║ • session_info - Get session information                  ║");
+    println!("║ • advanced_math- Advanced math functions (with schema)    ║");
+    println!("║ • random       - Random number generator (with schema)    ║");
     println!("╠════════════════════════════════════════════════════════════╣");
     println!("║ Connect with:                                              ║");
     println!("║ cargo run --example 24_streamable_http_client             ║");
