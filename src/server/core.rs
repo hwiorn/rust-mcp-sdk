@@ -244,11 +244,20 @@ impl ServerCore {
     async fn handle_list_prompts(&self, _req: &ListPromptsParams) -> Result<ListPromptsResult> {
         let prompts = self
             .prompts
-            .keys()
-            .map(|name| PromptInfo {
-                name: name.clone(),
-                description: None,
-                arguments: None,
+            .iter()
+            .map(|(name, handler)| {
+                // Use prompt metadata if provided, otherwise use defaults
+                if let Some(mut info) = handler.metadata() {
+                    // Ensure the name matches the registered name
+                    info.name.clone_from(name);
+                    info
+                } else {
+                    PromptInfo {
+                        name: name.clone(),
+                        description: None,
+                        arguments: None,
+                    }
+                }
             })
             .collect();
 
