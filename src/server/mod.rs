@@ -51,6 +51,34 @@ pub mod simple_resources;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod simple_tool;
 
+/// Typed tool implementations with automatic schema generation.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod typed_tool;
+
+/// Validation helpers for typed tools.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod validation;
+
+/// Schema utilities for normalizing and inlining JSON schemas.
+#[cfg(feature = "schema-generation")]
+pub mod schema_utils;
+
+/// Standard error codes for validation with client elicitation support.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod error_codes;
+
+/// Cross-platform path validation with security constraints.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod path_validation;
+
+/// Enhanced typed tools with optional output typing.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod typed_tool_v2;
+
+/// WASM-compatible typed tools with automatic schema generation.
+#[cfg(target_arch = "wasm32")]
+pub mod wasm_typed_tool;
+
 // For WASM, provide a simple stub for RequestHandlerExtra
 #[cfg(target_arch = "wasm32")]
 pub mod cancellation {
@@ -1349,6 +1377,128 @@ impl ServerBuilder {
     /// ```
     pub fn tool(mut self, name: impl Into<String>, handler: impl ToolHandler + 'static) -> Self {
         self.tools.insert(name.into(), Arc::new(handler));
+        self
+    }
+
+    /// Add a type-safe tool handler with automatic schema generation.
+    ///
+    /// This method provides first-class support for creating tools with:
+    /// - Automatic JSON schema generation from Rust types
+    /// - Compile-time type safety
+    /// - Runtime validation
+    /// - Field descriptions from doc comments
+    ///
+    /// # Example
+    /// ```no_run
+    /// # #[cfg(feature = "schema-generation")]
+    /// # {
+    /// use pmcp::ServerBuilder;
+    /// use schemars::JsonSchema;
+    /// use serde::{Deserialize, Serialize};
+    ///
+    /// #[derive(Debug, Deserialize, Serialize, JsonSchema)]
+    /// struct EchoArgs {
+    ///     /// The message to echo
+    ///     message: String,
+    ///     /// Optional prefix
+    ///     prefix: Option<String>,
+    /// }
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), pmcp::Error> {
+    /// let server = ServerBuilder::new()
+    ///     .name("example")
+    ///     .tool_typed("echo", |args: EchoArgs, _| {
+    ///         Box::pin(async move {
+    ///             let message = match args.prefix {
+    ///                 Some(p) => format!("{}: {}", p, args.message),
+    ///                 None => args.message,
+    ///             };
+    ///             Ok(serde_json::json!({ "message": message }))
+    ///         })
+    ///     })
+    ///     .build();
+    /// # Ok::<(), pmcp::Error>(())
+    /// # }
+    /// # }
+    /// ```
+    #[cfg(feature = "schema-generation")]
+    pub fn tool_typed<T, F, Fut>(mut self, name: impl Into<String>, handler: F) -> Self
+    where
+        T: serde::de::DeserializeOwned + schemars::JsonSchema + Send + Sync + 'static,
+        F: Fn(T, crate::RequestHandlerExtra) -> Fut + Send + Sync + 'static,
+        Fut: std::future::Future<Output = crate::Result<serde_json::Value>> + Send + 'static,
+    {
+        use crate::server::typed_tool::TypedTool;
+        use std::pin::Pin;
+
+        let name_str = name.into();
+
+        // Wrap the handler to return Pin<Box<dyn Future>>
+        let wrapped_handler = move |args: T,
+                                    extra: crate::RequestHandlerExtra|
+              -> Pin<
+            Box<dyn std::future::Future<Output = crate::Result<serde_json::Value>> + Send>,
+        > { Box::pin(handler(args, extra)) };
+
+        let tool = TypedTool::new(name_str.clone(), wrapped_handler);
+        self.tools.insert(name_str, Arc::new(tool));
+        self
+    }
+
+    /// Add a synchronous type-safe tool handler with automatic schema generation.
+    ///
+    /// Similar to `tool_typed` but for synchronous handlers.
+    ///
+    /// # Example
+    /// ```no_run
+    /// # #[cfg(feature = "schema-generation")]
+    /// # {
+    /// use pmcp::ServerBuilder;
+    /// use schemars::JsonSchema;
+    /// use serde::{Deserialize, Serialize};
+    ///
+    /// #[derive(Debug, Deserialize, Serialize, JsonSchema)]
+    /// struct MathArgs {
+    ///     /// First number
+    ///     a: f64,
+    ///     /// Second number
+    ///     b: f64,
+    ///     /// Operation to perform
+    ///     op: String,
+    /// }
+    ///
+    /// # fn main() -> Result<(), pmcp::Error> {
+    /// let server = ServerBuilder::new()
+    ///     .name("example")
+    ///     .tool_typed_sync("calculator", |args: MathArgs, _| {
+    ///         let result = match args.op.as_str() {
+    ///             "add" => args.a + args.b,
+    ///             "subtract" => args.a - args.b,
+    ///             "multiply" => args.a * args.b,
+    ///             "divide" => args.a / args.b,
+    ///             _ => return Err(pmcp::Error::Validation("Unknown operation".into())),
+    ///         };
+    ///         Ok(serde_json::json!({ "result": result }))
+    ///     })
+    ///     .build();
+    /// # Ok::<(), pmcp::Error>(())
+    /// # }
+    /// # }
+    /// ```
+    #[cfg(feature = "schema-generation")]
+    pub fn tool_typed_sync<T, F>(mut self, name: impl Into<String>, handler: F) -> Self
+    where
+        T: serde::de::DeserializeOwned + schemars::JsonSchema + Send + Sync + 'static,
+        F: Fn(T, crate::RequestHandlerExtra) -> crate::Result<serde_json::Value>
+            + Send
+            + Sync
+            + 'static,
+    {
+        use crate::server::typed_tool::TypedSyncTool;
+        let name_str = name.into();
+        let tool = TypedSyncTool::new(name_str.clone(), handler);
+        self.tools.insert(name_str, Arc::new(tool));
         self
     }
 
