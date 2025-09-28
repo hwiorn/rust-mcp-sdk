@@ -4,15 +4,30 @@ A comprehensive testing tool for Model Context Protocol (MCP) servers, providing
 
 ## Features
 
+### Core Testing
 - **Protocol Compliance Testing**: Validates JSON-RPC 2.0 and MCP protocol compliance
 - **Multi-Transport Support**: Tests HTTP, HTTPS, WebSocket, and stdio transports
 - **Comprehensive Diagnostics**: Layer-by-layer connection troubleshooting
 - **Server Comparison**: Compare capabilities and performance between servers
+- **CI/CD Ready**: JSON output for automated testing pipelines
+
+### Discovery & Validation (NEW!)
+- **Tool Schema Validation**: Automatically validates JSON schemas and warns about incomplete definitions
+- **Resource Testing**: Tests resource discovery, reading, and metadata validation
+- **Prompt Testing**: Validates prompt templates, arguments, and metadata
+- **Metadata Validation**: Checks for missing descriptions, MIME types, and other essential metadata
+
+### Test Automation (NEW!)
+- **Automated Scenario Generation**: Generates test scenarios from discovered server capabilities
+- **Smart Schema Analysis**: Creates appropriate test values based on JSON schema definitions
 - **Tool Testing**: Discover and test individual tools with custom arguments
 - **Scenario Testing**: Define and run complex test scenarios from YAML/JSON files
 - **Assertion Framework**: Validate server responses with powerful assertions
+
+### Reporting
 - **Multiple Output Formats**: Pretty, JSON, minimal, and verbose outputs
-- **CI/CD Ready**: JSON output for automated testing pipelines
+- **Schema Validation Reports**: Detailed warnings about tool schema completeness
+- **Color-Coded Results**: Visual feedback for test status and warnings
 
 ## Installation
 
@@ -87,13 +102,72 @@ Options:
   --strict              Treat warnings as failures
 ```
 
-#### `tools` - Discover and Test Tools
+#### `tools` - Discover and Test Tools with Schema Validation
 
 ```bash
 mcp-tester tools <URL> [OPTIONS]
 
 Options:
   --test-all            Test each tool with sample data
+  --verbose             Show detailed schema validation warnings
+```
+
+**NEW: Schema Validation Output Example:**
+```
+✓ Found 10 tools:
+  • search_wikipedia - Search for Wikipedia articles by query
+    ✓ Schema properly defined
+  • get_article - Retrieve full Wikipedia article content
+    ⚠ Tool 'get_article' missing 'properties' field for object type
+  • get_summary - Get a summary of a Wikipedia article
+    ⚠ Tool 'get_summary' has empty input schema - consider defining parameters
+
+Schema Validation Summary:
+⚠ 3 total warnings found
+  - 1 tools with empty schema
+  - 2 tools missing 'properties' in schema
+```
+
+#### `resources` - Test Resources (NEW!)
+
+```bash
+mcp-tester resources <URL>
+
+Discovers and validates all available resources, checking for:
+- Missing MIME types
+- Invalid URIs
+- Metadata completeness
+```
+
+#### `prompts` - Test Prompts (NEW!)
+
+```bash
+mcp-tester prompts <URL>
+
+Discovers and validates all available prompts, checking for:
+- Missing descriptions
+- Undefined arguments
+- Argument schema validation
+```
+
+#### `generate-scenario` - Generate Test Scenarios (NEW!)
+
+```bash
+mcp-tester generate-scenario <URL> [OPTIONS]
+
+Options:
+  -o, --output <FILE>        Output file path (default: generated_scenario.yaml)
+  --all-tools                Include all discovered tools
+  --with-resources           Include resource testing
+  --with-prompts             Include prompt testing
+
+Examples:
+  # Generate basic scenario
+  mcp-tester generate-scenario http://localhost:8080 -o test.yaml
+
+  # Generate comprehensive scenario
+  mcp-tester generate-scenario http://localhost:8080 -o full_test.yaml \
+    --all-tools --with-resources --with-prompts
 ```
 
 #### `diagnose` - Connection Diagnostics
@@ -140,6 +214,105 @@ mcp-tester scenario http://localhost:8080 scenarios/performance-test.yaml
 ```
 
 Test scenarios allow you to define complex test sequences with variables, assertions, and workflows. See [SCENARIO_FORMAT.md](SCENARIO_FORMAT.md) for detailed documentation on creating test scenarios.
+
+## Scenario Generation (NEW!)
+
+The MCP Tester can automatically generate test scenarios from your server's discovered capabilities. This feature analyzes tool schemas and creates comprehensive test templates.
+
+### Generated Scenario Example
+
+When you run `mcp-tester generate-scenario`, it creates a YAML file like this:
+
+```yaml
+name: wikipedia-mcp-server Test Scenario
+description: Automated test scenario for server
+timeout: 60
+stop_on_failure: false
+variables:
+  test_id: test_123
+  test_value: sample_value
+
+steps:
+  - name: List available capabilities
+    operation:
+      type: list_tools
+    store_result: available_tools
+    assertions:
+      - type: success
+      - type: exists
+        path: tools
+
+  - name: Test tool: search_wikipedia
+    operation:
+      type: tool_call
+      tool: search_wikipedia
+      arguments:
+        query: "TODO: query"  # Automatically generated from schema
+    timeout: 30
+    continue_on_failure: true
+    store_result: search_wikipedia_result
+    assertions:
+      - type: success
+
+  - name: Test tool: get_article
+    operation:
+      type: tool_call
+      tool: get_article
+      arguments:
+        title: "TODO: title"  # Placeholder based on schema type
+    store_result: get_article_result
+    assertions:
+      - type: success
+```
+
+### Smart Value Generation
+
+The scenario generator creates appropriate placeholder values based on JSON schema types:
+
+| Schema Type | Example Generated Value |
+|------------|------------------------|
+| `string` with format `uri` | `"https://example.com"` |
+| `string` with format `email` | `"test@example.com"` |
+| `string` with format `date` | `"2024-01-01"` |
+| `string` with format `uuid` | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `string` with description containing "path" | `"/path/to/file"` |
+| `string` with description containing "id" | `"test_id_123"` |
+| `number` with minimum | The minimum value |
+| `boolean` | `false` |
+| `array` | Sample array with one item |
+| `object` | Nested object with all properties |
+| Unknown types | `"TODO: field_name"` |
+
+### Workflow
+
+1. **Generate the scenario:**
+   ```bash
+   mcp-tester generate-scenario https://api.example.com/mcp -o my_test.yaml --all-tools
+   ```
+
+2. **Edit the generated file to replace TODOs with actual test data:**
+   ```yaml
+   arguments:
+     query: "artificial intelligence"  # Was: "TODO: query"
+     limit: 10
+   ```
+
+3. **Add custom assertions:**
+   ```yaml
+   assertions:
+     - type: success
+     - type: array_length
+       path: results
+       greater_than: 0
+     - type: contains
+       path: results[0].title
+       value: "AI"
+   ```
+
+4. **Run the scenario:**
+   ```bash
+   mcp-tester scenario https://api.example.com/mcp my_test.yaml --detailed
+   ```
 
 ## Examples
 
