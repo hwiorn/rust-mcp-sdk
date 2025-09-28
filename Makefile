@@ -236,9 +236,8 @@ test-examples:
 # MCP Tester Integration
 .PHONY: build-tester
 build-tester:
-	@echo "$(BLUE)Building MCP tester...$(NC)"
-	$(CARGO) build --release --manifest-path examples/26-server-tester/Cargo.toml
-	@echo "$(GREEN)✓ MCP tester built$(NC)"
+	@echo "$(BLUE)MCP tester build skipped - using external tester$(NC)"
+	@echo "$(GREEN)✓ Ready for testing$(NC)"
 
 .PHONY: test-with-tester
 test-with-tester: build-tester
