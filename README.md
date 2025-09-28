@@ -24,6 +24,27 @@ Code Name: *Angel Rust*
 
 > **🎉 Claude Code Compatible!** Version 1.4.0+ includes full JSON-RPC 2.0 compatibility, enabling seamless integration with Claude Code and all standard MCP clients. If you're experiencing connection issues, please [upgrade to v1.4.1+](MIGRATION_GUIDE.md).
 
+## 🎉 Version 1.5.4 - Enhanced Testing & Metadata Support!
+
+### 🧪 **MCP Server Tester Enhancements**
+- 🔍 **Schema Validation**: Automatic validation of tool JSON schemas with detailed warnings
+- 🤖 **Scenario Generation**: Auto-generate test scenarios from server capabilities
+- 📦 **Resource Testing**: Comprehensive resource discovery and validation
+- 💬 **Prompt Testing**: Full prompt template and argument validation
+- 📊 **Smart Value Generation**: Context-aware test data based on schema definitions
+
+### 🎯 **New Metadata & Helper Types**
+- ✨ **SimpleTool**: Streamlined tool creation with builder pattern
+- 📚 **SimplePrompt**: Easy prompt template creation with metadata
+- 🗂️ **SimpleResource**: Simplified resource management with MIME types
+- 🔧 **Enhanced Type Support**: Full prompt and resource metadata structures
+
+### 🐛 **Bug Fixes & Improvements**
+- 🚀 **Performance**: Increased SIMD test timeout for CI stability
+- 🔧 **CI/CD**: Updated GitHub Actions to eliminate deprecation warnings
+- 📝 **Documentation**: Comprehensive test scenario examples and guides
+- ✅ **Quality**: Zero clippy warnings, improved test coverage
+
 ## 🎉 Version 1.4.2 - MCP Server Tester & Enhanced Compatibility!
 
 ### 🧪 **NEW: MCP Server Tester Tool**
