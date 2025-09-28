@@ -44,14 +44,23 @@ struct UserRegistration {
     /// Defaults to "US" if not provided
     #[serde(default = "default_country")]
     country: String,
+
+    /// Account type for the user
+    /// Defaults to Free if not provided
+    #[serde(default = "default_account_type")]
+    account_type: AccountType,
 }
 
 fn default_country() -> String {
     "US".to_string()
 }
 
+fn default_account_type() -> AccountType {
+    AccountType::Free
+}
+
 // Example with string enums that automatically match
-#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, JsonSchema, Clone)]
 #[serde(rename_all = "lowercase")]
 enum AccountType {
     /// Free tier account
@@ -253,11 +262,20 @@ async fn main() -> Result<()> {
                         }
                     }
 
+                    // Set user quota based on account type
+                    let quota = match args.account_type {
+                        AccountType::Free => 100,
+                        AccountType::Professional => 1000,
+                        AccountType::Enterprise => 10000,
+                    };
+
                     Ok(json!({
                         "success": true,
                         "email": args.email,
                         "name": args.name,
                         "country": args.country,
+                        "account_type": format!("{:?}", args.account_type).to_lowercase(),
+                        "quota": quota,
                         "newsletter": args.subscribe_newsletter,
                         "has_phone": args.phone.is_some()
                     }))
