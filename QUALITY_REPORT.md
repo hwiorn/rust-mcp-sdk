@@ -1,10 +1,6 @@
 # PMAT Quality Report
 
-<<<<<<< HEAD
-Generated on: 2025-09-28 00:59:24 UTC
-=======
-Generated on: 2025-09-28 04:44:18 UTC
->>>>>>> upstream/main
+Generated on: 2025-09-28 04:58:07 UTC
 
 ## Summary Metrics
 
