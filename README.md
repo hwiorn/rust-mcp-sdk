@@ -24,26 +24,25 @@ Code Name: *Angel Rust*
 
 > **🎉 Claude Code Compatible!** Version 1.4.0+ includes full JSON-RPC 2.0 compatibility, enabling seamless integration with Claude Code and all standard MCP clients. If you're experiencing connection issues, please [upgrade to v1.4.1+](MIGRATION_GUIDE.md).
 
-## 🎉 Version 1.5.4 - Enhanced Testing & Metadata Support!
+## 🎉 Version 1.5.5 - Type-Safe Schema Generation & Critical Fixes!
 
-### 🧪 **MCP Server Tester Enhancements**
+### 🛡️ **Type-Safe Tool Creation with Automatic Schema Generation**
+- 🎯 **TypedTool & TypedSyncTool**: Type-safe tool implementations with automatic JSON schema generation
+- 📝 **Schema Generation**: Automatic schema generation from Rust types using `schemars`
+- ✨ **Extension Traits**: `SimpleToolExt` and `SyncToolExt` for adding schemas to existing tools
+- 🔍 **Compile-Time Validation**: Type checking at compile time for tool arguments
+- 📚 **Example**: New `32_typed_tools` example demonstrating all features
+
+### 🐛 **Critical Bug Fix**
+- 🔧 **Tool Description Serialization**: Fixed critical bug where `SimpleTool.with_description()` wasn't properly serializing descriptions in the `tools/list` response
+- ✅ **Metadata Handling**: Corrected `handle_list_tools` to properly use tool metadata instead of hardcoding `None`
+
+### 🎯 **Previous: Version 1.5.4 - Enhanced Testing & Metadata Support**
 - 🔍 **Schema Validation**: Automatic validation of tool JSON schemas with detailed warnings
 - 🤖 **Scenario Generation**: Auto-generate test scenarios from server capabilities
 - 📦 **Resource Testing**: Comprehensive resource discovery and validation
 - 💬 **Prompt Testing**: Full prompt template and argument validation
 - 📊 **Smart Value Generation**: Context-aware test data based on schema definitions
-
-### 🎯 **New Metadata & Helper Types**
-- ✨ **SimpleTool**: Streamlined tool creation with builder pattern
-- 📚 **SimplePrompt**: Easy prompt template creation with metadata
-- 🗂️ **SimpleResource**: Simplified resource management with MIME types
-- 🔧 **Enhanced Type Support**: Full prompt and resource metadata structures
-
-### 🐛 **Bug Fixes & Improvements**
-- 🚀 **Performance**: Increased SIMD test timeout for CI stability
-- 🔧 **CI/CD**: Updated GitHub Actions to eliminate deprecation warnings
-- 📝 **Documentation**: Comprehensive test scenario examples and guides
-- ✅ **Quality**: Zero clippy warnings, improved test coverage
 
 ## 🎉 Version 1.4.2 - MCP Server Tester & Enhanced Compatibility!
 
@@ -526,6 +525,49 @@ let batcher = MessageBatcher::new(BatchingConfig {
 ```
 
 ## Quick Start
+
+### Type-Safe Tools with Automatic Schema Generation (v1.5.5+)
+
+Create tools with compile-time type safety and automatic JSON schema generation:
+
+```rust
+use pmcp::{TypedTool, TypedSyncTool, SimpleToolExt};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+
+// Define your argument type with JsonSchema derive
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+struct CalculatorArgs {
+    operation: String,
+    a: f64,
+    b: f64,
+}
+
+// Create a typed tool with automatic schema generation
+let tool = TypedTool::new("calculator", |args: CalculatorArgs, _extra| {
+    Box::pin(async move {
+        let result = match args.operation.as_str() {
+            "add" => args.a + args.b,
+            "subtract" => args.a - args.b,
+            "multiply" => args.a * args.b,
+            "divide" => args.a / args.b,
+            _ => return Err(pmcp::Error::Validation("Unknown operation".into())),
+        };
+        Ok(serde_json::json!({ "result": result }))
+    })
+})
+.with_description("Perform arithmetic operations");
+
+// Or add schema to existing SimpleTool
+let simple_tool = SimpleTool::new("calculator", handler)
+    .with_schema_from::<CalculatorArgs>();
+```
+
+The schema is automatically generated and included in the `tools/list` response, enabling:
+- **Type Safety**: Arguments are validated at compile time
+- **Auto-completion**: Clients can provide better UI based on schema
+- **Documentation**: Schema includes descriptions from doc comments
+- **Validation**: Runtime validation against the generated schema
 
 ### Client Example
 
