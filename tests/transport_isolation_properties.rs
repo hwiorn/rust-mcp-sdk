@@ -257,7 +257,7 @@ mod integration_tests {
                 // Register and complete multiple requests
                 for j in 0..5 {
                     let request_id = RequestId::from(format!("req_{}_{}", i, j));
-                    let rx = protocol.register_request(request_id.clone());
+                    let mut rx = protocol.register_request(request_id.clone());
 
                     let response = JSONRPCResponse::success(
                         request_id.clone(),
@@ -271,7 +271,6 @@ mod integration_tests {
 
                     // Verify response
                     tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-                    let mut rx = rx;
                     match rx.try_recv() {
                         Ok(resp) => {
                             assert_eq!(

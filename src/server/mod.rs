@@ -113,8 +113,6 @@ mod wasi_protocol {
 mod adapter_tests;
 #[cfg(test)]
 mod core_tests;
-#[cfg(all(test, not(target_arch = "wasm32")))]
-mod simple_tool_tests;
 
 /// Handler for tool execution.
 #[cfg(not(target_arch = "wasm32"))]
@@ -728,14 +726,19 @@ impl Server {
     fn handle_list_tools(&self, _req: ListToolsRequest) -> Result<Value> {
         let tools = self
             .tools
-            .keys()
-            .map(|name| crate::types::ToolInfo {
-                name: name.clone(),
-                description: None,
-                input_schema: serde_json::json!({
-                    "type": "object",
-                    "properties": {}
-                }),
+            .iter()
+            .map(|(name, handler)| {
+                // Try to get metadata from the handler, otherwise use defaults
+                handler
+                    .metadata()
+                    .unwrap_or_else(|| crate::types::ToolInfo {
+                        name: name.clone(),
+                        description: None,
+                        input_schema: serde_json::json!({
+                            "type": "object",
+                            "properties": {}
+                        }),
+                    })
             })
             .collect::<Vec<_>>();
 

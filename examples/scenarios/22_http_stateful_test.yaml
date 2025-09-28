@@ -1,0 +1,138 @@
+name: Stateful HTTP Server Test
+description: Validates the stateful HTTP server example including tool descriptions
+timeout: 30
+stop_on_failure: false
+
+variables:
+  test_value: 42
+  math_function: "sin"
+  math_input: 1.5708  # π/2 radians
+
+setup:
+  - name: Wait for server startup
+    operation:
+      type: delay
+      seconds: 1
+
+steps:
+  # Initialization is handled by the tester framework
+
+  - name: List available tools
+    operation:
+      type: list_tools
+    store_result: available_tools
+    assertions:
+      - type: success
+      - type: array_length
+        path: tools
+        equals: 5
+      - type: exists
+        path: tools[?(@.name=='advanced_math')].description
+      - type: equals
+        path: tools[?(@.name=='advanced_math')].description
+        value: "Perform advanced mathematical functions"
+      - type: exists
+        path: tools[?(@.name=='random')].description
+      - type: equals
+        path: tools[?(@.name=='random')].description
+        value: "Generate a random number within a range"
+
+  - name: Verify echo tool
+    operation:
+      type: tool_call
+      tool: echo
+      arguments:
+        message: "Hello, MCP Tester!"
+    store_result: echo_result
+    assertions:
+      - type: success
+      - type: equals
+        path: echo
+        value: "Hello, MCP Tester!"
+      - type: exists
+        path: timestamp
+
+  - name: Test calculator tool
+    operation:
+      type: tool_call
+      tool: calculate
+      arguments:
+        operation: "add"
+        a: 10
+        b: 32
+    store_result: calc_result
+    assertions:
+      - type: success
+      - type: equals
+        path: result
+        value: 42
+
+  - name: Test advanced math with sin function
+    operation:
+      type: tool_call
+      tool: advanced_math
+      arguments:
+        function: "{{math_function}}"
+        x: "{{math_input}}"
+    store_result: math_result
+    assertions:
+      - type: success
+      - type: exists
+        path: result
+      - type: range
+        path: result
+        min: 0.99999  # sin(π/2) ≈ 1
+        max: 1.00001
+
+  - name: Test random number generator
+    operation:
+      type: tool_call
+      tool: random
+      arguments:
+        min: 0
+        max: 100
+    store_result: random_result
+    assertions:
+      - type: success
+      - type: exists
+        path: value
+      - type: range
+        path: value
+        min: 0
+        max: 100
+
+  - name: Test session info tool
+    operation:
+      type: tool_call
+      tool: session_info
+      arguments: {}
+    store_result: session_result
+    assertions:
+      - type: success
+      - type: equals
+        path: session_active
+        value: true
+      - type: equals
+        path: server_mode
+        value: "stateful"
+
+  - name: Verify tool input schema validation
+    operation:
+      type: tool_call
+      tool: advanced_math
+      arguments:
+        function: "invalid_function"
+        x: 0
+    continue_on_failure: true
+    store_result: validation_error
+    assertions:
+      - type: error
+      - type: contains
+        path: error.message
+        value: "Unknown function"
+
+cleanup:
+  - name: Log test completion
+    operation:
+      type: log
+      message: "Test scenario completed successfully"

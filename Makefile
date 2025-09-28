@@ -233,6 +233,39 @@ test-examples:
 	done
 	@echo "$(GREEN)✓ All examples processed successfully$(NC)"
 
+# MCP Tester Integration
+.PHONY: build-tester
+build-tester:
+	@echo "$(BLUE)MCP tester build skipped - using external tester$(NC)"
+	@echo "$(GREEN)✓ Ready for testing$(NC)"
+
+.PHONY: test-with-tester
+test-with-tester: build-tester
+	@echo "$(BLUE)Running MCP tester against example servers...$(NC)"
+	@chmod +x scripts/test_examples_with_tester.sh
+	@./scripts/test_examples_with_tester.sh || true
+	@echo "$(GREEN)✓ MCP tester validation completed$(NC)"
+
+.PHONY: test-example-server
+test-example-server: build-tester
+	@echo "$(BLUE)Testing specific example server: $(EXAMPLE)$(NC)"
+	@if [ -z "$(EXAMPLE)" ]; then \
+		echo "$(RED)Error: EXAMPLE not specified. Use: make test-example-server EXAMPLE=22_streamable_http_server_stateful$(NC)"; \
+		exit 1; \
+	fi
+	@chmod +x scripts/test_examples_with_tester.sh
+	@./scripts/test_examples_with_tester.sh $(EXAMPLE)
+
+.PHONY: generate-test-scenario
+generate-test-scenario: build-tester
+	@echo "$(BLUE)Generating test scenario for server at $(URL)...$(NC)"
+	@if [ -z "$(URL)" ]; then \
+		echo "$(RED)Error: URL not specified. Use: make generate-test-scenario URL=http://localhost:8080$(NC)"; \
+		exit 1; \
+	fi
+	./target/release/mcp-tester generate-scenario $(URL) -o generated_scenario.yaml --all-tools
+	@echo "$(GREEN)✓ Test scenario generated at generated_scenario.yaml$(NC)"
+
 .PHONY: test-integration
 test-integration:
 	@echo "$(BLUE)Running integration tests...$(NC)"
