@@ -16,7 +16,7 @@ We have ZERO tolerance for defects. Your "clippy warnings won't..." is a P0 prob
 
 **To commit code:**
 ```bash
-make pre-commit-gate  # Run before any commit
+make quality-gate  # Run before any commit
 git add -A
 git commit -m "message"  # Will be blocked if quality fails
 ```
@@ -164,7 +164,7 @@ pdmt_deterministic_todos --requirement "implement feature X" --mode strict --cov
 #### Step 3: QUALITY VALIDATION (ALWAYS Required)
 ```bash
 # MANDATORY validation before any commit
-make pre-commit-gate     # All quality checks
+make quality-gate     # All quality checks
 make test-fuzz          # Fuzz testing
 make test-property      # Property tests  
 make test-unit          # Unit tests
