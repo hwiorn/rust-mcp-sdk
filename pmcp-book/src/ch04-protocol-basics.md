@@ -51,6 +51,19 @@ flowchart LR
   errors --> serr
 ```
 
+ASCII fallback (shown if Mermaid doesn’t render):
+
+```
+[Website (Human UI)]                      [MCP (Agent API)]
+  Home page instructions   --> Prompts
+  Navigation tabs          --> Discovery (tools/list, prompts/list, resources/list)
+  Forms + fields           --> Tools (tools/call)
+  Form labels/help text    --> Schemas + descriptions
+  Docs/FAQ/Policies        --> Resources (resources/read)
+  Notifications/toasts     --> Progress + cancellation
+  Error pages              --> Structured errors
+```
+
 ## Why Build An MCP Server
 
 - Speed: Agents operate your product without brittle scraping or slow human UI paths.
@@ -78,6 +91,86 @@ At a high level, an MCP client connects to a server over a transport (stdio, Web
   - Structured errors — explain what failed with machine-actionable details.
 
 You’ll go deeper on each surface in Chapters 5–8. Here we focus on the mental model and design guidance that makes servers easy for agents to use.
+
+## Resources: Docs With Relevance And Recency
+
+Resources are your “documentation pages” for agents. Beyond the body content, include metadata that helps clients decide what to show and when to trust it.
+
+- Priority: A number between 0.0 and 1.0 that hints at importance. Use it to surface critical references (policies, SLAs, pricing) over long-tail docs.
+- Modified date: Last updated timestamp. Clients can prioritize fresher docs and display “updated on …” to guide relevance.
+- Stable URIs: Treat resource URIs like permalinks; keep them stable across versions where possible.
+- Small, composable docs: Prefer focused resources with clear titles over giant walls of text.
+
+Example discovery and reading:
+
+```json
+{ "method": "resources/list", "params": {} }
+```
+
+Example response item (shape varies by client, fields shown for design intent):
+
+```json
+{
+  "uri": "docs://ordering/policies/v1",
+  "title": "Ordering Policies",
+  "priority": 0.95,
+  "modified_at": "2025-09-01T12:34:56Z",
+  "mime": "text/markdown"
+}
+```
+
+Then read the resource:
+
+```json
+{
+  "method": "resources/read",
+  "params": { "uri": "docs://ordering/policies/v1" }
+}
+```
+
+Design tip: Use high priority (e.g., ≥ 0.9) for essential safety/governance docs; give experimental or niche docs a lower priority (≤ 0.3). Always set an accurate `modified_at` so clients can rank and annotate recency.
+
+## Prompts: User‑Controlled Workflows
+
+Prompts are structured instructions exposed by the server and discovered by clients. They act like “guided workflows” that users can explicitly select in the UI.
+
+- User controlled: Prompts are intended for user initiation from the client UI, not silent auto‑execution.
+- Discoverable: Clients call `prompts/list` to surface available workflows; each prompt advertises arguments and a description.
+- Templated: Clients call `prompts/get` with arguments to expand into concrete model messages.
+- Workflow fit: Design prompts to match common user journeys (e.g., “Refund Order”, “Create Support Ticket”, “Compose Quote”).
+
+Discover prompts:
+
+```json
+{ "method": "prompts/list", "params": {} }
+```
+
+Example prompt metadata (shape for illustration):
+
+```json
+{
+  "name": "refund_order",
+  "description": "Guide the agent to safely process a refund.",
+  "arguments": [
+    { "name": "order_id", "type": "string", "required": true },
+    { "name": "reason", "type": "string", "required": false }
+  ]
+}
+```
+
+Get a concrete prompt with arguments:
+
+```json
+{
+  "method": "prompts/get",
+  "params": {
+    "name": "refund_order",
+    "arguments": { "order_id": "ord_123", "reason": "damaged" }
+  }
+}
+```
+
+XU tip: Treat prompts like your website’s primary CTAs — few, clear, and high‑signal. Link prompts to relevant resources (policies, SLAs) by stable URI so the agent can cite and comply.
 
 ## Designing For XU (Agent eXperience)
 
@@ -130,6 +223,23 @@ sequenceDiagram
 
   A->>S: resources/read docs://ordering/policies/v1
   S-->>A: policy text/JSON
+```
+
+ASCII fallback:
+
+```
+Agent Client -> MCP Server: prompts/list
+MCP Server  -> Agent Client: available prompts
+Agent Client -> MCP Server: tools/list, resources/list
+MCP Server  -> Agent Client: tool schemas, resource URIs
+
+Agent Client -> MCP Server: tools/call create_order(args)
+MCP Server  -> Agent Client: progress: "validating", 20%
+MCP Server  -> Agent Client: progress: "placing order", 80%
+MCP Server  -> Agent Client: result or structured error
+
+Agent Client -> MCP Server: resources/read docs://ordering/policies/v1
+MCP Server  -> Agent Client: policy text/JSON
 ```
 
 ## Minimal JSON Examples

@@ -24,6 +24,7 @@ create-missing = false  # Prevent accidental file creation
 
 # Mermaid diagrams preprocessor (renders ```mermaid blocks to SVG)
 [preprocessor.mermaid]
+command = "mdbook-mermaid"
 renderer = ["html"]
 
 [output.html]
@@ -34,6 +35,8 @@ mathjax-support = false
 copy-fonts = true
 additional-css = ["theme/pmcp.css", "theme/code-enhancements.css", "theme/syntax-highlight.css"]
 additional-js = [
+    "mermaid.min.js",
+    "mermaid-init.js",
     # Init script gracefully no-ops if Mermaid runtime is absent
     "theme/mermaid-init.js",
     "theme/pmcp-highlight.js",
