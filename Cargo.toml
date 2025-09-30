@@ -316,6 +316,16 @@ name = "35_wasm_typed_tools"
 path = "examples/35_wasm_typed_tools.rs"
 required-features = ["schema-generation"]
 
+[[example]]
+name = "36_typed_tool_v2_example"
+path = "examples/36_typed_tool_v2_example.rs"
+required-features = ["schema-generation"]
+
+[[example]]
+name = "37_description_variants_example"
+path = "examples/37_description_variants_example.rs"
+required-features = ["schema-generation"]
+
 
 
 [[bench]]
