@@ -1636,8 +1636,8 @@ impl ServerBuilder {
     ///
     /// # Type Parameters
     ///
-    /// * `TIn` - Input type that implements JsonSchema, Deserialize, Send, Sync
-    /// * `TOut` - Output type that implements JsonSchema, Serialize, Send, Sync
+    /// * `TIn` - Input type that implements `JsonSchema`, `Deserialize`, `Send`, `Sync`
+    /// * `TOut` - Output type that implements `JsonSchema`, `Serialize`, `Send`, `Sync`
     ///
     /// # Example
     /// ```no_run
