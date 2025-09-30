@@ -92,14 +92,14 @@ At a high level, an MCP client connects to a server over a transport (stdio, Web
 
 You’ll go deeper on each surface in Chapters 5–8. Here we focus on the mental model and design guidance that makes servers easy for agents to use.
 
-## Resources: Docs With Relevance And Recency
+## Resources: Docs For Agent Consumption
 
-Resources are your “documentation pages” for agents. Beyond the body content, include metadata that helps clients decide what to show and when to trust it.
+Resources are your "documentation pages" for agents. Include clear metadata that helps clients understand what's available and how to access it.
 
-- Priority: A number between 0.0 and 1.0 that hints at importance. Use it to surface critical references (policies, SLAs, pricing) over long-tail docs.
-- Modified date: Last updated timestamp. Clients can prioritize fresher docs and display “updated on …” to guide relevance.
 - Stable URIs: Treat resource URIs like permalinks; keep them stable across versions where possible.
-- Small, composable docs: Prefer focused resources with clear titles over giant walls of text.
+- Descriptive names: Use clear, human-readable names that indicate the resource's purpose.
+- MIME types: Specify the content type (text/markdown, application/json, etc.) to help clients parse correctly.
+- Small, composable docs: Prefer focused resources with clear descriptions over giant walls of text.
 
 Example discovery and reading:
 
@@ -107,15 +107,14 @@ Example discovery and reading:
 { "method": "resources/list", "params": {} }
 ```
 
-Example response item (shape varies by client, fields shown for design intent):
+Example response item (from `ResourceInfo` type):
 
 ```json
 {
   "uri": "docs://ordering/policies/v1",
-  "title": "Ordering Policies",
-  "priority": 0.95,
-  "modified_at": "2025-09-01T12:34:56Z",
-  "mime": "text/markdown"
+  "name": "Ordering Policies",
+  "description": "Company ordering policies and procedures",
+  "mimeType": "text/markdown"
 }
 ```
 
@@ -128,7 +127,7 @@ Then read the resource:
 }
 ```
 
-Design tip: Use high priority (e.g., ≥ 0.9) for essential safety/governance docs; give experimental or niche docs a lower priority (≤ 0.3). Always set an accurate `modified_at` so clients can rank and annotate recency.
+Design tip: Use clear, specific names and descriptions. Place critical safety/governance docs at stable, well-known URIs that agents can reference. Use MIME types to help clients parse and display content correctly.
 
 ## Prompts: User‑Controlled Workflows
 
@@ -280,7 +279,7 @@ Read a resource (like opening docs):
 
 ## Bootstrap With PMCP (Rust)
 
-Here’s a sketch of a website-like MCP server using PMCP. We’ll add full coverage of tools, resources, and prompts in later chapters; this snippet focuses on the “forms” (tools) first.
+Here's a minimal website-like MCP server using PMCP. We'll add full coverage of tools, resources, and prompts in later chapters; this snippet focuses on the "forms" (tools) first.
 
 ```rust
 use pmcp::{Server, ToolHandler, RequestHandlerExtra, Result};
@@ -297,11 +296,11 @@ impl ToolHandler for SearchProducts {
         let limit = args.get("limit").and_then(|v| v.as_u64()).unwrap_or(10);
 
         // In a real server, query your catalog here.
+        // The framework wraps this in CallToolResult automatically.
         Ok(json!({
-            "content": [{ "type": "text", "text": format!(
-                "Found results for '{}' (limit {})", query, limit
-            )}],
-            "isError": false
+            "query": query,
+            "limit": limit,
+            "results": ["Product A", "Product B", "Product C"]
         }))
     }
 }
@@ -312,15 +311,16 @@ struct CreateOrder;
 #[async_trait]
 impl ToolHandler for CreateOrder {
     async fn handle(&self, args: Value, _extra: RequestHandlerExtra) -> Result<Value> {
-        // Validate required fields (ids, items, currency, etc.)
-        if args.get("customer_id").and_then(|v| v.as_str()).is_none() {
-            return Err(pmcp::Error::validation("Missing 'customer_id'"));
-        }
-        // Normally you would validate items/currency and write to storage.
+        // Validate required fields
+        let customer_id = args.get("customer_id")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| pmcp::Error::validation("Missing 'customer_id'"))?;
 
+        // Normally you would validate items/currency and write to storage.
         Ok(json!({
-            "content": [{ "type": "text", "text": "Order created (demo)" }],
-            "isError": false
+            "order_id": "ord_12345",
+            "customer_id": customer_id,
+            "status": "created"
         }))
     }
 }
@@ -340,10 +340,26 @@ async fn main() -> Result<()> {
 
 As you evolve this server, bake in XU:
 
-- Add precise schemas and descriptions to each tool (Chapter 5).
-- Publish a small set of reference docs as `resources/*` with stable URIs (Chapter 6).
+- Add precise JSON schemas and descriptions using `SimpleTool` or the builder pattern (Chapter 5).
+- Publish a small set of reference docs as resources with stable URIs (Chapter 6).
 - Provide starter prompts that teach the agent ideal workflows (Chapter 7).
 - Return actionable errors and support progress/cancellation for long tasks (Chapters 8 and 12).
+
+Note: The tool handlers return `Result<Value>` where `Value` contains your tool's output data. The PMCP framework automatically wraps this in the proper `CallToolResult` structure for the MCP protocol.
+
+## What Not To Build
+
+A common mistake is “API wrapper ≠ MCP server.” Simply auto‑generating tools from a REST/OpenAPI or RPC surface produces developer‑centric verbs, leaky abstractions, and hundreds of low‑level endpoints that agents cannot reliably compose. It’s the equivalent of making your public website a list of internal API forms — technically complete, practically unusable.
+
+Design anti‑patterns to avoid:
+- 1:1 endpoint mapping: Don’t expose every REST method as a tool. Prefer task‑level verbs (e.g., `refund_order`) over transport artifacts (`POST /orders/:id/refunds`).
+- Low‑level leakage: Hide internal ids, flags, and sequencing rules behind clear, validated arguments and schemas.
+- Hidden preconditions: Make prerequisites explicit in the tool schema or encode pre‑flight checks; don’t require agents to guess call order.
+- Unbounded surface area: Curate a small, high‑signal set of tools that align to goals, not to tables or microservice granularity.
+- Side‑effects without guardrails: Provide prompts, examples, and resource links that set expectations and constraints for risky actions.
+- “Just upload OpenAPI”: Generation can help as a starting inventory, but always refactor to business goals and XU before shipping.
+
+Aim for user‑goal orientation: design tools and prompts the way you design your website’s navigation and primary actions — to help intelligent users (agents) complete outcomes, not to mirror internal APIs.
 
 ## Checklist: From Website To MCP
 
