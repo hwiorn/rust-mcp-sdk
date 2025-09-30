@@ -22,6 +22,10 @@ create-missing = false  # Prevent accidental file creation
 # command = "./tools/pmcp-preprocessor"
 # renderer = ["html"]
 
+# Mermaid diagrams preprocessor (renders ```mermaid blocks to SVG)
+[preprocessor.mermaid]
+renderer = ["html"]
+
 [output.html]
 default-theme = "rust"
 preferred-dark-theme = "ayu"
