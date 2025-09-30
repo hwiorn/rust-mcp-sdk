@@ -108,7 +108,7 @@ Let's start with the simplest possible client: connecting to a server and listin
 use pmcp::{Client, ClientCapabilities, StdioTransport};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> pmcp::Result<()> {
     // Create a client with stdio transport
     let transport = StdioTransport::new();
     let mut client = Client::new(transport);
@@ -225,10 +225,10 @@ match client.call_tool("create_order".to_string(), args).await {
         if let Some(code) = e.error_code() {
             match code {
                 pmcp::ErrorCode::INVALID_PARAMS => {
-                    eprintln!("Invalid arguments provided");
+                    eprintln!("Invalid arguments provided (error -32602)");
                 }
                 pmcp::ErrorCode::METHOD_NOT_FOUND => {
-                    eprintln!("Tool not found");
+                    eprintln!("Tool not found (error -32601)");
                 }
                 _ => eprintln!("Error code: {}", code.as_i32())
             }
@@ -293,7 +293,7 @@ impl ServerTester {
         insecure: bool,
         api_key: Option<&str>,
         transport: Option<&str>,
-    ) -> Result<Self> {
+    ) -> pmcp::Result<Self> {
         // Parse URL to determine transport type
         if url.starts_with("http://") || url.starts_with("https://") {
             // Use HTTP transport
@@ -310,7 +310,7 @@ impl ServerTester {
 **2. Capability Discovery and Validation**
 
 ```rust
-pub async fn run_full_suite(&mut self, with_tools: bool) -> Result<TestReport> {
+pub async fn run_full_suite(&mut self, with_tools: bool) -> pmcp::Result<TestReport> {
     let mut report = TestReport::new();
 
     // Initialize connection
@@ -388,7 +388,7 @@ pub async fn generate_scenario(
     tester: &mut ServerTester,
     output: &str,
     all_tools: bool,
-) -> Result<()> {
+) -> pmcp::Result<()> {
     // Initialize and discover capabilities
     tester.initialize().await?;
     let tools = tester.list_tools().await?;
@@ -786,18 +786,18 @@ match client.call_tool(name, args).await {
     Err(Error::Protocol { code, message, .. }) => {
         match code {
             ErrorCode::INVALID_PARAMS => {
-                // User error - fix arguments
+                // User error - fix arguments (JSON-RPC -32602)
                 Err(format!("Invalid args: {}", message))
             }
             ErrorCode::METHOD_NOT_FOUND => {
-                // Tool doesn't exist - check name
+                // Tool doesn't exist - check name (JSON-RPC -32601)
                 Err(format!("Tool not found: {}", name))
             }
             ErrorCode::INTERNAL_ERROR => {
-                // Server error - retry or escalate
+                // Server error - retry or escalate (JSON-RPC -32603)
                 Err(format!("Server error: {}", message))
             }
-            _ => Err(format!("Protocol error {}: {}", code, message))
+            _ => Err(format!("Protocol error {} ({}): {}", code, code.as_i32(), message))
         }
     }
     Err(Error::Timeout(ms)) => {
@@ -820,7 +820,7 @@ match client.call_tool(name, args).await {
 fn validate_tool_args(
     tool: &ToolInfo,
     args: &serde_json::Value,
-) -> Result<(), String> {
+) -> pmcp::Result<()> {
     // Check args match schema
     let schema = &tool.input_schema;
 
@@ -828,7 +828,9 @@ fn validate_tool_args(
         for field in required {
             if let Some(field_name) = field.as_str() {
                 if !args.get(field_name).is_some() {
-                    return Err(format!("Missing required field: {}", field_name));
+                    return Err(pmcp::Error::validation(
+                        format!("Missing required field: {}", field_name)
+                    ));
                 }
             }
         }
@@ -873,7 +875,7 @@ struct ClientPool {
 }
 
 impl ClientPool {
-    async fn get_or_create(&mut self, url: &str) -> Result<&mut Client> {
+    async fn get_or_create(&mut self, url: &str) -> pmcp::Result<&mut Client> {
         if !self.clients.contains_key(url) {
             let transport = create_transport(url)?;
             let mut client = Client::new(transport);
