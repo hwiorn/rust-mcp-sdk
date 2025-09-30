@@ -2,6 +2,10 @@
 //!
 //! Provides type-safe tool creation for WASM environments (Browser, Cloudflare Workers, WASI).
 //! Mirrors the native typed tool API but works within WASM constraints.
+//!
+//! **Note**: Currently supports input typing only. Output typing (`TypedToolWithOutput`)
+//! is available in the native API (`typed_tool.rs`) but not yet implemented for WASM
+//! due to async constraints and cancellation token compatibility.
 
 use crate::server::wasm_server::{WasmMcpServerBuilder, WasmTool};
 use crate::types::ToolInfo;

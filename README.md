@@ -85,11 +85,11 @@ The schema is automatically generated and included in the `tools/list` response,
   - 📏 **Schema Normalization**: Configurable depth/size limits prevent huge expanded schemas
   - 🎯 **Consistent Error Codes**: Standardized validation error codes for client elicitation
   - 🔒 **Cross-Platform Path Validation**: Robust Windows/Unix path handling with security constraints
-  - 📝 **Output Typing**: Optional `TypedToolV2<TIn, TOut>` for better testing and documentation
+  - 📝 **Output Typing**: Optional `TypedToolWithOutput<TIn, TOut>` for better testing and documentation
 
 - **Cross-Transport Support** ("Write Once, Run Anywhere"):
   - ✅ **Transport Compatibility**: Typed tools work seamlessly across HTTP, SSE, and WebSocket
-  - 🌐 **WASM Support**: Browser and Cloudflare Workers compatible typed tool API
+  - 🌐 **WASM Support**: Browser and Cloudflare Workers compatible typed tool API (input typing only)
   - 🧪 **Comprehensive Testing**: E2E transport tests ensure compatibility
   - 🏗️ **Ergonomic Builder**: New `tool_typed()` and `tool_typed_sync()` builder methods
 
