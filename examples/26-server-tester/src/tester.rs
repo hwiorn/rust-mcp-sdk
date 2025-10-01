@@ -318,6 +318,10 @@ impl ServerTester {
     }
 
     pub async fn run_resources_discovery(&mut self) -> Result<TestReport> {
+        self.run_resources_discovery_with_verbose(false).await
+    }
+
+    pub async fn run_resources_discovery_with_verbose(&mut self, verbose: bool) -> Result<TestReport> {
         let mut report = TestReport::new();
         let start = Instant::now();
 
@@ -347,7 +351,31 @@ impl ServerTester {
         }
 
         // List and validate resources
-        report.add_test(self.test_resources_list().await);
+        let list_result = self.test_resources_list().await;
+        report.add_test(list_result.clone());
+
+        if verbose && list_result.status == TestStatus::Passed {
+            if let Some(ref resources) = self.resources {
+                println!("  ✓ Found {} resources:", resources.len());
+                for resource in resources {
+                    println!("    • {} ({})", resource.name, resource.uri);
+                    if let Some(ref desc) = resource.description {
+                        println!("      {}", desc);
+                    }
+                    if let Some(ref mime) = resource.mime_type {
+                        println!("      MIME: {}", mime);
+                    }
+                }
+                println!();
+            }
+        }
+
+        // Read and validate each resource if we have any
+        if let Some(ref resources) = self.resources {
+            if !resources.is_empty() {
+                report.add_test(self.test_resources_read(verbose).await);
+            }
+        }
 
         report.duration = start.elapsed();
         Ok(report)
@@ -1313,6 +1341,254 @@ impl ServerTester {
                 error: Some(e.to_string()),
                 details: None,
             },
+        }
+    }
+
+    async fn test_resources_read(&mut self, verbose: bool) -> TestResult {
+        let start = Instant::now();
+        let name = "Read and Validate Resources".to_string();
+
+        // Get resources to test
+        let resources = match &self.resources {
+            Some(r) if !r.is_empty() => r.clone(),
+            _ => {
+                return TestResult {
+                    name,
+                    category: TestCategory::Resources,
+                    status: TestStatus::Skipped,
+                    duration: start.elapsed(),
+                    error: None,
+                    details: Some("No resources to read".to_string()),
+                };
+            }
+        };
+
+        let mut warnings = Vec::new();
+        let mut errors = Vec::new();
+        let mut read_count = 0;
+
+        // Test reading each resource (limit to first 5 to avoid overwhelming output)
+        let resources_to_test = resources.iter().take(5);
+
+        if verbose {
+            println!("  Reading and validating resources...");
+        }
+
+        for resource in resources_to_test {
+            match self.read_resource(&resource.uri).await {
+                Ok(result) => {
+                    read_count += 1;
+
+                    if verbose {
+                        println!("    ✓ Read resource: {}", resource.name);
+                    }
+
+                    // Validate resource content structure
+                    if result.contents.is_empty() {
+                        warnings.push(format!(
+                            "Resource '{}' returned empty contents array",
+                            resource.name
+                        ));
+                        continue;
+                    }
+
+                    for content in &result.contents {
+                        // Verbose output showing content
+                        if verbose {
+                            match content {
+                                pmcp::types::Content::Text { text } => {
+                                    let preview = if text.len() > 200 {
+                                        format!("{}... ({} chars total)", &text[..200], text.len())
+                                    } else {
+                                        text.clone()
+                                    };
+                                    println!("      Content type: Text");
+                                    println!("      Preview: {}", preview);
+                                },
+                                pmcp::types::Content::Image { data, mime_type } => {
+                                    println!("      Content type: Image");
+                                    println!("      MIME type: {}", mime_type);
+                                    println!("      Data size: {} bytes (base64)", data.len());
+                                },
+                                pmcp::types::Content::Resource { uri, text, mime_type } => {
+                                    println!("      Content type: Resource Reference");
+                                    println!("      URI: {}", uri);
+                                    if let Some(ref mime) = mime_type {
+                                        println!("      MIME type: {}", mime);
+                                    }
+                                    if let Some(ref t) = text {
+                                        let preview = if t.len() > 200 {
+                                            format!("{}... ({} chars)", &t[..200], t.len())
+                                        } else {
+                                            t.clone()
+                                        };
+                                        println!("      Text: {}", preview);
+                                    }
+                                },
+                            }
+                        }
+
+                        // Validate content structure based on type
+                        match content {
+                            pmcp::types::Content::Text { text } => {
+                                if text.is_empty() {
+                                    warnings.push(format!(
+                                        "Resource '{}' has empty text content",
+                                        resource.name
+                                    ));
+                                }
+                                // Validate MIME type consistency
+                                if let Some(ref mime) = resource.mime_type {
+                                    if !mime.starts_with("text/") && !mime.contains("json") && !mime.contains("xml") {
+                                        warnings.push(format!(
+                                            "Resource '{}' has MIME type '{}' but returns text content",
+                                            resource.name, mime
+                                        ));
+                                    }
+                                }
+                            },
+                            pmcp::types::Content::Image { data, mime_type } => {
+                                if data.is_empty() {
+                                    warnings.push(format!(
+                                        "Resource '{}' has empty image data",
+                                        resource.name
+                                    ));
+                                }
+                                // Validate MIME type consistency
+                                if let Some(ref list_mime) = resource.mime_type {
+                                    if list_mime != mime_type {
+                                        warnings.push(format!(
+                                            "Resource '{}' MIME type mismatch: list='{}', content='{}'",
+                                            resource.name, list_mime, mime_type
+                                        ));
+                                    }
+                                }
+                                if !mime_type.starts_with("image/") {
+                                    warnings.push(format!(
+                                        "Resource '{}' has non-image MIME type '{}' for image content",
+                                        resource.name, mime_type
+                                    ));
+                                }
+                            },
+                            pmcp::types::Content::Resource { uri, text: _, mime_type } => {
+                                if uri.is_empty() {
+                                    warnings.push(format!(
+                                        "Resource '{}' reference has empty URI",
+                                        resource.name
+                                    ));
+                                }
+                                // Check MIME type consistency if present
+                                if let (Some(ref list_mime), Some(ref content_mime)) = (&resource.mime_type, mime_type) {
+                                    if list_mime != content_mime {
+                                        warnings.push(format!(
+                                            "Resource '{}' MIME type mismatch: list='{}', content='{}'",
+                                            resource.name, list_mime, content_mime
+                                        ));
+                                    }
+                                }
+                            },
+                        }
+                    }
+
+                    // Check for annotations (warning only)
+                    let warnings_before = warnings.len();
+                    self.check_resource_annotations(&resource.uri, &mut warnings).await;
+
+                    // Show annotation warnings in verbose mode
+                    if verbose && warnings.len() > warnings_before {
+                        for warning in &warnings[warnings_before..] {
+                            println!("      ⚠ {}", warning);
+                        }
+                    }
+                },
+                Err(e) => {
+                    let error_msg = format!(
+                        "Failed to read resource '{}': {}",
+                        resource.name, e
+                    );
+                    errors.push(error_msg.clone());
+
+                    if verbose {
+                        println!("      ✗ {}", error_msg);
+                    }
+                }
+            }
+        }
+
+        if verbose {
+            println!();
+        }
+
+        // Build result message
+        let mut details_parts = vec![format!("Successfully read {} resources", read_count)];
+
+        if !warnings.is_empty() {
+            details_parts.push(format!("Warnings ({}):", warnings.len()));
+            for warning in &warnings {
+                details_parts.push(format!("  - {}", warning));
+            }
+        }
+
+        if !errors.is_empty() {
+            details_parts.push(format!("Errors ({}):", errors.len()));
+            for error in &errors {
+                details_parts.push(format!("  - {}", error));
+            }
+        }
+
+        let status = if !errors.is_empty() {
+            TestStatus::Failed
+        } else if !warnings.is_empty() {
+            TestStatus::Warning
+        } else {
+            TestStatus::Passed
+        };
+
+        TestResult {
+            name,
+            category: TestCategory::Resources,
+            status,
+            duration: start.elapsed(),
+            error: if !errors.is_empty() {
+                Some(errors.join("; "))
+            } else {
+                None
+            },
+            details: Some(details_parts.join("\n")),
+        }
+    }
+
+    async fn check_resource_annotations(&self, uri: &str, warnings: &mut Vec<String>) {
+        // Try to fetch the raw JSON to check for annotations
+        // This is a best-effort check - we look for common annotation patterns
+
+        // Check if the description contains priority hints
+        if let Some(resources) = &self.resources {
+            if let Some(resource) = resources.iter().find(|r| r.uri == uri) {
+                let has_priority_hint = resource.description.as_ref()
+                    .map(|d| d.to_lowercase().contains("priority"))
+                    .unwrap_or(false);
+
+                let has_modified_hint = resource.description.as_ref()
+                    .map(|d| d.to_lowercase().contains("updated on")
+                              || d.to_lowercase().contains("modified")
+                              || d.to_lowercase().contains("last update"))
+                    .unwrap_or(false);
+
+                if !has_priority_hint {
+                    warnings.push(format!(
+                        "Resource '{}' may be missing priority annotation (not found in description)",
+                        resource.name
+                    ));
+                }
+
+                if !has_modified_hint {
+                    warnings.push(format!(
+                        "Resource '{}' may be missing modification timestamp (not found in description)",
+                        resource.name
+                    ));
+                }
+            }
         }
     }
 
