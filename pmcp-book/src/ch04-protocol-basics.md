@@ -96,10 +96,12 @@ You’ll go deeper on each surface in Chapters 5–8. Here we focus on the menta
 
 Resources are your "documentation pages" for agents. Include clear metadata that helps clients understand what's available and how to access it.
 
-- Stable URIs: Treat resource URIs like permalinks; keep them stable across versions where possible.
-- Descriptive names: Use clear, human-readable names that indicate the resource's purpose.
-- MIME types: Specify the content type (text/markdown, application/json, etc.) to help clients parse correctly.
-- Small, composable docs: Prefer focused resources with clear descriptions over giant walls of text.
+- **Stable URIs**: Treat resource URIs like permalinks; keep them stable across versions where possible.
+- **Descriptive names**: Use clear, human-readable names that indicate the resource's purpose.
+- **MIME types**: Specify the content type (text/markdown, application/json, etc.) to help clients parse correctly.
+- **Priority (0.0–1.0)**: Signal importance to clients. 0.9–1.0 = must-read (policies, SLAs), 0.5 = normal docs, 0.1–0.3 = low-signal/archived content.
+- **Modified At (ISO 8601)**: Timestamp of last update. Clients can sort by recency and show "Updated on..." in UI.
+- **Small, composable docs**: Prefer focused resources (50-500 lines) with clear descriptions over giant walls of text.
 
 Example discovery and reading:
 
@@ -107,16 +109,22 @@ Example discovery and reading:
 { "method": "resources/list", "params": {} }
 ```
 
-Example response item (from `ResourceInfo` type):
+Example response item with recommended metadata:
 
 ```json
 {
   "uri": "docs://ordering/policies/v1",
   "name": "Ordering Policies",
-  "description": "Company ordering policies and procedures",
-  "mimeType": "text/markdown"
+  "description": "[PRIORITY: HIGH] Company ordering policies and procedures. Updated on 2025-01-15.",
+  "mimeType": "text/markdown",
+  "annotations": {
+    "priority": 0.9,
+    "modifiedAt": "2025-01-15T10:30:00Z"
+  }
 }
 ```
+
+**Note**: The core `ResourceInfo` type includes uri, name, description, and mimeType. Priority and timestamp can be embedded in the description or exposed via an optional `annotations` extension map (see Chapter 6 for implementation patterns).
 
 Then read the resource:
 
@@ -127,7 +135,7 @@ Then read the resource:
 }
 ```
 
-Design tip: Use clear, specific names and descriptions. Place critical safety/governance docs at stable, well-known URIs that agents can reference. Use MIME types to help clients parse and display content correctly.
+Design tip: Use clear, specific names and descriptions. Place critical safety/governance docs at stable, well-known URIs that agents can reference. Use MIME types to help clients parse and display content correctly. Signal importance with priority (0.9+ for must-read policies) and keep modified_at current so agents know they're consulting fresh information. Clients should sort by priority DESC, then modified_at DESC to surface the most important and recent resources first.
 
 ## Prompts: User‑Controlled Workflows
 
