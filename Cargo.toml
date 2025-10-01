@@ -1,6 +1,6 @@
 [package]
 name = "pmcp"
-version = "1.5.5"
+version = "1.6.0"
 edition = "2021"
 authors = ["PAIML Team"]
 description = "High-quality Rust SDK for Model Context Protocol (MCP) with full TypeScript SDK compatibility"
@@ -45,10 +45,10 @@ http-body-util = "0.1"
 # OAuth dependencies
 sha2 = "0.10"
 base64 = "0.22"
-tokio-tungstenite = { version = "0.27", features = ["native-tls"], optional = true }
+tokio-tungstenite = { version = "0.28", features = ["native-tls"], optional = true }
 hyper = { version = "1.6", features = ["full"], optional = true }
 hyper-util = { version = "0.1", features = ["full"], optional = true }
-axum = { version = "0.7.5", optional = true }
+axum = { version = "0.8.5", optional = true }
 notify = { version = "8.2", optional = true }
 glob-match = { version = "0.2", optional = true }
 tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
@@ -97,6 +97,7 @@ test-case = "3.3"
 criterion = { version = "0.7", features = ["html_reports"] }
 insta = { version = "1.43", features = ["json", "redactions"] }
 mockito = "1.5.0"
+tokio-util = { version = "0.7", features = ["rt"] }
 
 # For examples
 clap = { version = "4.5", features = ["derive"] }
@@ -105,13 +106,14 @@ dashmap = "6.1"  # Already in main deps but needed for examples
 
 [features]
 default = ["validation"]
-full = ["websocket", "http", "streamable-http", "sse", "validation", "resource-watcher", "rayon"]
+full = ["websocket", "http", "streamable-http", "sse", "validation", "resource-watcher", "rayon", "schema-generation"]
 sse = ["dep:bytes"]
 websocket = ["dep:tokio-tungstenite"]
 http = ["dep:hyper", "dep:hyper-util", "dep:bytes"]
 streamable-http = ["dep:hyper", "dep:hyper-util", "dep:futures-util", "dep:bytes", "dep:axum"]
 validation = ["dep:jsonschema", "dep:garde"]
 resource-watcher = ["dep:notify", "dep:glob-match"]
+schema-generation = ["dep:schemars"]
 # macros = ["dep:pmcp-macros", "dep:schemars"]
 wasm = ["websocket-wasm", "uuid/js", "dep:futures-channel", "dep:futures-locks"]
 websocket-wasm = []
@@ -293,6 +295,36 @@ required-features = ["full"]
 name = "31_advanced_error_recovery"
 path = "examples/31_advanced_error_recovery.rs"
 required-features = ["full"]
+
+[[example]]
+name = "32_typed_tools"
+path = "examples/32_typed_tools.rs"
+required-features = ["schema-generation"]
+
+[[example]]
+name = "33_advanced_typed_tools"
+path = "examples/33_advanced_typed_tools.rs"
+required-features = ["schema-generation"]
+
+[[example]]
+name = "34_serverbuilder_typed"
+path = "examples/34_serverbuilder_typed.rs"
+required-features = ["schema-generation"]
+
+[[example]]
+name = "35_wasm_typed_tools"
+path = "examples/35_wasm_typed_tools.rs"
+required-features = ["schema-generation"]
+
+[[example]]
+name = "36_typed_tool_v2_example"
+path = "examples/36_typed_tool_v2_example.rs"
+required-features = ["schema-generation"]
+
+[[example]]
+name = "37_description_variants_example"
+path = "examples/37_description_variants_example.rs"
+required-features = ["schema-generation"]
 
 
 
