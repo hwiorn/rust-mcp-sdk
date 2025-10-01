@@ -321,7 +321,10 @@ impl ServerTester {
         self.run_resources_discovery_with_verbose(false).await
     }
 
-    pub async fn run_resources_discovery_with_verbose(&mut self, verbose: bool) -> Result<TestReport> {
+    pub async fn run_resources_discovery_with_verbose(
+        &mut self,
+        verbose: bool,
+    ) -> Result<TestReport> {
         let mut report = TestReport::new();
         let start = Instant::now();
 
@@ -1360,7 +1363,7 @@ impl ServerTester {
                     error: None,
                     details: Some("No resources to read".to_string()),
                 };
-            }
+            },
         };
 
         let mut warnings = Vec::new();
@@ -1410,7 +1413,11 @@ impl ServerTester {
                                     println!("      MIME type: {}", mime_type);
                                     println!("      Data size: {} bytes (base64)", data.len());
                                 },
-                                pmcp::types::Content::Resource { uri, text, mime_type } => {
+                                pmcp::types::Content::Resource {
+                                    uri,
+                                    text,
+                                    mime_type,
+                                } => {
                                     println!("      Content type: Resource Reference");
                                     println!("      URI: {}", uri);
                                     if let Some(ref mime) = mime_type {
@@ -1439,7 +1446,10 @@ impl ServerTester {
                                 }
                                 // Validate MIME type consistency
                                 if let Some(ref mime) = resource.mime_type {
-                                    if !mime.starts_with("text/") && !mime.contains("json") && !mime.contains("xml") {
+                                    if !mime.starts_with("text/")
+                                        && !mime.contains("json")
+                                        && !mime.contains("xml")
+                                    {
                                         warnings.push(format!(
                                             "Resource '{}' has MIME type '{}' but returns text content",
                                             resource.name, mime
@@ -1470,7 +1480,11 @@ impl ServerTester {
                                     ));
                                 }
                             },
-                            pmcp::types::Content::Resource { uri, text: _, mime_type } => {
+                            pmcp::types::Content::Resource {
+                                uri,
+                                text: _,
+                                mime_type,
+                            } => {
                                 if uri.is_empty() {
                                     warnings.push(format!(
                                         "Resource '{}' reference has empty URI",
@@ -1478,7 +1492,9 @@ impl ServerTester {
                                     ));
                                 }
                                 // Check MIME type consistency if present
-                                if let (Some(ref list_mime), Some(ref content_mime)) = (&resource.mime_type, mime_type) {
+                                if let (Some(ref list_mime), Some(ref content_mime)) =
+                                    (&resource.mime_type, mime_type)
+                                {
                                     if list_mime != content_mime {
                                         warnings.push(format!(
                                             "Resource '{}' MIME type mismatch: list='{}', content='{}'",
@@ -1492,7 +1508,8 @@ impl ServerTester {
 
                     // Check for annotations (warning only)
                     let warnings_before = warnings.len();
-                    self.check_resource_annotations(&resource.uri, &mut warnings).await;
+                    self.check_resource_annotations(&resource.uri, &mut warnings)
+                        .await;
 
                     // Show annotation warnings in verbose mode
                     if verbose && warnings.len() > warnings_before {
@@ -1502,16 +1519,13 @@ impl ServerTester {
                     }
                 },
                 Err(e) => {
-                    let error_msg = format!(
-                        "Failed to read resource '{}': {}",
-                        resource.name, e
-                    );
+                    let error_msg = format!("Failed to read resource '{}': {}", resource.name, e);
                     errors.push(error_msg.clone());
 
                     if verbose {
                         println!("      ✗ {}", error_msg);
                     }
-                }
+                },
             }
         }
 
@@ -1565,14 +1579,20 @@ impl ServerTester {
         // Check if the description contains priority hints
         if let Some(resources) = &self.resources {
             if let Some(resource) = resources.iter().find(|r| r.uri == uri) {
-                let has_priority_hint = resource.description.as_ref()
+                let has_priority_hint = resource
+                    .description
+                    .as_ref()
                     .map(|d| d.to_lowercase().contains("priority"))
                     .unwrap_or(false);
 
-                let has_modified_hint = resource.description.as_ref()
-                    .map(|d| d.to_lowercase().contains("updated on")
-                              || d.to_lowercase().contains("modified")
-                              || d.to_lowercase().contains("last update"))
+                let has_modified_hint = resource
+                    .description
+                    .as_ref()
+                    .map(|d| {
+                        d.to_lowercase().contains("updated on")
+                            || d.to_lowercase().contains("modified")
+                            || d.to_lowercase().contains("last update")
+                    })
                     .unwrap_or(false);
 
                 if !has_priority_hint {
@@ -2214,12 +2234,18 @@ impl ServerTester {
     pub async fn read_resource(&mut self, uri: &str) -> Result<pmcp::types::ReadResourceResult> {
         // Try to use existing HTTP client if initialized
         if let Some(client) = &mut self.pmcp_client {
-            return client.read_resource(uri.to_string()).await.map_err(|e| e.into());
+            return client
+                .read_resource(uri.to_string())
+                .await
+                .map_err(|e| e.into());
         }
 
         // Try stdio client
         if let Some(client) = &mut self.stdio_client {
-            return client.read_resource(uri.to_string()).await.map_err(|e| e.into());
+            return client
+                .read_resource(uri.to_string())
+                .await
+                .map_err(|e| e.into());
         }
 
         // Fallback for direct JSON-RPC HTTP (without pmcp client wrapper)
@@ -2237,7 +2263,8 @@ impl ServerTester {
                         if let Some(error) = response.error {
                             return Err(anyhow::anyhow!("JSON-RPC error: {:?}", error));
                         } else if let Some(result) = response.result {
-                            match serde_json::from_value::<pmcp::types::ReadResourceResult>(result) {
+                            match serde_json::from_value::<pmcp::types::ReadResourceResult>(result)
+                            {
                                 Ok(resource) => Ok(resource),
                                 Err(e) => Err(anyhow::anyhow!("Failed to parse resource: {}", e)),
                             }
@@ -2251,7 +2278,7 @@ impl ServerTester {
             _ => {
                 // Return empty resource for other transport types
                 Ok(pmcp::types::ReadResourceResult { contents: vec![] })
-            }
+            },
         }
     }
 
@@ -2305,24 +2332,29 @@ impl ServerTester {
         arguments: Value,
     ) -> Result<pmcp::types::GetPromptResult> {
         // Convert JSON Value arguments to HashMap<String, String>
-        let args_map: std::collections::HashMap<String, String> = if let Value::Object(map) = &arguments {
-            map.iter()
-                .filter_map(|(k, v)| {
-                    v.as_str().map(|s| (k.clone(), s.to_string()))
-                })
-                .collect()
-        } else {
-            std::collections::HashMap::new()
-        };
+        let args_map: std::collections::HashMap<String, String> =
+            if let Value::Object(map) = &arguments {
+                map.iter()
+                    .filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_string())))
+                    .collect()
+            } else {
+                std::collections::HashMap::new()
+            };
 
         // Try to use existing HTTP client if initialized
         if let Some(client) = &mut self.pmcp_client {
-            return client.get_prompt(name.to_string(), args_map).await.map_err(|e| e.into());
+            return client
+                .get_prompt(name.to_string(), args_map)
+                .await
+                .map_err(|e| e.into());
         }
 
         // Try stdio client
         if let Some(client) = &mut self.stdio_client {
-            return client.get_prompt(name.to_string(), args_map).await.map_err(|e| e.into());
+            return client
+                .get_prompt(name.to_string(), args_map)
+                .await
+                .map_err(|e| e.into());
         }
 
         // Fallback for direct JSON-RPC HTTP (without pmcp client wrapper)
@@ -2360,7 +2392,7 @@ impl ServerTester {
                     messages: vec![],
                     description: None,
                 })
-            }
+            },
         }
     }
 
