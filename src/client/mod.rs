@@ -225,9 +225,9 @@ impl<T: Transport> Client<T> {
                     self.instructions.clone_from(&init_result.instructions);
                     self.initialized = true;
 
-                    // Send initialized notification
-                    self.send_notification(Notification::Client(ClientNotification::Initialized))
-                        .await?;
+                    // // Send initialized notification
+                    // self.send_notification(Notification::Client(ClientNotification::Initialized))
+                    //     .await?;
 
                     Ok(init_result)
                 } else {
