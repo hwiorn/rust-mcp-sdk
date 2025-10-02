@@ -1479,7 +1479,31 @@ impl ServerTester {
             // Check for common JSON Schema properties
             if !obj.contains_key("type") {
                 warnings.push(format!("Tool '{}' schema missing 'type' field", tool.name));
+            } else if let Some(schema_type) = obj.get("type") {
+                // Validate the type value
+                if let Some(type_str) = schema_type.as_str() {
+                    // Valid JSON Schema types
+                    let valid_types = ["object", "array", "string", "number", "integer", "boolean"];
+
+                    if type_str == "null" {
+                        // Special case: "null" as a type is almost always a bug
+                        // (from Rust unit type () serializing to "null")
+                        warnings.push(format!(
+                            "Tool '{}' has invalid inputSchema.type = \"null\" - this will be rejected by MCP clients like Claude Code. \
+                            Expected \"object\" for structured input, or omit inputSchema if no parameters required. \
+                            (This often happens when using unit type () in Rust - use an empty struct instead)",
+                            tool.name
+                        ));
+                    } else if !valid_types.contains(&type_str) {
+                        warnings.push(format!(
+                            "Tool '{}' has invalid inputSchema.type = \"{}\". \
+                            Must be one of: object, array, string, number, integer, boolean",
+                            tool.name, type_str
+                        ));
+                    }
+                }
             }
+
             if obj.get("type") == Some(&json!("object")) && !obj.contains_key("properties") {
                 warnings.push(format!(
                     "Tool '{}' schema missing 'properties' field for object type",
